@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  ShieldCheck, Package, Users, Scissors, Store, Plus, Trash2, Edit3, Check, X, UserPlus, Clock, Terminal, Save, RotateCcw
+  ShieldCheck, Package, Users, Scissors, Store, Plus, Trash2, Edit3, Check, X, UserPlus, Clock, Terminal, Save, RotateCcw, MessageCircle, AlertTriangle, Lock, RefreshCw, Key
 } from 'lucide-react';
 
 export default function AdminView({ 
@@ -25,11 +25,10 @@ export default function AdminView({
     { id: 3, nombre: 'Champú Anticaída Gol Cut', stock: 20, precio: 45000 }
   ]);
 
-  // Horarios en formato fácil AM/PM
+  // Horarios en formato AM/PM
   const [horarios, setHorarios] = useState({ apertura: '08:00 AM', cierre: '07:00 PM', dias: 'Lunes a Sábado' });
   const [mensajeHorariosGuardados, setMensajeHorariosGuardados] = useState(false);
 
-  // Lista de horas AM/PM para administradores
   const listaHorasAdmin = [
     '06:00 AM', '06:30 AM', '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
     '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '01:00 PM', '01:30 PM',
@@ -40,6 +39,31 @@ export default function AdminView({
   const [admins, setAdmins] = useState([
     { id: 1, nombre: 'Elkin Ramírez', usuario: 'elkin-dev26', rol: 'SuperAdmin / Programador' },
     { id: 2, nombre: 'Admin Barbershop', usuario: 'admin', rol: 'Administrador Local' }
+  ]);
+
+  // ESTADOS DEL PANEL DEVELOPER (elkin-dev26) - GESTIÓN SAAS / SUSCRIPCIONES
+  const [numeroWhatsappDev, setNumeroWhatsappDev] = useState('573001234567'); // Número por defecto para recibir pagos
+  const [barberiasRegistradas, setBarberiasRegistradas] = useState([
+    {
+      id: 1,
+      nombre: 'Peluquería Gol Cut Barber (Sede Principal)',
+      propietario: 'Elkin Ramírez',
+      telefono: '573000000000',
+      fechaRegistro: '2026-11-01',
+      diasRestantes: 25,
+      estado: 'Activa', // 'Activa', 'Pausada', 'Vencida'
+      plan: 'Mensual VIP ($50.000 COP)'
+    },
+    {
+      id: 2,
+      nombre: 'Barbería Rey de Oro',
+      propietario: 'Carlos Mendoza',
+      telefono: '573119876543',
+      fechaRegistro: '2026-10-05',
+      diasRestantes: 0,
+      estado: 'Vencida',
+      plan: 'Prueba Gratuita 1 Mes'
+    }
   ]);
 
   const [nuevoBarbero, setNuevoBarbero] = useState('');
@@ -133,6 +157,23 @@ export default function AdminView({
     setAdmins(admins.filter(a => a.id !== id));
   };
 
+  // ACCIONES MASTER DEVELOPER (elkin-dev26)
+  const renovarSuscripcionBarberia = (id) => {
+    setBarberiasRegistradas(barberiasRegistradas.map(b => 
+      b.id === id ? { ...b, diasRestantes: 30, estado: 'Activa' } : b
+    ));
+  };
+
+  const cambiarEstadoBarberia = (id, nuevoEstado) => {
+    setBarberiasRegistradas(barberiasRegistradas.map(b => 
+      b.id === id ? { ...b, estado: nuevoEstado, diasRestantes: nuevoEstado === 'Pausada' ? 0 : b.diasRestantes } : b
+    ));
+  };
+
+  const eliminarBarberia = (id) => {
+    setBarberiasRegistradas(barberiasRegistradas.filter(b => b.id !== id));
+  };
+
   // Guardar Horarios de Atención
   const guardarHorarios = () => {
     setMensajeHorariosGuardados(true);
@@ -147,7 +188,7 @@ export default function AdminView({
   };
 
   const restablecerNombre = () => {
-    const nombreOriginal = 'Peluquería Gol Cut';
+    const nombreOriginal = 'Peluquería Gol Cut Barber';
     setNombreTemporal(nombreOriginal);
     setConfig({ ...config, nombreNegocio: nombreOriginal });
   };
@@ -160,13 +201,13 @@ export default function AdminView({
           <Terminal className="w-4 h-4" />
           <span className="font-mono font-bold">
             PERFIL ACTIVO: {
-              activeRole === 'superadmin' ? 'SUPERUSUARIO / PROGRAMADOR (elkin-dev26)' :
+              activeRole === 'superadmin' ? 'DESARROLLADOR / MASTER (elkin-dev26)' :
               activeRole === 'admin' ? 'ADMINISTRADOR GENERAL (admin)' : 'EVALUACIÓN (Acceso Directo Demo)'
             }
           </span>
         </div>
         <span className="bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase text-[10px]">
-          {activeRole === 'superadmin' ? 'Control Total Base Datos' : activeRole === 'admin' ? 'Gestión Negocio' : 'Modo Demostración'}
+          {activeRole === 'superadmin' ? 'Control SaaS Nube' : activeRole === 'admin' ? 'Gestión Local' : 'Modo Demostración'}
         </span>
       </div>
 
@@ -179,7 +220,8 @@ export default function AdminView({
           { id: 'inventario', label: 'Inventario', icon: Package },
           { id: 'horarios', label: 'Horarios', icon: Clock },
           { id: 'usuarios', label: 'Administradores', icon: UserPlus },
-          { id: 'config', label: 'Ajustes Negocio', icon: Store }
+          { id: 'config', label: 'Ajustes Negocio', icon: Store },
+          ...(activeRole === 'superadmin' ? [{ id: 'master_dev', label: 'Panel Dev (Suscripciones)', icon: Terminal }] : [])
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -187,7 +229,9 @@ export default function AdminView({
               key={item.id}
               onClick={() => setTab(item.id)}
               className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
-                tab === item.id ? 'bg-[#d4af37] text-black shadow-md' : 'text-gray-300 hover:bg-[#1a1a1a]'
+                tab === item.id 
+                  ? (item.id === 'master_dev' ? 'bg-emerald-500 text-black shadow-md' : 'bg-[#d4af37] text-black shadow-md') 
+                  : 'text-gray-300 hover:bg-[#1a1a1a]'
               }`}
             >
               <Icon className="w-4 h-4" /> {item.label}
@@ -209,6 +253,7 @@ export default function AdminView({
             <table className="w-full text-left text-sm">
               <thead className="bg-[#1a1a1a] text-[#d4af37] uppercase text-xs">
                 <tr>
+                  <th className="p-3">Tipo</th>
                   <th className="p-3">Cliente</th>
                   <th className="p-3">Servicio</th>
                   <th className="p-3">Barbero</th>
@@ -220,6 +265,13 @@ export default function AdminView({
               <tbody className="divide-y divide-gray-800 text-gray-200">
                 {citas.map((c) => (
                   <tr key={c.id} className="hover:bg-[#1a1a1a]/50">
+                    <td className="p-3">
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                        c.tipo === 'Expreso / En Local' ? 'bg-purple-900/60 text-purple-300 border border-purple-700' : 'bg-gray-800 text-gray-300'
+                      }`}>
+                        {c.tipo || 'Programada'}
+                      </span>
+                    </td>
                     <td className="p-3 font-medium text-white">{c.cliente}</td>
                     <td className="p-3">{c.servicio}</td>
                     <td className="p-3">{c.barbero}</td>
@@ -229,7 +281,7 @@ export default function AdminView({
                         c.estado === 'Confirmada' ? 'bg-emerald-900/60 text-emerald-300' :
                         c.estado === 'Cancelada' ? 'bg-rose-900/60 text-rose-300' : 'bg-amber-900/60 text-amber-300'
                       }`}>
-                        {c.estado}
+                        {c.estado || 'Pendiente'}
                       </span>
                     </td>
                     <td className="p-3 flex justify-center gap-2">
@@ -424,7 +476,7 @@ export default function AdminView({
         </div>
       )}
 
-      {/* 5. HORARIOS (RENOVADO CON SELECCIÓN FÁCIL AM/PM) */}
+      {/* 5. HORARIOS */}
       {tab === 'horarios' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Configuración de Horarios de Atención</h3>
@@ -581,6 +633,121 @@ export default function AdminView({
             >
               <RotateCcw className="w-4 h-4" /> Restablecer Nombre
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 8. PANEL DEVELOPER / MASTER SAAS (SOLO VISIBLE PARA elkin-dev26) */}
+      {tab === 'master_dev' && activeRole === 'superadmin' && (
+        <div className="bg-[#1f2937] border border-emerald-500/40 p-6 rounded-xl space-y-6 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-gray-700 pb-4">
+            <div>
+              <h3 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                <Terminal className="w-6 h-6" /> Control Maestro de Suscripciones SaaS
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">Gestión de licencias de 30 días, renovaciones por WhatsApp y control de barberías activas</p>
+            </div>
+            <span className="bg-emerald-500/20 text-emerald-300 text-xs px-3 py-1 rounded-full border border-emerald-500/40 font-mono font-bold">
+              Desarrollador: elkin-dev26
+            </span>
+          </div>
+
+          {/* Configuración del Número de WhatsApp para Cobros */}
+          <div className="bg-[#111827] border border-gray-700 p-4 rounded-xl space-y-3">
+            <h4 className="text-sm font-bold text-emerald-300 flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-emerald-400" /> Configuración WhatsApp de Renovaciones
+            </h4>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="block text-[11px] text-gray-400 mb-1">Número Celular (con código de país +57 de Colombia):</label>
+                <input
+                  type="text"
+                  value={numeroWhatsappDev}
+                  onChange={(e) => setNumeroWhatsappDev(e.target.value)}
+                  className="w-full bg-[#1f2937] border border-gray-600 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                  placeholder="Ej: 573001234567"
+                />
+              </div>
+              <a
+                href={`https://wa.me/${numeroWhatsappDev}?text=Hola%20Elkin,%20deseo%20renovar%20mi%20suscripci%C3%B3n%20de%20Gol%20Cut%20Barber`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-2 mt-5 transition-all"
+              >
+                <MessageCircle className="w-4 h-4" /> Probar Enlace WhatsApp
+              </a>
+            </div>
+          </div>
+
+          {/* Lista de Barberías y Estado de Licencia */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold text-gray-200">Barberías Registradas y Estado de Prueba (30 Días)</h4>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111827] text-emerald-400 uppercase">
+                  <tr>
+                    <th className="p-3">Establecimiento / Propietario</th>
+                    <th className="p-3">Teléfono</th>
+                    <th className="p-3">Plan / Registro</th>
+                    <th className="p-3">Días Restantes</th>
+                    <th className="p-3">Estado</th>
+                    <th className="p-3 text-center">Acciones Maestro</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800 text-gray-300">
+                  {barberiasRegistradas.map((b) => (
+                    <tr key={b.id} className="hover:bg-[#111827]/60">
+                      <td className="p-3">
+                        <p className="font-bold text-white text-sm">{b.nombre}</p>
+                        <p className="text-gray-400">Dueño: {b.propietario}</p>
+                      </td>
+                      <td className="p-3 font-mono">{b.telefono}</td>
+                      <td className="p-3">
+                        <p className="text-gray-200">{b.plan}</p>
+                        <p className="text-[10px] text-gray-500">Reg: {b.fechaRegistro}</p>
+                      </td>
+                      <td className="p-3 font-bold font-mono">
+                        <span className={b.diasRestantes <= 5 ? 'text-rose-400' : 'text-emerald-400'}>
+                          {b.diasRestantes} Días
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                          b.estado === 'Activa' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' :
+                          b.estado === 'Vencida' ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-amber-950 text-amber-300 border border-amber-800'
+                        }`}>
+                          {b.estado}
+                        </span>
+                      </td>
+                      <td className="p-3 flex justify-center gap-2">
+                        <button
+                          onClick={() => renovarSuscripcionBarberia(b.id)}
+                          className="bg-emerald-700 hover:bg-emerald-600 text-white p-1.5 rounded flex items-center gap-1 font-bold text-[10px]"
+                          title="Renovar +30 Días"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" /> +30 Días
+                        </button>
+                        <button
+                          onClick={() => cambiarEstadoBarberia(b.id, b.estado === 'Pausada' ? 'Activa' : 'Pausada')}
+                          className="bg-amber-700 hover:bg-amber-600 text-white p-1.5 rounded text-[10px] font-bold"
+                          title="Pausar o Activar Licencia"
+                        >
+                          {b.estado === 'Pausada' ? 'Activar' : 'Pausar'}
+                        </button>
+                        <button
+                          onClick={() => eliminarBarberia(b.id)}
+                          className="bg-rose-950 hover:bg-rose-900 text-rose-300 p-1.5 rounded border border-rose-800"
+                          title="Eliminar Barbería"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
