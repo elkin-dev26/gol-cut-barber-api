@@ -13,7 +13,7 @@ export default function Navbar({
   const getLabelRole = () => {
     if (activeRole === 'superadmin') return 'Perfil: SuperAdmin / Dev';
     if (activeRole === 'admin') return 'Perfil: Administrador';
-    if (activeRole === 'demo') return 'Perfil: Demo (SENA)';
+    if (activeRole === 'demo') return 'Perfil: Demo';
     return 'Perfil: Cliente';
   };
 
@@ -63,7 +63,7 @@ export default function Navbar({
 
         {menuAbierto && (
           <div className="absolute right-0 mt-2 w-64 bg-[#262626] border border-[#d4af37]/40 rounded-xl shadow-2xl py-2 z-50 divide-y divide-gray-800">
-            {/* Opción 1: Demo SENA */}
+            {/* Opción 1: Demo */}
             <button
               onClick={() => {
                 onSelectRole('demo');
@@ -73,7 +73,7 @@ export default function Navbar({
             >
               <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               <div>
-                <p className="text-xs font-bold text-white">1. Perfil Demo (SENA)</p>
+                <p className="text-xs font-bold text-white">1. Perfil Demo</p>
                 <p className="text-[10px] text-gray-400">Acceso directo sin clave para evaluación</p>
               </div>
             </button>

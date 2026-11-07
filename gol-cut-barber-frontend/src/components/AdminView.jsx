@@ -3,48 +3,60 @@ import {
   ShieldCheck, Package, Users, Scissors, Store, Plus, Trash2, Edit3, Check, X, UserPlus, Clock, Terminal, Save, RotateCcw
 } from 'lucide-react';
 
-export default function AdminView({ config, setConfig, barberos, setBarberos, servicios, setServicios, activeRole }) {
+export default function AdminView({ 
+  config, 
+  setConfig, 
+  barberos, 
+  setBarberos, 
+  servicios, 
+  setServicios, 
+  citas, 
+  setCitas, 
+  activeRole 
+}) {
   const [tab, setTab] = useState('citas');
 
-  // Control local del nombre comercial en Ajustes del Negocio
   const [nombreTemporal, setNombreTemporal] = useState(config.nombreNegocio);
   const [mensajeGuardado, setMensajeGuardado] = useState(false);
 
-  // Citas de prueba
-  const [citas, setCitas] = useState([
-    { id: 1, cliente: 'Elkin Ramírez', servicio: 'Combo Oro Corte VIP', barbero: 'Carlos Pérez', hora: '14:00', estado: 'Pendiente' },
-    { id: 2, cliente: 'Juan Pablo Marín', servicio: 'Corte Sombreado', barbero: 'Mateo Gómez', hora: '15:30', estado: 'Confirmada' }
-  ]);
-
-  // Inventario
   const [productos, setProductos] = useState([
     { id: 1, nombre: 'Cera Moldear Mate (Oro)', stock: 15, precio: 32000 },
     { id: 2, nombre: 'Aceite de Barba Hidratante', stock: 8, precio: 28000 },
     { id: 3, nombre: 'Champú Anticaída Gol Cut', stock: 20, precio: 45000 }
   ]);
 
-  // Horarios
-  const [horarios, setHorarios] = useState({ apertura: '09:00', cierre: '19:00', dias: 'Lunes a Sábado' });
+  // Horarios en formato fácil AM/PM
+  const [horarios, setHorarios] = useState({ apertura: '08:00 AM', cierre: '07:00 PM', dias: 'Lunes a Sábado' });
+  const [mensajeHorariosGuardados, setMensajeHorariosGuardados] = useState(false);
 
-  // Lista de Administradores
+  // Lista de horas AM/PM para administradores
+  const listaHorasAdmin = [
+    '06:00 AM', '06:30 AM', '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
+    '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '01:00 PM', '01:30 PM',
+    '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM',
+    '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM', '09:30 PM', '10:00 PM'
+  ];
+
   const [admins, setAdmins] = useState([
     { id: 1, nombre: 'Elkin Ramírez', usuario: 'elkin-dev26', rol: 'SuperAdmin / Programador' },
     { id: 2, nombre: 'Admin Barbershop', usuario: 'admin', rol: 'Administrador Local' }
   ]);
 
-  // Formularios locales
   const [nuevoBarbero, setNuevoBarbero] = useState('');
   const [nuevoServicio, setNuevoServicio] = useState({ nombre: '', precio: '' });
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', stock: '', precio: '' });
   const [nuevoAdmin, setNuevoAdmin] = useState({ nombre: '', usuario: '', clave: '' });
 
-  // Edición de Servicios
   const [servicioEditando, setServicioEditando] = useState(null);
   const [datosEdicion, setDatosEdicion] = useState({ nombre: '', precio: '' });
 
-  // Acciones Citas
+  // ACCIONES CITAS
   const cambiarEstadoCita = (id, nuevoEstado) => {
     setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado } : c));
+  };
+
+  const eliminarCita = (id) => {
+    setCitas(citas.filter(c => c.id !== id));
   };
 
   // Acciones Barberos
@@ -58,7 +70,8 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
   // Acciones Servicios
   const agregarServicio = () => {
     if (!nuevoServicio.nombre || !nuevoServicio.precio) return;
-    setServicios([...servicios, { id: Date.now(), nombre: nuevoServicio.nombre, precio: parseInt(nuevoServicio.precio) }]);
+    const precioLimpio = parseInt(String(nuevoServicio.precio).replace(/\./g, '').replace(/,/g, '')) || 0;
+    setServicios([...servicios, { id: Date.now(), nombre: nuevoServicio.nombre, precio: precioLimpio }]);
     setNuevoServicio({ nombre: '', precio: '' });
   };
 
@@ -68,8 +81,9 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
   };
 
   const guardarEdicionServicio = (id) => {
+    const precioLimpio = parseInt(String(datosEdicion.precio).replace(/\./g, '').replace(/,/g, '')) || 0;
     setServicios(servicios.map(s => 
-      s.id === id ? { ...s, nombre: datosEdicion.nombre, precio: parseInt(datosEdicion.precio) || 0 } : s
+      s.id === id ? { ...s, nombre: datosEdicion.nombre, precio: precioLimpio } : s
     ));
     setServicioEditando(null);
   };
@@ -84,13 +98,20 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
   };
 
   const agregarProducto = () => {
-    if (!nuevoProducto.nombre) return;
-    setProductos([...productos, { 
-      id: Date.now(), 
-      nombre: nuevoProducto.nombre, 
-      stock: parseInt(nuevoProducto.stock) || 0, 
-      precio: parseInt(nuevoProducto.precio) || 0 
-    }]);
+    if (!nuevoProducto.nombre || !nuevoProducto.precio) return;
+    
+    const precioLimpio = parseInt(String(nuevoProducto.precio).replace(/\./g, '').replace(/,/g, '')) || 0;
+    const stockLimpio = parseInt(String(nuevoProducto.stock).replace(/\./g, '')) || 0;
+
+    setProductos([
+      ...productos, 
+      { 
+        id: Date.now(), 
+        nombre: nuevoProducto.nombre, 
+        precio: precioLimpio,
+        stock: stockLimpio
+      }
+    ]);
     setNuevoProducto({ nombre: '', stock: '', precio: '' });
   };
 
@@ -98,7 +119,7 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
     setProductos(productos.filter(p => p.id !== id));
   };
 
-  // Acciones Administradores (Crear y Eliminar)
+  // Acciones Administradores
   const agregarAdmin = () => {
     if (!nuevoAdmin.nombre || !nuevoAdmin.usuario || !nuevoAdmin.clave) return;
     setAdmins([
@@ -110,6 +131,12 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
 
   const eliminarAdmin = (id) => {
     setAdmins(admins.filter(a => a.id !== id));
+  };
+
+  // Guardar Horarios de Atención
+  const guardarHorarios = () => {
+    setMensajeHorariosGuardados(true);
+    setTimeout(() => setMensajeHorariosGuardados(false), 3000);
   };
 
   // Guardar Ajustes del Negocio
@@ -134,12 +161,12 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
           <span className="font-mono font-bold">
             PERFIL ACTIVO: {
               activeRole === 'superadmin' ? 'SUPERUSUARIO / PROGRAMADOR (elkin-dev26)' :
-              activeRole === 'admin' ? 'ADMINISTRADOR GENERAL (admin)' : 'EVALUACIÓN SENA (Acceso Directo Demo)'
+              activeRole === 'admin' ? 'ADMINISTRADOR GENERAL (admin)' : 'EVALUACIÓN (Acceso Directo Demo)'
             }
           </span>
         </div>
         <span className="bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase text-[10px]">
-          {activeRole === 'superadmin' ? 'Control Total Base Datos' : activeRole === 'admin' ? 'Gestión Negocio' : 'Modo Demostración SENA'}
+          {activeRole === 'superadmin' ? 'Control Total Base Datos' : activeRole === 'admin' ? 'Gestión Negocio' : 'Modo Demostración'}
         </span>
       </div>
 
@@ -187,7 +214,7 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
                   <th className="p-3">Barbero</th>
                   <th className="p-3">Hora</th>
                   <th className="p-3">Estado</th>
-                  <th className="p-3 text-center">Acción</th>
+                  <th className="p-3 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800 text-gray-200">
@@ -206,11 +233,26 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
                       </span>
                     </td>
                     <td className="p-3 flex justify-center gap-2">
-                      <button onClick={() => cambiarEstadoCita(c.id, 'Confirmada')} className="p-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">
+                      <button 
+                        onClick={() => cambiarEstadoCita(c.id, 'Confirmada')} 
+                        className="p-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white"
+                        title="Confirmar Cita"
+                      >
                         <Check className="w-4 h-4" />
                       </button>
-                      <button onClick={() => cambiarEstadoCita(c.id, 'Cancelada')} className="p-1.5 bg-rose-700 hover:bg-rose-600 rounded text-white">
+                      <button 
+                        onClick={() => cambiarEstadoCita(c.id, 'Cancelada')} 
+                        className="p-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white"
+                        title="Marcar como Cancelada"
+                      >
                         <X className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => eliminarCita(c.id)} 
+                        className="p-1.5 bg-rose-950/50 hover:bg-rose-900/80 text-rose-400 rounded border border-rose-800"
+                        title="Eliminar cita atendida o cancelada"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -263,8 +305,8 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
               className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
             />
             <input
-              type="number"
-              placeholder="Precio ($)"
+              type="text"
+              placeholder="Precio ($ ej: 35000)"
               value={nuevoServicio.precio}
               onChange={(e) => setNuevoServicio({ ...nuevoServicio, precio: e.target.value })}
               className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
@@ -285,7 +327,7 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
                       className="bg-[#1a1a1a] border border-[#d4af37] rounded px-2 py-1 text-xs text-white"
                     />
                     <input
-                      type="number"
+                      type="text"
                       value={datosEdicion.precio}
                       onChange={(e) => setDatosEdicion({ ...datosEdicion, precio: e.target.value })}
                       className="bg-[#1a1a1a] border border-[#d4af37] rounded px-2 py-1 text-xs text-white"
@@ -321,7 +363,8 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
       {tab === 'inventario' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Inventario de Productos y Stock</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
             <input
               type="text"
               placeholder="Nombre del Producto"
@@ -330,16 +373,27 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
               className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
             />
             <input
-              type="number"
-              placeholder="Stock Inicial"
+              type="text"
+              placeholder="Precio ($ ej: 20000)"
+              value={nuevoProducto.precio}
+              onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
+              className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
+            />
+            <input
+              type="text"
+              placeholder="Stock Inicial (Unidades)"
               value={nuevoProducto.stock}
               onChange={(e) => setNuevoProducto({ ...nuevoProducto, stock: e.target.value })}
               className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
             />
-            <button onClick={agregarProducto} className="bg-[#d4af37] text-black px-4 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1">
+            <button 
+              onClick={agregarProducto} 
+              className="bg-[#d4af37] hover:bg-[#b89628] text-black px-4 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all"
+            >
               <Plus className="w-4 h-4" /> Guardar Producto
             </button>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             {productos.map(p => (
               <div key={p.id} className="bg-[#1a1a1a] border border-gray-800 p-4 rounded-lg flex flex-col justify-between relative group">
@@ -348,15 +402,19 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
                     <p className="font-semibold text-white text-sm pr-6">{p.nombre}</p>
                     <p className="text-xs text-[#d4af37] font-bold mt-1">${p.precio.toLocaleString()}</p>
                   </div>
-                  <button onClick={() => eliminarProducto(p.id)} className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-950/50 rounded transition-all">
+                  <button 
+                    onClick={() => eliminarProducto(p.id)} 
+                    className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-950/50 rounded transition-all"
+                    title="Eliminar producto"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-800">
-                  <span className="text-xs text-gray-400">Stock:</span>
+                  <span className="text-xs text-gray-400">Existencias:</span>
                   <div className="flex items-center gap-2">
                     <button onClick={() => cambiarStock(p.id, -1)} className="bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-xs font-bold">-</button>
-                    <span className="font-mono text-xs text-white px-1">{p.stock} un.</span>
+                    <span className="font-mono text-xs text-white px-1">{p.stock} unidades.</span>
                     <button onClick={() => cambiarStock(p.id, 1)} className="bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-xs font-bold">+</button>
                   </div>
                 </div>
@@ -366,43 +424,70 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
         </div>
       )}
 
-      {/* 5. HORARIOS */}
+      {/* 5. HORARIOS (RENOVADO CON SELECCIÓN FÁCIL AM/PM) */}
       {tab === 'horarios' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Configuración de Horarios de Atención</h3>
+          
+          {mensajeHorariosGuardados && (
+            <div className="p-3 bg-emerald-900/60 border border-emerald-500 text-emerald-300 text-xs rounded-lg flex items-center gap-2">
+              <Check className="w-4 h-4 shrink-0" />
+              <span>¡Horarios comerciales actualizados con éxito!</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Hora Apertura</label>
-              <input
-                type="time"
+              <label className="block text-xs text-gray-400 mb-1 font-semibold">Hora de Apertura (AM/PM)</label>
+              <select
                 value={horarios.apertura}
                 onChange={(e) => setHorarios({ ...horarios, apertura: e.target.value })}
-                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-              />
+                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg px-3 py-2 text-sm text-white font-medium outline-none"
+              >
+                {listaHorasAdmin.map((h, idx) => (
+                  <option key={idx} value={h}>{h}</option>
+                ))}
+              </select>
             </div>
+
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Hora Cierre</label>
-              <input
-                type="time"
+              <label className="block text-xs text-gray-400 mb-1 font-semibold">Hora de Cierre (AM/PM)</label>
+              <select
                 value={horarios.cierre}
                 onChange={(e) => setHorarios({ ...horarios, cierre: e.target.value })}
-                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-              />
+                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg px-3 py-2 text-sm text-white font-medium outline-none"
+              >
+                {listaHorasAdmin.map((h, idx) => (
+                  <option key={idx} value={h}>{h}</option>
+                ))}
+              </select>
             </div>
+
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Días de Atención</label>
-              <input
-                type="text"
+              <label className="block text-xs text-gray-400 mb-1 font-semibold">Días de Atención</label>
+              <select
                 value={horarios.dias}
                 onChange={(e) => setHorarios({ ...horarios, dias: e.target.value })}
-                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-              />
+                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg px-3 py-2 text-sm text-white font-medium outline-none"
+              >
+                <option value="Lunes a Sábado">Lunes a Sábado</option>
+                <option value="Lunes a Viernes">Lunes a Viernes</option>
+                <option value="Todos los Días (L-D)">Todos los Días (Lunes a Domingo)</option>
+                <option value="Martes a Domingo">Martes a Domingo</option>
+              </select>
             </div>
           </div>
+
+          <button
+            onClick={guardarHorarios}
+            className="bg-[#d4af37] hover:bg-[#b89628] text-black font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md mt-2"
+          >
+            <Save className="w-4 h-4" /> Guardar Horarios
+          </button>
         </div>
       )}
 
-      {/* 6. USUARIOS ADMINISTRADORES (CREAR Y ELIMINAR) */}
+      {/* 6. USUARIOS ADMINISTRADORES */}
       {tab === 'usuarios' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Registro de Usuarios Administradores</h3>
