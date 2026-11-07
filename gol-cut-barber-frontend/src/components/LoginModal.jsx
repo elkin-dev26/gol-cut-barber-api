@@ -12,26 +12,27 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
     e.preventDefault();
     setError('');
 
+    // Validación según el perfil seleccionado
     if (targetRole === 'demo') {
-      if (usuario === 'demo' && clave === 'demo123') {
+      if (usuario.trim().toLowerCase() === 'demo' && clave === 'demo123') {
         onLoginSuccess('demo');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Usuario o contraseña incorrectos para el Perfil Evaluación/Demo.');
+        setError('Credenciales de Perfil Demo incorrectas (Usuario: demo / Clave: demo123)');
       }
     } else if (targetRole === 'admin') {
-      if (usuario === 'admin' && clave === 'admin123') {
+      if (usuario.trim().toLowerCase() === 'admin' && clave === 'admin123') {
         onLoginSuccess('admin');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Credenciales de Administrador incorrectas.');
+        setError('Credenciales de Administrador incorrectas (Usuario: admin / Clave: admin123)');
       }
     } else if (targetRole === 'superadmin') {
-      if (usuario === 'elkin-dev26' && clave === 'elkin2026') {
+      if (usuario.trim() === 'elkin-dev26' && clave === 'elkin2026') {
         onLoginSuccess('superadmin');
         onClose();
         setUsuario('');
@@ -63,7 +64,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
             <Lock className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-bold text-white">{getTitle()}</h3>
-          <p className="text-xs text-gray-400">Ingresa tus credenciales autorizadas para continuar</p>
+          <p className="text-xs text-gray-400">Ingresa tus credenciales para ingresar</p>
         </div>
 
         {error && (
