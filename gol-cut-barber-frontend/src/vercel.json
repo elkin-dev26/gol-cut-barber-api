@@ -1,0 +1,15 @@
+{
+  "builds": [
+    {
+      "src": "gol-cut-barber-frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "build" }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "gol-cut-barber-frontend/$1"
+    }
+  ]
+}
