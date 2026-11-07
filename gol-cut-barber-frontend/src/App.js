@@ -2,100 +2,88 @@ import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import ClienteView from './components/ClienteView';
 import AdminView from './components/AdminView';
-import LoginModal from './components/LoginModal';
+import BarberoView from './components/BarberoView';
 
-function App() {
-  const [activeTab, setActiveTab] = useState('reservas');
+export default function App() {
   const [activeRole, setActiveRole] = useState('cliente');
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [targetRole, setTargetRole] = useState('admin');
 
-  const [adminCredentials, setAdminCredentials] = useState({
-    usuario: 'admin',
-    clave: '123456'
+  const [config, setConfig] = useState({
+    nombreNegocio: 'Peluquería Gol Cut Barber'
   });
 
-  const [config, setConfig] = useState({ nombreNegocio: 'Peluquería Gol Cut barber' });
-  
-  // ESTADO GLOBAL DE CITAS COMPARTIDO
-  const [citas, setCitas] = useState([
-    { id: 1, cliente: 'Elkin Ramírez', servicio: 'Combo Oro Corte VIP', barbero: 'Carlos Pérez (Maestro Barbero)', hora: '14:00', estado: 'Pendiente' },
-    { id: 2, cliente: 'Juan Pablo Marín', servicio: 'Corte Sombreado + Barba', barbero: 'Mateo Gómez (Especialista Degradados)', hora: '15:30', estado: 'Confirmada' }
-  ]);
-
   const [barberos, setBarberos] = useState([
-    { id: 1, nombre: 'Carlos Pérez (Maestro Barbero)' },
-    { id: 2, nombre: 'Mateo Gómez (Especialista Degradados)' }
+    { id: 1, nombre: 'Elkin Ramírez', estadoSilla: 'Al Día' },
+    { id: 2, nombre: 'Mateo Gómez', estadoSilla: 'Al Día' },
+    { id: 3, nombre: 'Carlos Andrés', estadoSilla: 'Moroso' }
   ]);
-  
+
   const [servicios, setServicios] = useState([
-    { id: 1, nombre: 'Corte Sombreado + Barba', precio: 35000 },
-    { id: 2, nombre: 'Corte Clásico', precio: 25000 }
+    { id: 1, nombre: 'Corte Clásico / Fade', precio: 25000 },
+    { id: 2, nombre: 'Barba Completa con Toalla Caliente', precio: 15000 },
+    { id: 3, nombre: 'Combo Gol Cut (Corte + Barba)', precio: 35000 }
   ]);
 
-  const handleSelectRole = (selectedRole) => {
-    if (selectedRole === 'demo') {
-      setActiveRole('demo');
-      setActiveTab('admin');
-    } else {
-      setTargetRole(selectedRole);
-      setIsLoginOpen(true);
+  const [citas, setCitas] = useState([
+    {
+      id: 1,
+      cliente: 'Juan Pablo',
+      servicio: 'Combo Gol Cut (Corte + Barba)',
+      barbero: 'Elkin Ramírez',
+      hora: '02:00 PM',
+      estado: 'Confirmada',
+      tipo: 'Programada'
     }
-  };
+  ]);
 
-  const agregarCitaCliente = (nuevaCita) => {
-    setCitas([
-      { id: Date.now(), ...nuevaCita, estado: 'Pendiente' },
-      ...citas
-    ]);
+  const handleAgregarCita = (nuevaCita) => {
+    const citaCompleta = {
+      id: Date.now(),
+      ...nuevaCita,
+      estado: 'Pendiente'
+    };
+    setCitas((prevCitas) => [citaCompleta, ...prevCitas]);
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-white">
-      <Navbar 
-        nombreNegocio={config.nombreNegocio}
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        onSelectRole={handleSelectRole}
+    <div className="min-h-screen bg-[#141414] text-white flex flex-col font-sans">
+      <Navbar
         activeRole={activeRole}
+        setActiveRole={setActiveRole}
+        config={config}
       />
 
-      <main className="max-w-6xl mx-auto p-6">
-        {activeTab === 'reservas' ? (
-          <ClienteView 
-            barberos={barberos} 
-            servicios={servicios} 
-            onAgregarCita={agregarCitaCliente}
+      <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+        {activeRole === 'cliente' && (
+          <ClienteView
+            barberos={barberos}
+            servicios={servicios}
+            onAgregarCita={handleAgregarCita}
           />
-        ) : (
-          <AdminView 
-            config={config} 
-            setConfig={setConfig} 
-            barberos={barberos} 
-            setBarberos={setBarberos} 
+        )}
+
+        {(activeRole === 'admin' || activeRole === 'superadmin' || activeRole === 'demo') && (
+          <AdminView
+            config={config}
+            setConfig={setConfig}
+            barberos={barberos}
+            setBarberos={setBarberos}
             servicios={servicios}
             setServicios={setServicios}
             citas={citas}
             setCitas={setCitas}
             activeRole={activeRole}
-            adminCredentials={adminCredentials}
-            setAdminCredentials={setAdminCredentials}
+          />
+        )}
+
+        {activeRole === 'barbero' && (
+          <BarberoView
+            barberoActual={barberos[0]}
+            citas={citas}
+            setCitas={setCitas}
+            onCerrarSesion={() => setActiveRole('cliente')}
           />
         )}
       </main>
-
-      <LoginModal 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
-        targetRole={targetRole}
-        adminCredentials={adminCredentials}
-        onLoginSuccess={(grantedRole) => {
-          setActiveRole(grantedRole);
-          setActiveTab('admin');
-        }} 
-      />
     </div>
   );
 }
-
-export default App;
