@@ -24,9 +24,9 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
     '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM'
   ];
 
-  // URL actual para generar el gráfico QR escaneable
+  // URL para generar el Código QR visual mediante API externa gratuita
   const urlActual = typeof window !== 'undefined' ? window.location.href : 'https://gol-cut-barber.vercel.app';
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(urlActual)}&color=d4af37&bgcolor=1a1a1a`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(urlActual)}&color=000000&bgcolor=ffffff`;
 
   const handleSubmitCita = (e) => {
     e.preventDefault();
@@ -100,7 +100,7 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
             modo === 'expreso' ? 'bg-[#d4af37] text-black shadow-md' : 'text-gray-400 hover:text-white'
           }`}
         >
-          <Zap className="w-4 h-4" /> Sin Cita (Código QR)
+          <Zap className="w-4 h-4" /> Sin Cita (Registro QR Expreso)
         </button>
       </div>
 
@@ -109,13 +109,13 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
           {modo === 'cita' ? (
             <> <Calendar className="w-5 h-5" /> Reservar Cita con Anticipación </>
           ) : (
-            <> <QrCode className="w-5 h-5 text-[#d4af37]" /> Registro Expreso con Código QR </>
+            <> <QrCode className="w-5 h-5 text-[#d4af37]" /> Registro Rápido en la Barbería </>
           )}
         </h2>
         <p className="text-xs text-gray-400 mt-1">
           {modo === 'cita' 
             ? 'Selecciona tu barbero, servicio y hora de preferencia' 
-            : 'Escanea el QR o completa los datos rápidamente en el local'}
+            : 'Si estás en el local sin cita previa, escanea el QR o registra tu corte aquí'}
         </p>
       </div>
 
@@ -210,34 +210,30 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
         </form>
       )}
 
-      {/* MODO 2: MOSTRAR CÓDIGO QR Y FORMULARIO EXPRESO */}
+      {/* MODO 2: CÓDIGO QR VISUAL + FORMULARIO EXPRESO */}
       {modo === 'expreso' && (
         <div className="space-y-6">
-          {/* Tarjeta Visual del Código QR escaneable */}
-          <div className="bg-[#1a1a1a] border border-[#d4af37]/40 p-6 rounded-2xl text-center space-y-3">
-            <div className="inline-block p-3 bg-white rounded-xl shadow-xl border-2 border-[#d4af37]">
+          {/* Tarjeta Visual con la imagen del Código QR escaneable */}
+          <div className="bg-[#1a1a1a] border border-[#d4af37]/40 p-5 rounded-2xl text-center space-y-3">
+            <div className="inline-block p-3 bg-white rounded-2xl shadow-2xl border-2 border-[#d4af37]">
               <img 
                 src={qrImageUrl} 
                 alt="Código QR Gol Cut Barber" 
-                className="w-44 h-44 mx-auto block"
+                className="w-40 h-40 mx-auto block"
               />
             </div>
             <div className="space-y-1">
               <p className="text-xs font-bold text-[#d4af37] flex items-center justify-center gap-1 uppercase tracking-wider">
-                <Smartphone className="w-4 h-4" /> Escanea desde tu Móvil
+                <Smartphone className="w-4 h-4 text-[#d4af37]" /> Escanea el código desde tu Celular
               </p>
               <p className="text-[11px] text-gray-400">
-                Pide al cliente que apunte con la cámara de su celular a este código para registrar su corte al instante.
+                Pide al cliente que escanee este código en el local para abrir esta pantalla en su teléfono.
               </p>
             </div>
           </div>
 
-          {/* Formulario de registro rápido en pantalla */}
-          <form onSubmit={handleSubmitExpreso} className="space-y-4 text-xs bg-[#1a1a1a]/50 p-4 rounded-xl border border-gray-800">
-            <h3 className="text-xs font-bold text-[#d4af37] uppercase border-b border-gray-800 pb-2">
-              O registra el corte manualmente aquí:
-            </h3>
-
+          {/* Formulario de registro directo */}
+          <form onSubmit={handleSubmitExpreso} className="space-y-4 text-xs">
             <div>
               <label className="block font-semibold text-gray-300 uppercase mb-1">Barbero que te atiende</label>
               <select
@@ -274,12 +270,12 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
             </div>
 
             <div>
-              <label className="block font-semibold text-gray-300 uppercase mb-1">Nombre del Cliente (Opcional)</label>
+              <label className="block font-semibold text-gray-300 uppercase mb-1">Tu Nombre (Opcional)</label>
               <div className="relative">
                 <User className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
                 <input
                   type="text"
-                  placeholder="Ej: Carlos (O puedes dejarlo en blanco)"
+                  placeholder="Ej: Carlos (O puedes dejar en blanco)"
                   value={clienteExpreso}
                   onChange={(e) => setClienteExpreso(e.target.value)}
                   className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
@@ -291,7 +287,7 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
               type="submit"
               className="w-full bg-[#d4af37] hover:bg-[#b89628] text-black font-bold py-3 rounded-xl transition-all text-xs uppercase shadow-lg mt-2 flex items-center justify-center gap-2"
             >
-              <Zap className="w-4 h-4 fill-black" /> Confirmar y Guardar Registro Expreso
+              <Zap className="w-4 h-4 fill-black" /> Registrar Corte Expreso
             </button>
           </form>
         </div>
