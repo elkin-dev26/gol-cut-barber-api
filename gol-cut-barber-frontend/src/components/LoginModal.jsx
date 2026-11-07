@@ -9,27 +9,30 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Evita que la página se recargue y borre el estado
+    e.stopPropagation();
     setError('');
+
+    const userClean = usuario.trim().toLowerCase();
 
     // Validación según el perfil seleccionado
     if (targetRole === 'demo') {
-      if (usuario.trim().toLowerCase() === 'demo' && clave === 'demo123') {
+      if (userClean === 'demo' && clave === 'demo123') {
         onLoginSuccess('demo');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Credenciales de Perfil Demo incorrectas (Usuario: demo / Clave: demo123)');
+        setError('Usuario o clave incorrectos para Demo (Usar: demo / demo123)');
       }
     } else if (targetRole === 'admin') {
-      if (usuario.trim().toLowerCase() === 'admin' && clave === 'admin123') {
+      if (userClean === 'admin' && clave === 'admin123') {
         onLoginSuccess('admin');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Credenciales de Administrador incorrectas (Usuario: admin / Clave: admin123)');
+        setError('Usuario o clave incorrectos para Admin (Usar: admin / admin123)');
       }
     } else if (targetRole === 'superadmin') {
       if (usuario.trim() === 'elkin-dev26' && clave === 'elkin2026') {
@@ -38,7 +41,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
         setUsuario('');
         setClave('');
       } else {
-        setError('Acceso denegado. Credenciales de Desarrollador no válidas.');
+        setError('Credenciales de Desarrollador no válidas.');
       }
     }
   };
@@ -53,6 +56,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-[#262626] border border-[#d4af37]/40 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-6 relative">
         <button
+          type="button"
           onClick={onClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-white transition-all"
         >
@@ -64,7 +68,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
             <Lock className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-bold text-white">{getTitle()}</h3>
-          <p className="text-xs text-gray-400">Ingresa tus credenciales para ingresar</p>
+          <p className="text-xs text-gray-400">Ingresa tus credenciales autorizadas</p>
         </div>
 
         {error && (
