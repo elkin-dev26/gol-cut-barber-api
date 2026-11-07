@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, Key, X, ShieldAlert } from 'lucide-react';
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole, adminCredentials }) {
   const [user, setUser] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,14 +11,24 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const handleLogin = (e) => {
     e.preventDefault();
     
-    // Credenciales de Administrador Local y Desarrollador (SuperAdmin)
-    if ((user === 'admin' && password === '123456') || (user === 'elkin-dev26' && password === 'Dev2026*')) {
-      const isSuperAdmin = user === 'elkin-dev26';
-      onLoginSuccess(isSuperAdmin);
+    if (targetRole === 'superadmin' && user === 'elkin-dev26' && password === 'Dev2026*') {
+      onLoginSuccess('superadmin');
+      setError('');
+      onClose();
+    } else if (
+      targetRole === 'admin' && 
+      user === adminCredentials.usuario && 
+      password === adminCredentials.clave
+    ) {
+      onLoginSuccess('admin');
       setError('');
       onClose();
     } else {
-      setError('Credenciales inválidas. Usa (admin / 123456) o tu usuario Dev (elkin-dev26 / Dev2026*).');
+      setError(
+        targetRole === 'superadmin'
+          ? 'Credenciales SuperAdmin incorrectas (elkin-dev26 / Dev2026*)'
+          : `Credenciales incorrectas. Usa (${adminCredentials.usuario} / ${adminCredentials.clave})`
+      );
     }
   };
 
@@ -34,8 +44,10 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
             <Lock className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-[#d4af37]">Acceso Seguro al Sistema</h3>
-            <p className="text-xs text-gray-400">Autenticación por Token JWT / Roles</p>
+            <h3 className="text-xl font-bold text-[#d4af37]">
+              {targetRole === 'superadmin' ? 'Acceso SuperAdmin / Dev' : 'Acceso Administrador'}
+            </h3>
+            <p className="text-xs text-gray-400">Ingresa tus credenciales requeridas</p>
           </div>
         </div>
 
@@ -48,13 +60,13 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase mb-1">Usuario / ID de Acceso</label>
+            <label className="block text-xs font-semibold text-gray-300 uppercase mb-1">Usuario ID</label>
             <div className="relative">
               <User className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
               <input
                 type="text"
                 required
-                placeholder="Ej: admin o elkin-dev26"
+                placeholder={targetRole === 'superadmin' ? 'elkin-dev26' : adminCredentials.usuario}
                 value={user}
                 onChange={(e) => setUser(e.target.value)}
                 className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white outline-none"
@@ -81,7 +93,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
             type="submit"
             className="w-full bg-[#d4af37] hover:bg-[#b89628] text-black font-bold py-3 rounded-lg transition-all text-sm mt-2 shadow-lg"
           >
-            Iniciar Sesión
+            Validar e Iniciar Sesión
           </button>
         </form>
       </div>

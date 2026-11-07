@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  ShieldCheck, Package, Users, Scissors, Store, Plus, Trash2, Edit3, Check, X, UserPlus, Clock, Terminal 
+  ShieldCheck, Package, Users, Scissors, Store, Plus, Trash2, Edit3, Check, X, UserPlus, Clock, Terminal, Save, RotateCcw
 } from 'lucide-react';
 
-export default function AdminView({ config, setConfig, barberos, setBarberos, servicios, setServicios, isSuperAdmin }) {
+export default function AdminView({ config, setConfig, barberos, setBarberos, servicios, setServicios, activeRole }) {
   const [tab, setTab] = useState('citas');
+
+  // Control local del nombre comercial en Ajustes del Negocio
+  const [nombreTemporal, setNombreTemporal] = useState(config.nombreNegocio);
+  const [mensajeGuardado, setMensajeGuardado] = useState(false);
 
   // Citas de prueba
   const [citas, setCitas] = useState([
@@ -22,8 +26,8 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
   // Horarios
   const [horarios, setHorarios] = useState({ apertura: '09:00', cierre: '19:00', dias: 'Lunes a Sábado' });
 
-  // Lista de Admins
-  const [admins] = useState([
+  // Lista de Administradores
+  const [admins, setAdmins] = useState([
     { id: 1, nombre: 'Elkin Ramírez', usuario: 'elkin-dev26', rol: 'SuperAdmin / Programador' },
     { id: 2, nombre: 'Admin Barbershop', usuario: 'admin', rol: 'Administrador Local' }
   ]);
@@ -32,8 +36,9 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
   const [nuevoBarbero, setNuevoBarbero] = useState('');
   const [nuevoServicio, setNuevoServicio] = useState({ nombre: '', precio: '' });
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', stock: '', precio: '' });
+  const [nuevoAdmin, setNuevoAdmin] = useState({ nombre: '', usuario: '', clave: '' });
 
-  // Estados de Edición de Servicios
+  // Edición de Servicios
   const [servicioEditando, setServicioEditando] = useState(null);
   const [datosEdicion, setDatosEdicion] = useState({ nombre: '', precio: '' });
 
@@ -50,7 +55,7 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
   };
   const eliminarBarbero = (id) => setBarberos(barberos.filter(b => b.id !== id));
 
-  // Acciones Servicios (Crear, Editar, Eliminar)
+  // Acciones Servicios
   const agregarServicio = () => {
     if (!nuevoServicio.nombre || !nuevoServicio.precio) return;
     setServicios([...servicios, { id: Date.now(), nombre: nuevoServicio.nombre, precio: parseInt(nuevoServicio.precio) }]);
@@ -73,7 +78,7 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
     setServicios(servicios.filter(s => s.id !== id));
   };
 
-  // Acciones Inventario (Crear, Cambiar Stock, Eliminar)
+  // Acciones Inventario
   const cambiarStock = (id, delta) => {
     setProductos(productos.map(p => p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p));
   };
@@ -93,18 +98,50 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
     setProductos(productos.filter(p => p.id !== id));
   };
 
+  // Acciones Administradores (Crear y Eliminar)
+  const agregarAdmin = () => {
+    if (!nuevoAdmin.nombre || !nuevoAdmin.usuario || !nuevoAdmin.clave) return;
+    setAdmins([
+      ...admins,
+      { id: Date.now(), nombre: nuevoAdmin.nombre, usuario: nuevoAdmin.usuario, rol: 'Administrador Local' }
+    ]);
+    setNuevoAdmin({ nombre: '', usuario: '', clave: '' });
+  };
+
+  const eliminarAdmin = (id) => {
+    setAdmins(admins.filter(a => a.id !== id));
+  };
+
+  // Guardar Ajustes del Negocio
+  const guardarAjustesNegocio = () => {
+    setConfig({ ...config, nombreNegocio: nombreTemporal });
+    setMensajeGuardado(true);
+    setTimeout(() => setMensajeGuardado(false), 3000);
+  };
+
+  const restablecerNombre = () => {
+    const nombreOriginal = 'Peluquería Gol Cut';
+    setNombreTemporal(nombreOriginal);
+    setConfig({ ...config, nombreNegocio: nombreOriginal });
+  };
+
   return (
     <div className="space-y-6">
-      {/* Indicador de Rol */}
-      {isSuperAdmin && (
-        <div className="bg-amber-950/60 border border-[#d4af37] p-3 rounded-xl flex items-center justify-between text-xs text-[#d4af37]">
-          <div className="flex items-center gap-2">
-            <Terminal className="w-4 h-4" />
-            <span className="font-mono font-bold">MODO PROGRAMADOR ACTIVO (SuperAdmin: elkin-dev26)</span>
-          </div>
-          <span className="bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase text-[10px]">Acceso Total Base de Datos</span>
+      {/* Indicador del Perfil Activo */}
+      <div className="bg-[#262626] border border-[#d4af37]/40 p-3 rounded-xl flex items-center justify-between text-xs text-[#d4af37]">
+        <div className="flex items-center gap-2">
+          <Terminal className="w-4 h-4" />
+          <span className="font-mono font-bold">
+            PERFIL ACTIVO: {
+              activeRole === 'superadmin' ? 'SUPERUSUARIO / PROGRAMADOR (elkin-dev26)' :
+              activeRole === 'admin' ? 'ADMINISTRADOR GENERAL (admin)' : 'EVALUACIÓN SENA (Acceso Directo Demo)'
+            }
+          </span>
         </div>
-      )}
+        <span className="bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase text-[10px]">
+          {activeRole === 'superadmin' ? 'Control Total Base Datos' : activeRole === 'admin' ? 'Gestión Negocio' : 'Modo Demostración SENA'}
+        </span>
+      </div>
 
       {/* Sub-navegación del Administrador */}
       <div className="flex flex-wrap gap-2 bg-[#262626] p-2 rounded-xl border border-gray-800">
@@ -217,7 +254,6 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
       {tab === 'servicios' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Catálogo de Cortes y Tarifas</h3>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <input
               type="text"
@@ -237,7 +273,6 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
               <Plus className="w-4 h-4" /> Agregar Servicio
             </button>
           </div>
-
           <div className="divide-y divide-gray-800 mt-4">
             {servicios.map((s) => (
               <div key={s.id} className="py-3 flex justify-between items-center gap-4">
@@ -262,31 +297,17 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
                     <span className="text-sm font-bold text-[#d4af37]">${s.precio?.toLocaleString()}</span>
                   </>
                 )}
-
                 <div className="flex items-center gap-2">
                   {servicioEditando === s.id ? (
-                    <button
-                      onClick={() => guardarEdicionServicio(s.id)}
-                      className="p-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded"
-                      title="Guardar Cambios"
-                    >
+                    <button onClick={() => guardarEdicionServicio(s.id)} className="p-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded">
                       <Check className="w-4 h-4" />
                     </button>
                   ) : (
-                    <button
-                      onClick={() => iniciarEdicionServicio(s)}
-                      className="p-1.5 bg-gray-800 hover:bg-gray-700 text-[#d4af37] rounded"
-                      title="Editar Servicio"
-                    >
+                    <button onClick={() => iniciarEdicionServicio(s)} className="p-1.5 bg-gray-800 hover:bg-gray-700 text-[#d4af37] rounded">
                       <Edit3 className="w-4 h-4" />
                     </button>
                   )}
-
-                  <button
-                    onClick={() => eliminarServicio(s.id)}
-                    className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded border border-rose-800"
-                    title="Eliminar Servicio"
-                  >
+                  <button onClick={() => eliminarServicio(s.id)} className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded border border-rose-800">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -296,11 +317,10 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
         </div>
       )}
 
-      {/* 4. INVENTARIO (CON BOTÓN DE ELIMINAR EN CADA TARJETA) */}
+      {/* 4. INVENTARIO */}
       {tab === 'inventario' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Inventario de Productos y Stock</h3>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <input
               type="text"
@@ -320,7 +340,6 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
               <Plus className="w-4 h-4" /> Guardar Producto
             </button>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             {productos.map(p => (
               <div key={p.id} className="bg-[#1a1a1a] border border-gray-800 p-4 rounded-lg flex flex-col justify-between relative group">
@@ -329,16 +348,10 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
                     <p className="font-semibold text-white text-sm pr-6">{p.nombre}</p>
                     <p className="text-xs text-[#d4af37] font-bold mt-1">${p.precio.toLocaleString()}</p>
                   </div>
-                  {/* Botón Eliminar Producto */}
-                  <button 
-                    onClick={() => eliminarProducto(p.id)}
-                    className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-950/50 rounded transition-all"
-                    title="Eliminar del inventario"
-                  >
+                  <button onClick={() => eliminarProducto(p.id)} className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-950/50 rounded transition-all">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-800">
                   <span className="text-xs text-gray-400">Stock:</span>
                   <div className="flex items-center gap-2">
@@ -389,38 +402,100 @@ export default function AdminView({ config, setConfig, barberos, setBarberos, se
         </div>
       )}
 
-      {/* 6. USUARIOS Y ROLES */}
+      {/* 6. USUARIOS ADMINISTRADORES (CREAR Y ELIMINAR) */}
       {tab === 'usuarios' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
-          <h3 className="text-lg font-bold text-[#d4af37]">Usuarios Administradores</h3>
-          <div className="divide-y divide-gray-800">
+          <h3 className="text-lg font-bold text-[#d4af37]">Registro de Usuarios Administradores</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <input
+              type="text"
+              placeholder="Nombre Completo"
+              value={nuevoAdmin.nombre}
+              onChange={(e) => setNuevoAdmin({ ...nuevoAdmin, nombre: e.target.value })}
+              className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
+            />
+            <input
+              type="text"
+              placeholder="Usuario ID (para login)"
+              value={nuevoAdmin.usuario}
+              onChange={(e) => setNuevoAdmin({ ...nuevoAdmin, usuario: e.target.value })}
+              className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
+            />
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={nuevoAdmin.clave}
+              onChange={(e) => setNuevoAdmin({ ...nuevoAdmin, clave: e.target.value })}
+              className="bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
+            />
+          </div>
+          <button onClick={agregarAdmin} className="bg-[#d4af37] text-black px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-1">
+            <UserPlus className="w-4 h-4" /> Registrar Nuevo Administrador
+          </button>
+
+          <div className="divide-y divide-gray-800 mt-4">
             {admins.map(a => (
               <div key={a.id} className="py-3 flex justify-between items-center text-xs">
                 <div>
                   <p className="text-white font-medium text-sm">{a.nombre}</p>
-                  <p className="text-gray-400">@{a.usuario}</p>
+                  <p className="text-gray-400">Usuario: <span className="text-[#d4af37]">@{a.usuario}</span></p>
                 </div>
-                <span className="bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 px-3 py-1 rounded font-semibold">
-                  {a.rol}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 px-3 py-1 rounded font-semibold">
+                    {a.rol}
+                  </span>
+                  {a.usuario !== 'elkin-dev26' && (
+                    <button 
+                      onClick={() => eliminarAdmin(a.id)} 
+                      className="text-rose-400 hover:text-rose-300 p-1.5 bg-rose-950/40 hover:bg-rose-900/60 rounded border border-rose-800 transition-all"
+                      title="Eliminar usuario administrador"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 7. CONFIGURACIÓN GENERAL */}
+      {/* 7. AJUSTES DEL NEGOCIO */}
       {tab === 'config' && (
         <div className="bg-[#262626] border border-[#d4af37]/30 p-6 rounded-xl space-y-4">
           <h3 className="text-lg font-bold text-[#d4af37]">Ajustes del Establecimiento</h3>
+          
+          {mensajeGuardado && (
+            <div className="p-3 bg-emerald-900/60 border border-emerald-500 text-emerald-300 text-xs rounded-lg flex items-center gap-2">
+              <Check className="w-4 h-4 shrink-0" />
+              <span>¡Nombre comercial actualizado con éxito en la plataforma!</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs text-gray-400 mb-1">Nombre Comercial de la Barbería</label>
             <input
               type="text"
-              value={config.nombreNegocio}
-              onChange={(e) => setConfig({ ...config, nombreNegocio: e.target.value })}
-              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-bold"
+              value={nombreTemporal}
+              onChange={(e) => setNombreTemporal(e.target.value)}
+              className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg px-3 py-2 text-sm text-white font-bold outline-none"
             />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={guardarAjustesNegocio}
+              className="bg-[#d4af37] hover:bg-[#b89628] text-black font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md"
+            >
+              <Save className="w-4 h-4" /> Guardar Cambios
+            </button>
+            <button
+              onClick={restablecerNombre}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all"
+            >
+              <RotateCcw className="w-4 h-4" /> Restablecer Nombre
+            </button>
           </div>
         </div>
       )}
