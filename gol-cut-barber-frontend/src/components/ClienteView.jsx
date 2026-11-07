@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Calendar, Scissors, CheckCircle, Clock, User, QrCode, Zap } from 'lucide-react';
+import { Calendar, Scissors, CheckCircle, Clock, User, QrCode, Zap, Smartphone } from 'lucide-react';
 
 export default function ClienteView({ barberos = [], servicios = [], onAgregarCita }) {
-  const [modo, setModo] = useState('cita'); // 'cita' o 'expreso'
+  const [modo, setModo] = useState('cita');
 
   // Formulario Agendar Cita
   const [cliente, setCliente] = useState('');
@@ -23,6 +23,10 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
     '12:00 PM', '12:30 PM', '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
     '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM'
   ];
+
+  // URL actual para generar el gráfico QR escaneable
+  const urlActual = typeof window !== 'undefined' ? window.location.href : 'https://gol-cut-barber.vercel.app';
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(urlActual)}&color=d4af37&bgcolor=1a1a1a`;
 
   const handleSubmitCita = (e) => {
     e.preventDefault();
@@ -96,7 +100,7 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
             modo === 'expreso' ? 'bg-[#d4af37] text-black shadow-md' : 'text-gray-400 hover:text-white'
           }`}
         >
-          <Zap className="w-4 h-4" /> Sin Cita (Registro QR Expreso)
+          <Zap className="w-4 h-4" /> Sin Cita (Código QR)
         </button>
       </div>
 
@@ -105,13 +109,13 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
           {modo === 'cita' ? (
             <> <Calendar className="w-5 h-5" /> Reservar Cita con Anticipación </>
           ) : (
-            <> <QrCode className="w-5 h-5 text-[#d4af37]" /> Registro Rápido en la Barbería </>
+            <> <QrCode className="w-5 h-5 text-[#d4af37]" /> Registro Expreso con Código QR </>
           )}
         </h2>
         <p className="text-xs text-gray-400 mt-1">
           {modo === 'cita' 
             ? 'Selecciona tu barbero, servicio y hora de preferencia' 
-            : 'Si estás en el local sin cita previa, registra tu corte aquí en 15 segundos'}
+            : 'Escanea el QR o completa los datos rápidamente en el local'}
         </p>
       </div>
 
@@ -125,7 +129,7 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
         </div>
       )}
 
-      {/* VISTA 1: CITA PROGRAMADA */}
+      {/* MODO 1: CITA PROGRAMADA */}
       {modo === 'cita' && (
         <form onSubmit={handleSubmitCita} className="space-y-4 text-xs">
           <div>
@@ -206,65 +210,91 @@ export default function ClienteView({ barberos = [], servicios = [], onAgregarCi
         </form>
       )}
 
-      {/* VISTA 2: REGISTRO QR EXPRESO (SIN CITA) */}
+      {/* MODO 2: MOSTRAR CÓDIGO QR Y FORMULARIO EXPRESO */}
       {modo === 'expreso' && (
-        <form onSubmit={handleSubmitExpreso} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-gray-300 uppercase mb-1">Barbero que te atiende</label>
-            <select
-              required
-              value={barberoExpreso}
-              onChange={(e) => setBarberoExpreso(e.target.value)}
-              className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg px-3 py-2 text-white outline-none font-medium"
-            >
-              <option value="">-- Selecciona el Barbero --</option>
-              {barberos.map((b) => (
-                <option key={b.id} value={b.nombre}>{b.nombre}</option>
-              ))}
-            </select>
+        <div className="space-y-6">
+          {/* Tarjeta Visual del Código QR escaneable */}
+          <div className="bg-[#1a1a1a] border border-[#d4af37]/40 p-6 rounded-2xl text-center space-y-3">
+            <div className="inline-block p-3 bg-white rounded-xl shadow-xl border-2 border-[#d4af37]">
+              <img 
+                src={qrImageUrl} 
+                alt="Código QR Gol Cut Barber" 
+                className="w-44 h-44 mx-auto block"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-[#d4af37] flex items-center justify-center gap-1 uppercase tracking-wider">
+                <Smartphone className="w-4 h-4" /> Escanea desde tu Móvil
+              </p>
+              <p className="text-[11px] text-gray-400">
+                Pide al cliente que apunte con la cámara de su celular a este código para registrar su corte al instante.
+              </p>
+            </div>
           </div>
 
-          <div>
-            <label className="block font-semibold text-gray-300 uppercase mb-1">Servicio Realizado</label>
-            <div className="relative">
-              <Scissors className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
+          {/* Formulario de registro rápido en pantalla */}
+          <form onSubmit={handleSubmitExpreso} className="space-y-4 text-xs bg-[#1a1a1a]/50 p-4 rounded-xl border border-gray-800">
+            <h3 className="text-xs font-bold text-[#d4af37] uppercase border-b border-gray-800 pb-2">
+              O registra el corte manualmente aquí:
+            </h3>
+
+            <div>
+              <label className="block font-semibold text-gray-300 uppercase mb-1">Barbero que te atiende</label>
               <select
                 required
-                value={servicioExpreso}
-                onChange={(e) => setServicioExpreso(e.target.value)}
-                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
+                value={barberoExpreso}
+                onChange={(e) => setBarberoExpreso(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg px-3 py-2 text-white outline-none font-medium"
               >
-                <option value="">-- Seleccionar Servicio --</option>
-                {servicios.map((s) => (
-                  <option key={s.id} value={s.nombre}>
-                    {s.nombre} (${s.precio?.toLocaleString()})
-                  </option>
+                <option value="">-- Selecciona el Barbero --</option>
+                {barberos.map((b) => (
+                  <option key={b.id} value={b.nombre}>{b.nombre}</option>
                 ))}
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="block font-semibold text-gray-300 uppercase mb-1">Tu Nombre (Opcional)</label>
-            <div className="relative">
-              <User className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Ej: Carlos (O puedes dejarlo en blanco)"
-                value={clienteExpreso}
-                onChange={(e) => setClienteExpreso(e.target.value)}
-                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
-              />
+            <div>
+              <label className="block font-semibold text-gray-300 uppercase mb-1">Servicio Realizado</label>
+              <div className="relative">
+                <Scissors className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
+                <select
+                  required
+                  value={servicioExpreso}
+                  onChange={(e) => setServicioExpreso(e.target.value)}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
+                >
+                  <option value="">-- Seleccionar Servicio --</option>
+                  {servicios.map((s) => (
+                    <option key={s.id} value={s.nombre}>
+                      {s.nombre} (${s.precio?.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            className="w-full bg-[#d4af37] hover:bg-[#b89628] text-black font-bold py-3 rounded-xl transition-all text-xs uppercase shadow-lg mt-2 flex items-center justify-center gap-2"
-          >
-            <Zap className="w-4 h-4 fill-black" /> Registrar Corte Expreso
-          </button>
-        </form>
+            <div>
+              <label className="block font-semibold text-gray-300 uppercase mb-1">Nombre del Cliente (Opcional)</label>
+              <div className="relative">
+                <User className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Ej: Carlos (O puedes dejarlo en blanco)"
+                  value={clienteExpreso}
+                  onChange={(e) => setClienteExpreso(e.target.value)}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-[#d4af37] hover:bg-[#b89628] text-black font-bold py-3 rounded-xl transition-all text-xs uppercase shadow-lg mt-2 flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4 fill-black" /> Confirmar y Guardar Registro Expreso
+            </button>
+          </form>
+        </div>
       )}
     </div>
   );
