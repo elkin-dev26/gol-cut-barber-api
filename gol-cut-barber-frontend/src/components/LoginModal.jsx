@@ -1,99 +1,114 @@
 import React, { useState } from 'react';
-import { Lock, User, Key, X, ShieldAlert } from 'lucide-react';
+import { Lock, User, Key, X, AlertCircle } from 'lucide-react';
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole, adminCredentials }) {
-  const [user, setUser] = useState('');
-  const [password, setPassword] = useState('');
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole }) {
+  const [usuario, setUsuario] = useState('');
+  const [clave, setClave] = useState('');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleLogin = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (targetRole === 'superadmin' && user === 'elkin-dev26' && password === 'Dev2026*') {
-      onLoginSuccess('superadmin');
-      setError('');
-      onClose();
-    } else if (
-      targetRole === 'admin' && 
-      user === adminCredentials.usuario && 
-      password === adminCredentials.clave
-    ) {
-      onLoginSuccess('admin');
-      setError('');
-      onClose();
-    } else {
-      setError(
-        targetRole === 'superadmin'
-          ? 'Credenciales SuperAdmin incorrectas (elkin-dev26 / Dev2026*)'
-          : `Credenciales incorrectas. Usa (${adminCredentials.usuario} / ${adminCredentials.clave})`
-      );
+    setError('');
+
+    if (targetRole === 'demo') {
+      if (usuario === 'demo' && clave === 'demo123') {
+        onLoginSuccess('demo');
+        onClose();
+        setUsuario('');
+        setClave('');
+      } else {
+        setError('Usuario o contraseña incorrectos para el Perfil Evaluación/Demo.');
+      }
+    } else if (targetRole === 'admin') {
+      if (usuario === 'admin' && clave === 'admin123') {
+        onLoginSuccess('admin');
+        onClose();
+        setUsuario('');
+        setClave('');
+      } else {
+        setError('Credenciales de Administrador incorrectas.');
+      }
+    } else if (targetRole === 'superadmin') {
+      if (usuario === 'elkin-dev26' && clave === 'elkin2026') {
+        onLoginSuccess('superadmin');
+        onClose();
+        setUsuario('');
+        setClave('');
+      } else {
+        setError('Acceso denegado. Credenciales de Desarrollador no válidas.');
+      }
     }
+  };
+
+  const getTitle = () => {
+    if (targetRole === 'demo') return 'Acceso a Perfil Evaluación / Demo';
+    if (targetRole === 'admin') return 'Acceso a Administrador Local';
+    return 'Acceso a Perfil Desarrollador (elkin-dev26)';
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-[#262626] border border-[#d4af37]/40 w-full max-w-md rounded-xl p-6 shadow-2xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+      <div className="bg-[#262626] border border-[#d4af37]/40 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-white transition-all"
+        >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-[#d4af37] p-2 rounded-lg text-black">
+        <div className="text-center space-y-1">
+          <div className="w-12 h-12 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-full flex items-center justify-center mx-auto mb-2 text-[#d4af37]">
             <Lock className="w-6 h-6" />
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-[#d4af37]">
-              {targetRole === 'superadmin' ? 'Acceso SuperAdmin / Dev' : 'Acceso Administrador'}
-            </h3>
-            <p className="text-xs text-gray-400">Ingresa tus credenciales requeridas</p>
-          </div>
+          <h3 className="text-lg font-bold text-white">{getTitle()}</h3>
+          <p className="text-xs text-gray-400">Ingresa tus credenciales autorizadas para continuar</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-rose-900/50 border border-rose-500 text-rose-200 text-xs rounded-lg flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 shrink-0" />
+          <div className="p-3 bg-rose-950/60 border border-rose-800 text-rose-300 text-xs rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase mb-1">Usuario ID</label>
+            <label className="block text-gray-300 uppercase font-semibold mb-1">Usuario</label>
             <div className="relative">
-              <User className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
+              <User className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
               <input
                 type="text"
                 required
-                placeholder={targetRole === 'superadmin' ? 'elkin-dev26' : adminCredentials.usuario}
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white outline-none"
+                placeholder="Ingresa tu usuario"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase mb-1">Contraseña</label>
+            <label className="block text-gray-300 uppercase font-semibold mb-1">Contraseña</label>
             <div className="relative">
-              <Key className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
+              <Key className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
               <input
                 type="password"
                 required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white outline-none"
+                placeholder="Ingresa tu contraseña"
+                value={clave}
+                onChange={(e) => setClave(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-gray-700 focus:border-[#d4af37] rounded-lg pl-9 pr-3 py-2 text-white outline-none"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#d4af37] hover:bg-[#b89628] text-black font-bold py-3 rounded-lg transition-all text-sm mt-2 shadow-lg"
+            className="w-full bg-[#d4af37] hover:bg-[#b89628] text-black font-bold py-2.5 rounded-lg transition-all text-xs uppercase shadow-md mt-2"
           >
-            Validar e Iniciar Sesión
+            Iniciar Sesión
           </button>
         </form>
       </div>
