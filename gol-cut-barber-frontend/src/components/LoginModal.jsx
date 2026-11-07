@@ -14,7 +14,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
 
     const userClean = usuario.trim().toLowerCase();
 
-    // 1. PERFIL EVALUACIÓN / AUDITORÍA (SENA)
     if (targetRole === 'demo-sena') {
       if (userClean === 'demo-sena' && clave === 'sena2026') {
         onLoginSuccess('demo-sena');
@@ -24,9 +23,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
       } else {
         setError('Credenciales incorrectas para Perfil Evaluación.');
       }
-    } 
-    // 2. PERFIL DEMOSTRACIÓN / SUCURSAL (CLIENTES)
-    else if (targetRole === 'demo-cliente') {
+    } else if (targetRole === 'demo-cliente') {
       if (userClean === 'demo-cliente' && clave === 'demo2026') {
         onLoginSuccess('demo-cliente');
         onClose();
@@ -35,9 +32,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
       } else {
         setError('Credenciales incorrectas para Perfil Demostración.');
       }
-    } 
-    // 3. ADMINISTRADOR LOCAL
-    else if (targetRole === 'admin') {
+    } else if (targetRole === 'admin') {
       if (userClean === 'admin' && clave === 'admin123') {
         onLoginSuccess('admin');
         onClose();
@@ -46,16 +41,14 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
       } else {
         setError('Credenciales Admin incorrectas.');
       }
-    } 
-    // 4. DESARROLLADOR / MASTER
-    else if (targetRole === 'superadmin') {
+    } else if (targetRole === 'superadmin') {
       if (usuario.trim() === 'elkin-dev26' && clave === 'elkin2026') {
         onLoginSuccess('superadmin');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Acceso denegado. Credenciales no válidas.');
+        setError('Acceso denegado. Credenciales de Desarrollador no válidas.');
       }
     }
   };

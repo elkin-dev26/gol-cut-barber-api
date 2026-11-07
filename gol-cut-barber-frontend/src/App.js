@@ -61,7 +61,7 @@ export default function App() {
           />
         )}
 
-        {(activeRole === 'admin' || activeRole === 'superadmin' || activeRole === 'demo') && (
+        {(activeRole === 'admin' || activeRole === 'superadmin' || activeRole === 'demo-sena' || activeRole === 'demo-cliente') && (
           <AdminView
             config={config}
             setConfig={setConfig}
