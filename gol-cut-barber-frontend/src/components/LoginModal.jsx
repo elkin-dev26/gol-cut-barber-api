@@ -10,29 +10,35 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setError('');
 
     const userClean = usuario.trim().toLowerCase();
 
-    if (targetRole === 'demo-sena') {
-      if (userClean === 'demo-sena' && clave === 'sena2026') {
-        onLoginSuccess('demo-sena');
+    // 1. PERFIL EVALUACIÓN / DEMO
+    if (targetRole === 'demo' || targetRole === 'demo-sena') {
+      if ((userClean === 'demo' && clave === 'demo123') || (userClean === 'demo-sena' && clave === 'sena2026')) {
+        onLoginSuccess('demo');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Credenciales incorrectas para Perfil Evaluación.');
+        setError('Credenciales incorrectas para el Perfil Evaluación/Demo.');
       }
-    } else if (targetRole === 'demo-cliente') {
+    } 
+    // 2. DEMO COMERCIAL / SUCURSAL
+    else if (targetRole === 'demo-cliente') {
       if (userClean === 'demo-cliente' && clave === 'demo2026') {
-        onLoginSuccess('demo-cliente');
+        onLoginSuccess('demo');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Credenciales incorrectas para Perfil Demostración.');
+        setError('Credenciales incorrectas para el Perfil Demostración.');
       }
-    } else if (targetRole === 'admin') {
+    } 
+    // 3. ADMINISTRADOR LOCAL
+    else if (targetRole === 'admin') {
       if (userClean === 'admin' && clave === 'admin123') {
         onLoginSuccess('admin');
         onClose();
@@ -41,23 +47,18 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
       } else {
         setError('Credenciales Admin incorrectas.');
       }
-    } else if (targetRole === 'superadmin') {
+    } 
+    // 4. DESARROLLADOR / MASTER
+    else if (targetRole === 'superadmin') {
       if (usuario.trim() === 'elkin-dev26' && clave === 'elkin2026') {
         onLoginSuccess('superadmin');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Acceso denegado. Credenciales de Desarrollador no válidas.');
+        setError('Credenciales de Desarrollador no válidas.');
       }
     }
-  };
-
-  const getTitle = () => {
-    if (targetRole === 'demo-sena') return 'Acceso a Perfil Evaluación';
-    if (targetRole === 'demo-cliente') return 'Acceso a Perfil Demostración';
-    if (targetRole === 'admin') return 'Acceso a Administrador Local';
-    return 'Acceso a Perfil Desarrollador (elkin-dev26)';
   };
 
   return (
@@ -75,8 +76,8 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
           <div className="w-12 h-12 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-full flex items-center justify-center mx-auto mb-2 text-[#d4af37]">
             <Lock className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-bold text-white">{getTitle()}</h3>
-          <p className="text-xs text-gray-400">Ingresa tus credenciales autorizadas</p>
+          <h3 className="text-lg font-bold text-white">Acceso a Perfil Autorizado</h3>
+          <p className="text-xs text-gray-400">Ingresa tus credenciales para continuar</p>
         </div>
 
         {error && (

@@ -47,7 +47,7 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
             <span>
               {activeRole === 'superadmin' ? 'SuperAdmin / Dev' :
                activeRole === 'admin' ? 'Administrador Local' :
-               activeRole === 'demo-sena' ? 'Perfil Evaluación' :
+               activeRole === 'demo' || activeRole === 'demo-sena' ? 'Perfil Evaluación' :
                activeRole === 'demo-cliente' ? 'Perfil Demostración' : 'Vista Cliente'}
             </span>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
