@@ -9,45 +9,60 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, targetRole
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
-    e.preventDefault(); // Evita que la página se recargue y borre el estado
-    e.stopPropagation();
+    e.preventDefault();
     setError('');
 
     const userClean = usuario.trim().toLowerCase();
 
-    // Validación según el perfil seleccionado
-    if (targetRole === 'demo') {
-      if (userClean === 'demo' && clave === 'demo123') {
-        onLoginSuccess('demo');
+    // 1. PERFIL EVALUACIÓN / AUDITORÍA (SENA)
+    if (targetRole === 'demo-sena') {
+      if (userClean === 'demo-sena' && clave === 'sena2026') {
+        onLoginSuccess('demo-sena');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Usuario o clave incorrectos para Demo (Usar: demo / demo123)');
+        setError('Credenciales incorrectas para Perfil Evaluación.');
       }
-    } else if (targetRole === 'admin') {
+    } 
+    // 2. PERFIL DEMOSTRACIÓN / SUCURSAL (CLIENTES)
+    else if (targetRole === 'demo-cliente') {
+      if (userClean === 'demo-cliente' && clave === 'demo2026') {
+        onLoginSuccess('demo-cliente');
+        onClose();
+        setUsuario('');
+        setClave('');
+      } else {
+        setError('Credenciales incorrectas para Perfil Demostración.');
+      }
+    } 
+    // 3. ADMINISTRADOR LOCAL
+    else if (targetRole === 'admin') {
       if (userClean === 'admin' && clave === 'admin123') {
         onLoginSuccess('admin');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Usuario o clave incorrectos para Admin (Usar: admin / admin123)');
+        setError('Credenciales Admin incorrectas.');
       }
-    } else if (targetRole === 'superadmin') {
+    } 
+    // 4. DESARROLLADOR / MASTER
+    else if (targetRole === 'superadmin') {
       if (usuario.trim() === 'elkin-dev26' && clave === 'elkin2026') {
         onLoginSuccess('superadmin');
         onClose();
         setUsuario('');
         setClave('');
       } else {
-        setError('Credenciales de Desarrollador no válidas.');
+        setError('Acceso denegado. Credenciales no válidas.');
       }
     }
   };
 
   const getTitle = () => {
-    if (targetRole === 'demo') return 'Acceso a Perfil Evaluación / Demo';
+    if (targetRole === 'demo-sena') return 'Acceso a Perfil Evaluación';
+    if (targetRole === 'demo-cliente') return 'Acceso a Perfil Demostración';
     if (targetRole === 'admin') return 'Acceso a Administrador Local';
     return 'Acceso a Perfil Desarrollador (elkin-dev26)';
   };

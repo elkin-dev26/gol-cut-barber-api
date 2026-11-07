@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scissors, ShieldCheck, UserCheck, ChevronDown, User } from 'lucide-react';
+import { Scissors, ShieldCheck, UserCheck, ChevronDown, User, CheckSquare, Store } from 'lucide-react';
 import LoginModal from './LoginModal';
 
 export default function Navbar({ activeRole, setActiveRole, config }) {
@@ -47,13 +47,14 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
             <span>
               {activeRole === 'superadmin' ? 'SuperAdmin / Dev' :
                activeRole === 'admin' ? 'Administrador Local' :
-               activeRole === 'demo' ? 'Perfil Evaluación / Demo' : 'Vista Cliente'}
+               activeRole === 'demo-sena' ? 'Perfil Evaluación' :
+               activeRole === 'demo-cliente' ? 'Perfil Demostración' : 'Vista Cliente'}
             </span>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
           </button>
 
           {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-[#262626] border border-[#d4af37]/30 rounded-xl shadow-2xl py-2 z-50 text-xs">
+            <div className="absolute right-0 mt-2 w-64 bg-[#262626] border border-[#d4af37]/30 rounded-xl shadow-2xl py-2 z-50 text-xs">
               <button
                 type="button"
                 onClick={() => handleRoleSelect('cliente')}
@@ -61,13 +62,23 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
               >
                 <User className="w-4 h-4" /> Reservar Cita (Cliente)
               </button>
+              
               <button
                 type="button"
-                onClick={() => handleRoleSelect('demo')}
+                onClick={() => handleRoleSelect('demo-sena')}
                 className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
               >
-                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Perfil Evaluación / Demo
+                <CheckSquare className="w-4 h-4 text-emerald-400" /> Perfil Evaluación / Auditoría
               </button>
+
+              <button
+                type="button"
+                onClick={() => handleRoleSelect('demo-cliente')}
+                className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
+              >
+                <Store className="w-4 h-4 text-sky-400" /> Perfil Demostración / Sucursal
+              </button>
+
               <button
                 type="button"
                 onClick={() => handleRoleSelect('admin')}
@@ -75,6 +86,7 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
               >
                 <ShieldCheck className="w-4 h-4 text-amber-400" /> Administrador Local
               </button>
+
               <button
                 type="button"
                 onClick={() => handleRoleSelect('superadmin')}
