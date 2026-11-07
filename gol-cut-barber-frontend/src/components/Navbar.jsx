@@ -17,6 +17,11 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
     }
   };
 
+  const handleLoginSuccess = (roleAprobado) => {
+    setActiveRole(roleAprobado);
+    setIsModalOpen(false);
+  };
+
   return (
     <>
       <nav className="bg-[#1a1a1a] border-b border-[#d4af37]/30 px-6 py-4 flex items-center justify-between shadow-xl">
@@ -34,6 +39,7 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
 
         <div className="relative">
           <button
+            type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="bg-[#262626] border border-[#d4af37]/40 text-gray-200 hover:text-[#d4af37] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md"
           >
@@ -49,24 +55,28 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
           {isDropdownOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-[#262626] border border-[#d4af37]/30 rounded-xl shadow-2xl py-2 z-50 text-xs">
               <button
+                type="button"
                 onClick={() => handleRoleSelect('cliente')}
                 className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2"
               >
                 <User className="w-4 h-4" /> Reservar Cita (Cliente)
               </button>
               <button
+                type="button"
                 onClick={() => handleRoleSelect('demo')}
                 className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-400" /> Perfil Evaluación / Demo
               </button>
               <button
+                type="button"
                 onClick={() => handleRoleSelect('admin')}
                 className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
               >
                 <ShieldCheck className="w-4 h-4 text-amber-400" /> Administrador Local
               </button>
               <button
+                type="button"
                 onClick={() => handleRoleSelect('superadmin')}
                 className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
               >
@@ -80,7 +90,7 @@ export default function Navbar({ activeRole, setActiveRole, config }) {
       <LoginModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onLoginSuccess={(role) => setActiveRole(role)}
+        onLoginSuccess={handleLoginSuccess}
         targetRole={targetRole}
       />
     </>
