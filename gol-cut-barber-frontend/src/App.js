@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Scissors, User, Lock, LogOut, Calendar, Clock, 
   CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare, Database, PlusSquare
+  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare, Database, PlusSquare, HelpCircle
 } from 'lucide-react';
 
 export default function App() {
@@ -71,9 +71,9 @@ export default function App() {
 
   // Citas / Atenciones Persistentes en Base de Datos Real
   const [citas, setCitas] = useState([
-    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true },
-    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false },
-    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'completada', esCumpleanos: false }
+    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true, motivoCancelacion: null },
+    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false, motivoCancelacion: null },
+    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'confirmada', esCumpleanos: false, motivoCancelacion: null }
   ]);
 
   // Auditoría de Accesos
@@ -392,7 +392,8 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
       hora: modo === 'qr_walkin' ? 'Atención Inmediata (QR)' : hora,
       precio: precioFinal,
       estado: 'confirmada',
-      esCumpleanos: cumple && !!incCumple
+      esCumpleanos: cumple && !!incCumple,
+      motivoCancelacion: null
     };
 
     setCitas([nueva, ...citas]);
@@ -557,11 +558,16 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
   );
 }
 
-{/* VISTA BARBERO */}
+{/* VISTA BARBERO CON CANCELACIÓN JUSTIFICADA */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [esCumpleanosCheck, setEsCumpleanosCheck] = useState(false);
+
+  // Estado para Modal de Cancelación con Justificación
+  const [citaACancelar, setCitaACancelar] = useState(null);
+  const [motivoPreset, setMotivoPreset] = useState('Cliente no asistió a la cita agendada');
+  const [motivoLibre, setMotivoLibre] = useState('');
 
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola')}`;
 
@@ -591,6 +597,28 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado } : c));
   };
 
+  const handleConfirmarCancelacion = (e) => {
+    e.preventDefault();
+    if (!citaACancelar) return;
+
+    const justificacionFinal = motivoPreset === 'Otro motivo...' ? motivoLibre.trim() : motivoPreset;
+
+    if (!justificacionFinal) {
+      alert('Por favor ingrese la justificación de la cancelación para la auditoría administrativa.');
+      return;
+    }
+
+    setCitas(citas.map(c => c.id === citaACancelar.id ? { 
+      ...c, 
+      estado: 'cancelada', 
+      motivoCancelacion: justificacionFinal 
+    } : c));
+
+    setCitaACancelar(null);
+    setMotivoLibre('');
+    setMotivoPreset('Cliente no asistió a la cita agendada');
+  };
+
   const handleCambioServicio = (nombreServ) => {
     setServicioRapido(nombreServ);
     const sObj = servicios.find(s => s.nombre === nombreServ);
@@ -615,7 +643,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       precio: valorFinal,
       estado: 'completada',
-      esCumpleanos: esCumpleanosCheck && !!incCumple
+      esCumpleanos: esCumpleanosCheck && !!incCumple,
+      motivoCancelacion: null
     };
 
     setCitas([nueva, ...citas]);
@@ -698,6 +727,12 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                 </span>
               </div>
 
+              {c.motivoCancelacion && (
+                <div style={{ margin: '6px 0', padding: '6px', backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid #f43f5e', borderRadius: '6px', color: '#fda4af', fontSize: '10px' }}>
+                  <strong>Motivo Cancelación:</strong> {c.motivoCancelacion}
+                </div>
+              )}
+
               {c.esCumpleanos && (
                 <div style={{ margin: '6px 0', padding: '4px 6px', backgroundColor: 'rgba(5, 150, 105, 0.2)', border: '1px solid #059669', borderRadius: '4px', color: '#34d399', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Gift style={{ width: '12px', height: '12px' }} />
@@ -707,7 +742,9 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', borderTop: '1px solid #1e293b', paddingTop: '6px', marginTop: '6px' }}>
                 <span>{c.fecha} - {c.hora}</span>
-                <span style={{ color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</span>
+                <span style={{ color: c.estado === 'cancelada' ? '#f43f5e' : '#34d399', fontWeight: 'bold' }}>
+                  {c.estado === 'cancelada' ? '$0' : `$${(c.precio || 0).toLocaleString()}`}
+                </span>
               </div>
 
               {c.estado !== 'completada' && c.estado !== 'cancelada' && (
@@ -719,10 +756,10 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                     Atendido
                   </button>
                   <button 
-                    onClick={() => handleEstadoCita(c.id, 'cancelada')} 
+                    onClick={() => setCitaACancelar(c)} 
                     style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                   >
-                    No Asistió
+                    Cancelar / No Atendido
                   </button>
                 </div>
               )}
@@ -734,11 +771,81 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           </div>
         )}
       </div>
+
+      {/* MODAL JUSTIFICACIÓN DE CANCELACIÓN */}
+      {citaACancelar && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', maxWidth: '400px', width: '100%', padding: '20px', position: 'relative', boxSizing: 'border-box' }}>
+            <button 
+              onClick={() => setCitaACancelar(null)} 
+              style={{ position: 'absolute', top: '12px', right: '12px', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
+            >
+              ✕
+            </button>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ width: '40px', height: '40px', backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid #f43f5e', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}>
+                <XCircle style={{ width: '22px', height: '22px', color: '#f43f5e' }} />
+              </div>
+              <h3 style={{ margin: 0, color: '#f43f5e', fontSize: '16px', fontWeight: 'bold' }}>Justificar Cancelación de Cita</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                Cliente: <strong>{citaACancelar.cliente}</strong> ({citaACancelar.servicio})
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmarCancelacion} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Seleccione la Causa Principal:</label>
+                <select
+                  value={motivoPreset}
+                  onChange={(e) => setMotivoPreset(e.target.value)}
+                  style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#f8fafc', fontSize: '12px', boxSizing: 'border-box' }}
+                >
+                  <option value="Cliente no asistió a la cita agendada">Cliente no asistió a la cita agendada</option>
+                  <option value="Cliente se retiró del punto físico antes de motilarse">Cliente se retiró del punto físico antes de motilarse</option>
+                  <option value="Cliente canceló vía telefónica / mensaje previamente">Cliente canceló vía telefónica / mensaje previamente</option>
+                  <option value="Demora en tiempo de espera en barbería">Demora en tiempo de espera en barbería</option>
+                  <option value="Otro motivo...">Otro motivo (Escribir a continuación)</option>
+                </select>
+              </div>
+
+              {motivoPreset === 'Otro motivo...' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Detalle el motivo para la administración:</label>
+                  <textarea
+                    rows={3}
+                    value={motivoLibre}
+                    onChange={(e) => setMotivoLibre(e.target.value)}
+                    placeholder="Escriba la razón específica..."
+                    style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#f8fafc', fontSize: '12px', boxSizing: 'border-box', resize: 'none' }}
+                    required
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCitaACancelar(null)}
+                  style={{ flex: 1, backgroundColor: '#334155', color: '#f8fafc', fontWeight: 'bold', padding: '8px', borderRadius: '6px', fontSize: '12px', border: 'none', cursor: 'pointer' }}
+                >
+                  Regresar
+                </button>
+                <button
+                  type="submit"
+                  style={{ flex: 1, backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', fontWeight: 'bold', padding: '8px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  Confirmar Cancelación
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-{/* VISTA ADMIN CON FORMULARIO PARA REGISTRAR INCENTIVOS PROPIOS */}
+{/* VISTA ADMIN CON AUDITORÍA DE MOTIVOS DE CANCELACIÓN */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
@@ -955,8 +1062,8 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
               <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{citas.filter(c => c.estado === 'completada').length}</p>
             </div>
             <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-              <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Descuentos Cumpleaños</span>
-              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#34d399' }}>{citas.filter(c => c.esCumpleanos).length}</p>
+              <span style={{ fontSize: '10px', color: '#f43f5e', fontWeight: 'bold' }}>Citas Canceladas</span>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#f43f5e' }}>{citas.filter(c => c.estado === 'cancelada').length}</p>
             </div>
           </div>
 
@@ -968,8 +1075,9 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                   <th style={{ padding: '6px' }}>Cliente</th>
                   <th style={{ padding: '6px' }}>Barbero</th>
                   <th style={{ padding: '6px' }}>Servicio</th>
+                  <th style={{ padding: '6px' }}>Estado</th>
                   <th style={{ padding: '6px' }}>Caja / Cobro</th>
-                  <th style={{ padding: '6px' }}>Observación Auditoría</th>
+                  <th style={{ padding: '6px' }}>Justificación / Auditoría</th>
                 </tr>
               </thead>
               <tbody>
@@ -978,9 +1086,20 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                     <td style={{ padding: '6px', fontWeight: 'bold', color: '#fff' }}>{c.cliente}</td>
                     <td style={{ padding: '6px' }}>{c.barbero}</td>
                     <td style={{ padding: '6px' }}>{c.servicio}</td>
-                    <td style={{ padding: '6px', color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</td>
                     <td style={{ padding: '6px' }}>
-                      {c.esCumpleanos ? (
+                      <span style={{ color: c.estado === 'completada' ? '#34d399' : c.estado === 'cancelada' ? '#f43f5e' : '#fbbf24', fontWeight: 'bold' }}>
+                        {c.estado}
+                      </span>
+                    </td>
+                    <td style={{ padding: '6px', color: c.estado === 'cancelada' ? '#f43f5e' : '#34d399', fontWeight: 'bold' }}>
+                      {c.estado === 'cancelada' ? '$0' : `$${(c.precio || 0).toLocaleString()}`}
+                    </td>
+                    <td style={{ padding: '6px' }}>
+                      {c.estado === 'cancelada' ? (
+                        <span style={{ color: '#fda4af', backgroundColor: 'rgba(244, 63, 94, 0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px', border: '1px solid rgba(244, 63, 94, 0.4)' }}>
+                          ⚠️ {c.motivoCancelacion || 'Sin motivo registrado'}
+                        </span>
+                      ) : c.esCumpleanos ? (
                         <span style={{ color: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
                           🎁 Descuento Cumpleaños
                         </span>
@@ -998,7 +1117,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
       {tab === 'incentivos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* FORMULARIO PARA CREAR NUEVO INCENTIVO PROPIO */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '12px', boxSizing: 'border-box' }}>
             <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <PlusSquare style={{ width: '16px', height: '16px' }} /> Registrar Nuevo Beneficio o Acuerdos con Barberos
