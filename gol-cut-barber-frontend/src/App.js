@@ -4,20 +4,19 @@ import LoginModal from './components/LoginModal';
 import ClienteView from './components/ClienteView';
 import BarberoView from './components/BarberoView';
 import AdminView from './components/AdminView';
-import SuperAdminView from './components/SuperAdminView';
 
 export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
-  // Estado Multi-Tenant de Barberías (SaaS Temporizado por 1 mes)
-  const [tenants, setTenants] = useState([
+  // Estado Multi-Tenant de Barberías (SaaS Temporizado por 1 mes)[cite: 1]
+  const [tenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, plan: 'Mensual' },
     { id: 't2', nombreBarberia: 'Barbería Demo SENA', dueno: 'Instructor SENA', estadoLicencia: 'Activa', diasRestantes: 30, plan: 'Evaluacion' },
     { id: 't3', nombreBarberia: 'Barbería Demo Cliente', dueno: 'Cliente Comercial', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 15, plan: 'Demo' }
   ]);
 
-  // Barberos con control de cupos y caducidad de contraseña a 90 días (3 meses)
+  // Barberos con control de cupos y caducidad de contraseña a 90 días (3 meses)[cite: 1]
   const [barberos, setBarberos] = useState([
     { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', cupoPago: true, diasClave: 85 },
     { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', cupoPago: true, diasClave: 45 },
@@ -55,13 +54,13 @@ export default function App() {
     }
   ]);
 
-  // Auditoría estricta de ingresos y salidas para el Administrador
+  // Auditoría estricta de ingresos y salidas para el Administrador[cite: 1]
   const [logsSesion, setLogsSesion] = useState([
     { id: 'l1', usuario: 'Elkin Ramírez', rol: 'barbero', fechaHora: '2026-11-08 08:00 AM', evento: 'Ingreso Marcar Turno' },
     { id: 'l2', usuario: 'demo-sena', rol: 'evaluacion', fechaHora: '2026-11-08 09:15 AM', evento: 'Inicio de Sesión Audit' }
   ]);
 
-  // Protección anti-plagio (clic derecho)
+  // Protección anti-plagio (clic derecho)[cite: 1]
   useEffect(() => {
     const handleContextMenu = (e) => e.preventDefault();
     document.addEventListener('contextmenu', handleContextMenu);
@@ -115,7 +114,7 @@ export default function App() {
           />
         )}
 
-        {/* VISTA PROTEGIDA 1: BARBERO */}
+        {/* VISTA PROTEGIDA 1: BARBERO[cite: 1] */}
         {usuarioAutenticado && usuarioAutenticado.role === 'barbero' && (
           <BarberoView 
             barberoActual={usuarioAutenticado}
@@ -126,8 +125,8 @@ export default function App() {
           />
         )}
 
-        {/* VISTA PROTEGIDA 2: ADMINISTRADOR / DEMO SENA / DEMO CLIENTE */}
-        {usuarioAutenticado && ['admin', 'sucursal', 'evaluacion'].includes(usuarioAutenticado.role) && (
+        {/* VISTA PROTEGIDA 2: ADMINISTRADOR / SUPERADMIN / DEMO SENA / DEMO CLIENTE[cite: 1] */}
+        {usuarioAutenticado && ['admin', 'sucursal', 'evaluacion', 'superadmin'].includes(usuarioAutenticado.role) && (
           <AdminView 
             usuario={usuarioAutenticado}
             citas={citas}
@@ -137,20 +136,7 @@ export default function App() {
             servicios={servicios}
             setServicios={setServicios}
             logsSesion={logsSesion}
-          />
-        )}
-
-        {/* VISTA PROTEGIDA 3: DESARROLLADOR / SUPERADMIN */}
-        {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
-          <SuperAdminView 
-            usuario={usuarioAutenticado}
             tenants={tenants}
-            setTenants={setTenants}
-            barberos={barberos}
-            setBarberos={setBarberos}
-            servicios={servicios}
-            setServicios={setServicios}
-            logsSesion={logsSesion}
           />
         )}
       </main>
