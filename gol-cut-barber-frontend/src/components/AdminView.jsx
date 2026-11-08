@@ -4,48 +4,54 @@ import {
   CheckCircle, Plus, Trash2, Shield, Search, Lock, Unlock, History, MessageCircle 
 } from 'lucide-react';
 
-export default function AdminView({ usuario, citas, setCitas, barberos, setBarberos, servicios, setServicios, logsSesion, devConfig }) {
+export default function AdminView({ 
+  usuario = {}, 
+  citas = [], 
+  setCitas = () => {}, 
+  barberos = [], 
+  setBarberos = () => {}, 
+  servicios = [], 
+  setServicios = () => {}, 
+  logsSesion = [], 
+  devConfig = { whatsappSoporte: '573001234567', mensajeRenovacion: 'Hola' } 
+}) {
   const [activeTab, setActiveTab] = useState('resumen');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState('todas');
-
   const [nuevoBarbero, setNuevoBarbero] = useState('');
   const [especialidad, setEspecialidad] = useState('');
 
-  // Extracción ultrasegura con valor de respaldo inmediato
-  const whatsappTarget = (devConfig && devConfig.whatsappSoporte) ? devConfig.whatsappSoporte : '573001234567';
-  const whatsappMessage = (devConfig && devConfig.mensajeRenovacion) ? devConfig.mensajeRenovacion : 'Hola, deseo renovar mi membresia mensual de Gol Cut Barber.';
+  // Valores a prueba de fallos nulos
+  const configSegura = devConfig || { whatsappSoporte: '573001234567', mensajeRenovacion: 'Hola' };
+  const numWhatsapp = configSegura.whatsappSoporte || '573001234567';
+  const msjWhatsapp = configSegura.mensajeRenovacion || 'Hola, deseo renovar mi membresia mensual de Gol Cut Barber.';
 
-  const totalCitas = (citas && Array.isArray(citas)) ? citas.length : 0;
-  const citasCompletadas = (citas && Array.isArray(citas)) ? citas.filter(c => c.estado === 'completada').length : 0;
-  const citasPendientes = (citas && Array.isArray(citas)) ? citas.filter(c => c.estado === 'confirmada' || c.estado === 'pendiente').length : 0;
-  const ingresosTotales = (citas && Array.isArray(citas))
-    ? citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0)
-    : 0;
+  const totalCitas = citas.length;
+  const citasCompletadas = citas.filter(c => c.estado === 'completada').length;
+  const citasPendientes = citas.filter(c => c.estado === 'confirmada' || c.estado === 'pendiente').length;
+  const ingresosTotales = citas
+    .filter(c => c.estado === 'completada')
+    .reduce((sum, c) => sum + (c.precio || 0), 0);
 
   const toggleEstadoBarbero = (id) => {
-    if (setBarberos && barberos) {
-      setBarberos(barberos.map(b => {
-        if (b.id === id) {
-          const nuevoEstado = b.estado === 'Activo' ? 'Inactivo' : 'Activo';
-          return { ...b, estado: nuevoEstado, cupoPago: nuevoEstado === 'Activo' };
-        }
-        return b;
-      }));
-    }
+    setBarberos(barberos.map(b => {
+      if (b.id === id) {
+        const nuevoEstado = b.estado === 'Activo' ? 'Inactivo' : 'Activo';
+        return { ...b, estado: nuevoEstado, cupoPago: nuevoEstado === 'Activo' };
+      }
+      return b;
+    }));
   };
 
   const eliminarBarbero = (id) => {
-    if (setBarberos && barberos) {
-      setBarberos(barberos.filter(b => b.id !== id));
-    }
+    setBarberos(barberos.filter(b => b.id !== id));
   };
 
   const handleAgregarBarbero = (e) => {
     e.preventDefault();
-    if (!nuevoBarbero.trim() || !setBarberos) return;
+    if (!nuevoBarbero.trim()) return;
     setBarberos([
-      ...(barberos || []), 
+      ...barberos, 
       { id: 'b' + Date.now(), nombre: nuevoBarbero, especialidad: especialidad || 'Barbero Profesional', estado: 'Activo', cupoPago: true, diasClave: 90 }
     ]);
     setNuevoBarbero('');
@@ -53,19 +59,17 @@ export default function AdminView({ usuario, citas, setCitas, barberos, setBarbe
   };
 
   const handleAnularCita = (id) => {
-    if (setCitas && citas) {
-      setCitas(citas.map(c => c.id === id ? { ...c, estado: 'cancelada' } : c));
-    }
+    setCitas(citas.map(c => c.id === id ? { ...c, estado: 'cancelada' } : c));
   };
 
-  const citasFiltradas = (citas || []).filter(c => {
+  const citasFiltradas = citas.filter(c => {
     const coincideBusqueda = (c.cliente || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (c.barbero || '').toLowerCase().includes(searchTerm.toLowerCase());
     const coincideEstado = filterEstado === 'todas' || c.estado === filterEstado;
     return coincideBusqueda && coincideEstado;
   });
 
-  const urlWhatsapp = `https://wa.me/${whatsappTarget}?text=${encodeURIComponent(whatsappMessage)}`;
+  const urlWhatsapp = `https://wa.me/${numWhatsapp}?text=${encodeURIComponent(msjWhatsapp)}`;
 
   return (
     <div className="space-y-6">
@@ -182,7 +186,7 @@ export default function AdminView({ usuario, citas, setCitas, barberos, setBarbe
           </form>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(barberos || []).map((b) => (
+            {barberos.map((b) => (
               <div key={b.id} className="bg-slate-900 border border-amber-500/30 p-5 rounded-xl space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
@@ -307,7 +311,7 @@ export default function AdminView({ usuario, citas, setCitas, barberos, setBarbe
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {(logsSesion || []).map((log) => (
+                {logsSesion.map((log) => (
                   <tr key={log.id}>
                     <td className="px-4 py-3 font-medium text-slate-100">{log.usuario}</td>
                     <td className="px-4 py-3 text-xs text-amber-400 capitalize">{log.rol}</td>
