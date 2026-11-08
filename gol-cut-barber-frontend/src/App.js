@@ -6,11 +6,10 @@ import BarberoView from './components/BarberoView';
 import AdminView from './components/AdminView';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('cliente'); // 'cliente', 'barbero', 'admin', 'superadmin'
+  const [activeRole, setActiveRole] = useState('cliente');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
-  // Datos globales del sistema
   const [barberos, setBarberos] = useState([
     { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional' },
     { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior' },
@@ -46,25 +45,28 @@ export default function App() {
     }
   ]);
 
-  // Manejador de Login que asigna el perfil y la vista correspondiente
   const handleLoginSuccess = (userObj) => {
     setUsuarioAutenticado(userObj);
     setIsLoginOpen(false);
-
-    // Mapeo estricto de vistas según el rol autenticado
-    if (userObj.role === 'barbero') {
-      setActiveRole('barbero');
-    } else if (userObj.role === 'admin' || userObj.role === 'superadmin' || userObj.role === 'evaluacion' || userObj.role === 'sucursal') {
-      setActiveRole('admin');
-    } else {
-      setActiveRole('cliente');
-    }
+    const rol = (userObj.role || '').toLowerCase();
+    setActiveRole(rol);
   };
 
   const handleCerrarSesion = () => {
     setUsuarioAutenticado(null);
     setActiveRole('cliente');
   };
+
+  const normalizarRol = (rol) => {
+    const r = (rol || '').toLowerCase();
+    if (r === 'barbero') return 'barbero';
+    if (['admin', 'superadmin', 'evaluacion', 'evaluación', 'sucursal', 'demo-sena', 'demo-cliente'].includes(r)) {
+      return 'admin';
+    }
+    return 'cliente';
+  };
+
+  const vistaActual = normalizarRol(activeRole);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -77,8 +79,7 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-        {/* VISTA 1: CLIENTE (Formulario de Agendamiento de Citas) */}
-        {activeRole === 'cliente' && (
+        {vistaActual === 'cliente' && (
           <ClienteView 
             barberos={barberos}
             servicios={servicios}
@@ -87,8 +88,7 @@ export default function App() {
           />
         )}
 
-        {/* VISTA 2: BARBERO (Agenda de Turnos y Marcar Citas) */}
-        {activeRole === 'barbero' && (
+        {vistaActual === 'barbero' && (
           <BarberoView 
             barberoActual={barberos[0]}
             citas={citas}
@@ -97,8 +97,7 @@ export default function App() {
           />
         )}
 
-        {/* VISTA 3: ADMINISTRADOR / SUPERADMIN / EVALUACIÓN (Métricas, Control de Barberos y Citas Globales) */}
-        {(activeRole === 'admin' || activeRole === 'superadmin') && (
+        {vistaActual === 'admin' && (
           <AdminView 
             citas={citas}
             setCitas={setCitas}

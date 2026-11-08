@@ -1,110 +1,57 @@
-import React, { useState } from 'react';
-import { Scissors, ShieldCheck, UserCheck, ChevronDown, User, CheckSquare, Store } from 'lucide-react';
-import LoginModal from './LoginModal';
+import React from 'react';
+import { Scissors, User, LogOut, Lock } from 'lucide-react';
 
-export default function Navbar({ activeRole, setActiveRole, config }) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [targetRole, setTargetRole] = useState(null);
-
-  const handleRoleSelect = (role) => {
-    setIsDropdownOpen(false);
-    if (role === 'cliente') {
-      setActiveRole('cliente');
-    } else {
-      setTargetRole(role);
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleLoginSuccess = (roleAprobado) => {
-    setActiveRole(roleAprobado);
-    setIsModalOpen(false);
-  };
-
+export default function Navbar({ activeRole, setActiveRole, onOpenLogin, usuarioAutenticado, onCerrarSesion }) {
   return (
-    <>
-      <nav className="bg-[#1a1a1a] border-b border-[#d4af37]/30 px-6 py-4 flex items-center justify-between shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#262626] rounded-xl border border-[#d4af37]/40 text-[#d4af37]">
-            <Scissors className="w-6 h-6" />
+    <header className="bg-slate-900 border-b border-amber-500/30 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveRole('cliente')}>
+          <div className="p-2 bg-amber-500/10 border border-amber-500/40 rounded-lg">
+            <Scissors className="w-6 h-6 text-amber-400" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-[#d4af37] tracking-wider uppercase">
-              {config?.nombreNegocio || 'Peluquería Gol Cut Barber'}
+            <h1 className="font-extrabold text-amber-400 tracking-wider text-base md:text-lg">
+              PELUQUERÍA GOL CUT BARBER
             </h1>
-            <p className="text-[10px] text-gray-400 font-mono">Sistema de Gestión y Reservas</p>
+            <p className="text-xs text-slate-400 font-medium">Sistema de Gestión y Reservas</p>
           </div>
         </div>
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="bg-[#262626] border border-[#d4af37]/40 text-gray-200 hover:text-[#d4af37] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md"
-          >
-            <UserCheck className="w-4 h-4 text-[#d4af37]" />
-            <span>
-              {activeRole === 'superadmin' ? 'SuperAdmin / Dev' :
-               activeRole === 'admin' ? 'Administrador Local' :
-               activeRole === 'demo' || activeRole === 'demo-sena' ? 'Perfil Evaluación' :
-               activeRole === 'demo-cliente' ? 'Perfil Demostración' : 'Vista Cliente'}
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <select
+              value={activeRole}
+              onChange={(e) => setActiveRole(e.target.value)}
+              className="bg-slate-950 border border-amber-500/40 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400 font-semibold"
+            >
+              <option value="cliente">Vista: Cliente</option>
+              <option value="barbero">Vista: Barbero</option>
+              <option value="admin">Vista: Administrador</option>
+              <option value="superadmin">Perfil SuperAdministrador/Desarrollador</option>
+              <option value="evaluacion">Perfil Evaluación / Auditoría SENA</option>
+              <option value="sucursal">Perfil Demostración / Sucursal</option>
+            </select>
+          </div>
 
-          {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-[#262626] border border-[#d4af37]/30 rounded-xl shadow-2xl py-2 z-50 text-xs">
-              <button
-                type="button"
-                onClick={() => handleRoleSelect('cliente')}
-                className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2"
-              >
-                <User className="w-4 h-4" /> Reservar Cita (Cliente)
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleRoleSelect('demo-sena')}
-                className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
-              >
-                <CheckSquare className="w-4 h-4 text-emerald-400" /> Perfil Evaluación / Auditoría
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleRoleSelect('demo-cliente')}
-                className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
-              >
-                <Store className="w-4 h-4 text-sky-400" /> Perfil Demostración / Sucursal
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleRoleSelect('admin')}
-                className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
-              >
-                <ShieldCheck className="w-4 h-4 text-amber-400" /> Administrador Local
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleRoleSelect('superadmin')}
-                className="w-full text-left px-4 py-2.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-[#d4af37] flex items-center gap-2 border-t border-gray-800"
-              >
-                <ShieldCheck className="w-4 h-4 text-[#d4af37]" /> SuperAdmin / Programador
-              </button>
-            </div>
+          {usuarioAutenticado ? (
+            <button
+              onClick={onCerrarSesion}
+              className="flex items-center gap-1.5 px-3 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded-lg text-xs font-bold border border-rose-500/30 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Salir
+            </button>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold transition-all shadow-md shadow-amber-500/20"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Iniciar Sesión
+            </button>
           )}
         </div>
-      </nav>
-
-      <LoginModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-        targetRole={targetRole}
-      />
-    </>
+      </div>
+    </header>
   );
 }
