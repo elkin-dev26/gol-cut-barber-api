@@ -2,33 +2,42 @@ import React, { useState } from 'react';
 import { Terminal, ShieldCheck, Database, MessageCircle, Save, Plus, Trash2 } from 'lucide-react';
 
 export default function SuperAdminView({ usuario, tenants, setTenants, devConfig, setDevConfig }) {
+  // Protección de variable devConfig con valor por defecto
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   const [nombreBarberia, setNombreBarberia] = useState('');
   const [dueno, setDueno] = useState('');
 
   const handleGuardarWhatsapp = (e) => {
     e.preventDefault();
-    setDevConfig({ ...devConfig, whatsappSoporte: whatsapp });
-    alert('Número de WhatsApp de soporte actualizado.');
+    if (setDevConfig) {
+      setDevConfig({ ...(devConfig || {}), whatsappSoporte: whatsapp });
+    }
+    alert('Número de WhatsApp de soporte actualizado exitosamente.');
   };
 
   const handleAgregarTenant = (e) => {
     e.preventDefault();
     if (!nombreBarberia.trim()) return;
-    setTenants([
-      ...tenants,
-      { id: 't' + Date.now(), nombreBarberia, dueno: dueno || 'Cliente Nuevo', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 30 }
-    ]);
+    if (setTenants) {
+      setTenants([
+        ...(tenants || []),
+        { id: 't' + Date.now(), nombreBarberia, dueno: dueno || 'Cliente Nuevo', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 30 }
+      ]);
+    }
     setNombreBarberia('');
     setDueno('');
   };
 
   const toggleLicencia = (id) => {
-    setTenants(tenants.map(t => t.id === id ? { ...t, estadoLicencia: t.estadoLicencia === 'Activa' ? 'Pausada' : 'Activa' } : t));
+    if (setTenants && tenants) {
+      setTenants(tenants.map(t => t.id === id ? { ...t, estadoLicencia: t.estadoLicencia === 'Activa' ? 'Pausada' : 'Activa' } : t));
+    }
   };
 
   const eliminarTenant = (id) => {
-    setTenants(tenants.filter(t => t.id !== id));
+    if (setTenants && tenants) {
+      setTenants(tenants.filter(t => t.id !== id));
+    }
   };
 
   return (
@@ -112,7 +121,7 @@ export default function SuperAdminView({ usuario, tenants, setTenants, devConfig
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {tenants.map((t) => (
+              {(tenants || []).map((t) => (
                 <tr key={t.id}>
                   <td className="px-4 py-3 font-bold text-slate-100">{t.nombreBarberia}</td>
                   <td className="px-4 py-3">{t.dueno}</td>
