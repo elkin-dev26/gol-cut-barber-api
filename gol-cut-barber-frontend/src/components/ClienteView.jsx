@@ -1,167 +1,324 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, Scissors, User, CheckCircle, QrCode } from 'lucide-react';
+import { 
+  Users, Calendar, Scissors, DollarSign, Clock, 
+  CheckCircle, Plus, Trash2, Shield, Search, Lock, Unlock, History, MessageCircle 
+} from 'lucide-react';
 
-export default function ClienteView({ barberos, servicios, citas, setCitas }) {
-  const [barberoSeleccionado, setBarberoSeleccionado] = useState(barberos[0]?.nombre || '');
-  const [servicioSeleccionado, setServicioSeleccionado] = useState(servicios[0]?.nombre || '');
-  const [fecha, setFecha] = useState('2026-11-09');
-  const [hora, setHora] = useState('10:00 AM');
-  const [nombreCliente, setNombreCliente] = useState('');
-  const [citaCreada, setCitaCreada] = useState(null);
+export default function AdminView({ usuario, citas, setCitas, barberos, setBarberos, servicios, setServicios, logsSesion, devConfig }) {
+  const [activeTab, setActiveTab] = useState('resumen');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterEstado, setFilterEstado] = useState('todas');
 
-  const handleAgendar = (e) => {
-    e.preventDefault();
-    if (!nombreCliente.trim()) return;
+  const [nuevoBarbero, setNuevoBarbero] = useState('');
+  const [especialidad, setEspecialidad] = useState('');
 
-    const servObj = servicios.find(s => s.nombre === servicioSeleccionado);
-    const nuevaCita = {
-      id: 'c' + Date.now(),
-      cliente: nombreCliente,
-      barbero: barberoSeleccionado,
-      servicio: servicioSeleccionado,
-      fecha,
-      hora,
-      precio: servObj ? servObj.precio : 25000,
-      estado: 'confirmada'
-    };
+  // Métricas financieras y operativas
+  const totalCitas = citas.length;
+  const citasCompletadas = citas.filter(c => c.estado === 'completada').length;
+  const citasPendientes = citas.filter(c => c.estado === 'confirmada' || c.estado === 'pendiente').length;
+  const ingresosTotales = citas
+    .filter(c => c.estado === 'completada')
+    .reduce((sum, c) => sum + (c.precio || 0), 0);
 
-    setCitas([nuevaCita, ...citas]);
-    setCitaCreada(nuevaCita);
-    setNombreCliente('');
+  // Control de Pago de Cupo (Activar / Bloquear Barbero)
+  const toggleEstadoBarbero = (id) => {
+    setBarberos(barberos.map(b => {
+      if (b.id === id) {
+        const nuevoEstado = b.estado === 'Activo' ? 'Inactivo' : 'Activo';
+        return { ...b, estado: nuevoEstado, cupoPago: nuevoEstado === 'Activo' };
+      }
+      return b;
+    }));
   };
+
+  const eliminarBarbero = (id) => {
+    setBarberos(barberos.filter(b => b.id !== id));
+  };
+
+  const handleAgregarBarbero = (e) => {
+    e.preventDefault();
+    if (!nuevoBarbero.trim()) return;
+    setBarberos([
+      ...barberos, 
+      { id: 'b' + Date.now(), nombre: nuevoBarbero, especialidad: especialidad || 'Barbero Profesional', estado: 'Activo', cupoPago: true, diasClave: 90 }
+    ]);
+    setNuevoBarbero('');
+    setEspecialidad('');
+  };
+
+  const handleAnularCita = (id) => {
+    setCitas(citas.map(c => c.id === id ? { ...c, estado: 'cancelada' } : c));
+  };
+
+  const citasFiltradas = citas.filter(c => {
+    const coincideBusqueda = c.cliente.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             c.barbero.toLowerCase().includes(searchTerm.toLowerCase());
+    const coincideEstado = filterEstado === 'todas' || c.estado === filterEstado;
+    return coincideBusqueda && coincideEstado;
+  });
+
+  const urlWhatsapp = `https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(devConfig.mensajeRenovacion)}`;
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-amber-500/20 pb-4">
-        <h2 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
-          <Scissors className="w-7 h-7 text-amber-400" />
-          Reserva de Citas en Línea
-        </h2>
-        <p className="text-slate-400 text-sm">Agende su turno de atención presencial con confirmación instantánea</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-amber-400" />
-            Formulario de Agendamiento
-          </h3>
-
-          <form onSubmit={handleAgendar} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Nombre Completo del Cliente</label>
-              <input
-                type="text"
-                value={nombreCliente}
-                onChange={(e) => setNombreCliente(e.target.value)}
-                placeholder="Ingrese su nombre y apellido"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Seleccionar Barbería / Profesional</label>
-              <select
-                value={barberoSeleccionado}
-                onChange={(e) => setBarberoSeleccionado(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-              >
-                {barberos.map((b) => (
-                  <option key={b.id} value={b.nombre}>{b.nombre} - {b.especialidad}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Servicio Requerido</label>
-              <select
-                value={servicioSeleccionado}
-                onChange={(e) => setServicioSeleccionado(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-              >
-                {servicios.map((s) => (
-                  <option key={s.id} value={s.nombre}>{s.nombre} (${s.precio.toLocaleString()})</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Fecha</label>
-                <input
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Hora</label>
-                <select
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-                >
-                  <option value="09:00 AM">09:00 AM</option>
-                  <option value="10:00 AM">10:00 AM</option>
-                  <option value="11:00 AM">11:00 AM</option>
-                  <option value="02:00 PM">02:00 PM</option>
-                  <option value="03:00 PM">03:00 PM</option>
-                  <option value="04:00 PM">04:00 PM</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition-all shadow-lg shadow-amber-500/20"
-            >
-              Confirmar Reserva de Cita
-            </button>
-          </form>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
+            <Shield className="w-7 h-7 text-amber-400" />
+            Panel de Control del Administrador ({usuario.nombre})
+          </h2>
+          <p className="text-slate-400 text-sm">Control de alquiler de cupos, caja diaria y auditoría de asistencia</p>
         </div>
 
-        <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-6 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-4">
-              <QrCode className="w-5 h-5 text-amber-400" />
-              Ticket de Confirmación Expreso QR
-            </h3>
+        <div className="flex items-center gap-3">
+          <a
+            href={urlWhatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-600/20"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Renovar Membresía WhatsApp
+          </a>
 
-            {citaCreada ? (
-              <div className="bg-slate-950 border border-amber-500/40 rounded-xl p-5 text-center space-y-3">
-                <div className="inline-block p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400">
-                  <CheckCircle className="w-8 h-8" />
-                </div>
-                <h4 className="text-emerald-400 font-bold text-base">¡Cita Agendada Exitosamente!</h4>
-                
-                <div className="text-xs text-slate-300 space-y-1 bg-slate-900 p-3 rounded-lg border border-slate-800 text-left">
-                  <p><span className="text-slate-400 font-medium">Cliente:</span> {citaCreada.cliente}</p>
-                  <p><span className="text-slate-400 font-medium">Servicio:</span> {citaCreada.servicio}</p>
-                  <p><span className="text-slate-400 font-medium">Atiende:</span> {citaCreada.barbero}</p>
-                  <p><span className="text-slate-400 font-medium">Fecha y Hora:</span> {citaCreada.fecha} - {citaCreada.hora}</p>
-                </div>
-
-                <div className="pt-2 flex justify-center">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=GOLCUT-CITA-${citaCreada.id}`}
-                    alt="Código QR de Cita"
-                    className="border-2 border-amber-400 rounded-lg p-1 bg-white"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-400">Presente este código QR al llegar a la barbería</p>
-              </div>
-            ) : (
-              <div className="bg-slate-950/60 border border-dashed border-slate-800 rounded-xl p-8 text-center text-slate-500 space-y-2">
-                <QrCode className="w-12 h-12 mx-auto text-slate-600" />
-                <p className="text-sm">Complete el formulario para generar su ticket expreso con código QR</p>
-              </div>
-            )}
+          <div className="flex bg-slate-900/80 p-1 rounded-lg border border-amber-500/30">
+            <button
+              onClick={() => setActiveTab('resumen')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium ${activeTab === 'resumen' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300'}`}
+            >
+              Resumen
+            </button>
+            <button
+              onClick={() => setActiveTab('barberos')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium ${activeTab === 'barberos' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300'}`}
+            >
+              Control Cupos
+            </button>
+            <button
+              onClick={() => setActiveTab('citas')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium ${activeTab === 'citas' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300'}`}
+            >
+              Citas & Caja
+            </button>
+            <button
+              onClick={() => setActiveTab('auditoria')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium ${activeTab === 'auditoria' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300'}`}
+            >
+              Entradas / Salidas
+            </button>
           </div>
         </div>
       </div>
+
+      {activeTab === 'resumen' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-xl">
+            <div className="flex items-center justify-between text-amber-400 mb-2">
+              <span className="text-sm font-medium">Ingresos Totales</span>
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold text-slate-100">${ingresosTotales.toLocaleString()}</p>
+            <span className="text-xs text-slate-400">Atendidas + Walk-in</span>
+          </div>
+
+          <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-xl">
+            <div className="flex items-center justify-between text-amber-400 mb-2">
+              <span className="text-sm font-medium">Total Citas</span>
+              <Calendar className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold text-slate-100">{totalCitas}</p>
+            <span className="text-xs text-slate-400">Registradas en sistema</span>
+          </div>
+
+          <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-xl">
+            <div className="flex items-center justify-between text-emerald-400 mb-2">
+              <span className="text-sm font-medium">Completadas</span>
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold text-slate-100">{citasCompletadas}</p>
+            <span className="text-xs text-slate-400">Finalizadas</span>
+          </div>
+
+          <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-xl">
+            <div className="flex items-center justify-between text-blue-400 mb-2">
+              <span className="text-sm font-medium">Pendientes</span>
+              <Clock className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold text-slate-100">{citasPendientes}</p>
+            <span className="text-xs text-slate-400">Por atender</span>
+          </div>
+        </div>
+      )}
+
+      {/* CONTROL DE BARBEROS: PAGO DE CUPO MENSUAL Y BLOQUEO */}
+      {activeTab === 'barberos' && (
+        <div className="space-y-6">
+          <form onSubmit={handleAgregarBarbero} className="bg-slate-900 border border-amber-500/30 p-4 rounded-xl flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Nombre del nuevo barbero..."
+              value={nuevoBarbero}
+              onChange={(e) => setNuevoBarbero(e.target.value)}
+              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Especialidad"
+              value={especialidad}
+              onChange={(e) => setEspecialidad(e.target.value)}
+              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+            />
+            <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs flex items-center justify-center gap-1">
+              <Plus className="w-4 h-4" /> Crear Perfil Barbero
+            </button>
+          </form>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {barberos.map((b) => (
+              <div key={b.id} className="bg-slate-900 border border-amber-500/30 p-5 rounded-xl space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-slate-100">{b.nombre}</h4>
+                    <p className="text-xs text-slate-400">{b.especialidad}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                    b.estado === 'Activo' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {b.estado}
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-slate-400 bg-slate-950 p-2 rounded border border-slate-800">
+                  Renovación de contraseña: <span className="text-amber-400 font-bold">{b.diasClave} días restantes</span>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => toggleEstadoBarbero(b.id)}
+                    className={`flex-1 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 border transition-all ${
+                      b.estado === 'Activo'
+                        ? 'bg-rose-950/60 hover:bg-rose-900 text-rose-300 border-rose-500/40'
+                        : 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border-emerald-500/40'
+                    }`}
+                  >
+                    {b.estado === 'Activo' ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    {b.estado === 'Activo' ? 'Bloquear por Cupo' : 'Confirmar Pago Cupo'}
+                  </button>
+
+                  <button
+                    onClick={() => eliminarBarbero(b.id)}
+                    className="p-1.5 bg-slate-950 hover:bg-rose-950 text-rose-400 rounded border border-rose-500/30"
+                    title="Eliminar Barbero de la Barbería"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CITAS GLOBALES Y ANULACIÓN */}
+      {activeTab === 'citas' && (
+        <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-5 space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-200">Gestión Global de Reservas y Atenciones Expresas</h3>
+            <select
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2"
+            >
+              <option value="todas">Todos los estados</option>
+              <option value="confirmada">Confirmadas</option>
+              <option value="completada">Completadas</option>
+              <option value="cancelada">Anuladas</option>
+            </select>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-300">
+              <thead className="bg-slate-950 text-amber-400 text-xs uppercase border-b border-amber-500/20">
+                <tr>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Barbero</th>
+                  <th className="px-4 py-3">Servicio</th>
+                  <th className="px-4 py-3">Precio</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3 text-right">Anulación (Solo Adm)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {citasFiltradas.map((c) => (
+                  <tr key={c.id}>
+                    <td className="px-4 py-3 font-medium text-slate-100">{c.cliente}</td>
+                    <td className="px-4 py-3">{c.barbero}</td>
+                    <td className="px-4 py-3">{c.servicio}</td>
+                    <td className="px-4 py-3 font-bold text-amber-400">${(c.precio || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                        c.estado === 'completada' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                        c.estado === 'cancelada' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                        'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        {c.estado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {c.estado !== 'cancelada' && (
+                        <button
+                          onClick={() => handleAnularCita(c.id)}
+                          className="text-rose-400 text-xs bg-rose-950/60 px-2 py-1 rounded border border-rose-500/30 hover:bg-rose-900"
+                        >
+                          Anular Cita
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* AUDITORÍA DE INGRESO Y SALIDA DE BARBEROS */}
+      {activeTab === 'auditoria' && (
+        <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-5 space-y-4">
+          <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <History className="w-5 h-5 text-amber-400" />
+            Control de Asistencia (Horas de Entrada y Salida)
+          </h3>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-300">
+              <thead className="bg-slate-950 text-amber-400 text-xs uppercase border-b border-amber-500/20">
+                <tr>
+                  <th className="px-4 py-3">Personal</th>
+                  <th className="px-4 py-3">Rol</th>
+                  <th className="px-4 py-3">Fecha y Hora Exacta</th>
+                  <th className="px-4 py-3">Evento Registrado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {logsSesion.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-4 py-3 font-medium text-slate-100">{log.usuario}</td>
+                    <td className="px-4 py-3 text-xs text-amber-400 capitalize">{log.rol}</td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{log.fechaHora}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        {log.evento}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

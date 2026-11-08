@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scissors, LogOut, Lock, UserCheck, Shield } from 'lucide-react';
+import { Scissors, LogOut, Lock, Shield } from 'lucide-react';
 
 export default function Navbar({ usuarioAutenticado, onOpenLogin, onCerrarSesion }) {
   return (
@@ -13,7 +13,7 @@ export default function Navbar({ usuarioAutenticado, onOpenLogin, onCerrarSesion
             <h1 className="font-extrabold text-amber-400 tracking-wider text-base md:text-lg">
               PELUQUERÍA GOL CUT BARBER
             </h1>
-            <p className="text-xs text-slate-400 font-medium">Sistema de Gestión y Reservas</p>
+            <p className="text-xs text-slate-400 font-medium">Plataforma SaaS de Gestión & Reservas</p>
           </div>
         </div>
 
@@ -41,7 +41,7 @@ export default function Navbar({ usuarioAutenticado, onOpenLogin, onCerrarSesion
               className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold transition-all shadow-md shadow-amber-500/20"
             >
               <Lock className="w-3.5 h-3.5" />
-              Ingresar al Sistema
+              Iniciar Sesión
             </button>
           )}
         </div>

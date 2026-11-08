@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal';
 import ClienteView from './components/ClienteView';
@@ -10,11 +10,24 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
-  // Estado global de la aplicación
+  // Configuración global del Desarrollador (WhatsApp de soporte editable solo por SuperAdmin)
+  const [devConfig, setDevConfig] = useState({
+    whatsappSoporte: '573001234567',
+    mensajeRenovacion: 'Hola, deseo renovar mi membresía mensual del SaaS Gol Cut Barber.'
+  });
+
+  // Estado Multi-Tenant de Barberías (SaaS Temporizado por 1 mes)
+  const [tenants, setTenants] = useState([
+    { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, plan: 'Mensual' },
+    { id: 't2', nombreBarberia: 'Barbería Demo SENA', dueno: 'Instructor SENA', estadoLicencia: 'Activa', diasRestantes: 30, plan: 'Evaluacion' },
+    { id: 't3', nombreBarberia: 'Barbería Demo Cliente', dueno: 'Cliente Comercial', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 15, plan: 'Demo' }
+  ]);
+
+  // Barberos con control de cupos y caducidad de contraseña a 90 días (3 meses)
   const [barberos, setBarberos] = useState([
-    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo' },
-    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo' },
-    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Activo' }
+    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', cupoPago: true, diasClave: 85 },
+    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', cupoPago: true, diasClave: 45 },
+    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Inactivo', cupoPago: false, diasClave: 12 }
   ]);
 
   const [servicios, setServicios] = useState([
@@ -32,7 +45,8 @@ export default function App() {
       fecha: '2026-11-08', 
       hora: '10:00 AM', 
       precio: 25000, 
-      estado: 'confirmada' 
+      estado: 'confirmada',
+      tipo: 'reserva'
     },
     { 
       id: 'c2', 
@@ -42,22 +56,54 @@ export default function App() {
       fecha: '2026-11-08', 
       hora: '11:30 AM', 
       precio: 35000, 
-      estado: 'completada' 
+      estado: 'completada',
+      tipo: 'reserva'
     }
   ]);
 
-  // Manejo de autenticación estricta
+  // Auditoría estricta de ingresos y salidas para el Administrador
+  const [logsSesion, setLogsSesion] = useState([
+    { id: 'l1', usuario: 'Elkin Ramírez', rol: 'barbero', fechaHora: '2026-11-08 08:00 AM', evento: 'Ingreso Marcar Turno' },
+    { id: 'l2', usuario: 'demo-sena', rol: 'evaluacion', fechaHora: '2026-11-08 09:15 AM', evento: 'Inicio de Sesión Audit' }
+  ]);
+
+  // Protecciones anti-plagio y copia de código
+  useEffect(() => {
+    const handleContextMenu = (e) => e.preventDefault();
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => document.removeEventListener('contextmenu', handleContextMenu);
+  }, []);
+
   const handleLoginSuccess = (userObj) => {
     setUsuarioAutenticado(userObj);
     setIsLoginOpen(false);
+
+    const nuevoLog = {
+      id: 'l' + Date.now(),
+      usuario: userObj.nombre || userObj.username,
+      rol: userObj.role,
+      fechaHora: new Date().toLocaleString(),
+      evento: 'Ingreso al Sistema'
+    };
+    setLogsSesion(prev => [nuevoLog, ...prev]);
   };
 
   const handleCerrarSesion = () => {
+    if (usuarioAutenticado) {
+      const nuevoLog = {
+        id: 'l' + Date.now(),
+        usuario: usuarioAutenticado.nombre || usuarioAutenticado.username,
+        rol: usuarioAutenticado.role,
+        fechaHora: new Date().toLocaleString(),
+        evento: 'Salida de Turno / Cierre'
+      };
+      setLogsSesion(prev => [nuevoLog, ...prev]);
+    }
     setUsuarioAutenticado(null);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       <Navbar 
         usuarioAutenticado={usuarioAutenticado}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -65,27 +111,28 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-        {/* VISTA PÚBLICA / CLIENTE: Agendamiento sin autenticación */}
+        {/* VISTA PÚBLICA / CLIENTE: Agendamiento y QR Expreso */}
         {!usuarioAutenticado && (
           <ClienteView 
-            barberos={barberos}
+            barberos={barberos.filter(b => b.estado === 'Activo')}
             servicios={servicios}
             citas={citas}
             setCitas={setCitas}
           />
         )}
 
-        {/* VISTA PROTEGIDA 1: ROL BARBERO */}
+        {/* VISTA PROTEGIDA 1: BARBERO */}
         {usuarioAutenticado && usuarioAutenticado.role === 'barbero' && (
           <BarberoView 
             barberoActual={usuarioAutenticado}
             citas={citas}
             setCitas={setCitas}
+            servicios={servicios}
             onCerrarSesion={handleCerrarSesion}
           />
         )}
 
-        {/* VISTA PROTEGIDA 2: ROL ADMINISTRADOR / SUCURSAL / EVALUACIÓN SENA */}
+        {/* VISTA PROTEGIDA 2: ADMINISTRADOR / DEMO SENA / DEMO CLIENTE */}
         {usuarioAutenticado && ['admin', 'sucursal', 'evaluacion'].includes(usuarioAutenticado.role) && (
           <AdminView 
             usuario={usuarioAutenticado}
@@ -95,18 +142,24 @@ export default function App() {
             setBarberos={setBarberos}
             servicios={servicios}
             setServicios={setServicios}
+            logsSesion={logsSesion}
+            devConfig={devConfig}
           />
         )}
 
-        {/* VISTA PROTEGIDA 3: ROL SUPERADMIN / DESARROLLADOR */}
+        {/* VISTA PROTEGIDA 3: DESARROLLADOR / SUPERADMIN */}
         {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
           <SuperAdminView 
             usuario={usuarioAutenticado}
-            citas={citas}
+            tenants={tenants}
+            setTenants={setTenants}
             barberos={barberos}
-            servicios={servicios}
             setBarberos={setBarberos}
+            servicios={servicios}
             setServicios={setServicios}
+            logsSesion={logsSesion}
+            devConfig={devConfig}
+            setDevConfig={setDevConfig}
           />
         )}
       </main>
