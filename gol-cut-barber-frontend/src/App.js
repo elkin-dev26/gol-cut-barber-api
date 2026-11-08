@@ -4,16 +4,17 @@ import LoginModal from './components/LoginModal';
 import ClienteView from './components/ClienteView';
 import BarberoView from './components/BarberoView';
 import AdminView from './components/AdminView';
+import SuperAdminView from './components/SuperAdminView';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('cliente');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
+  // Estado global de la aplicación
   const [barberos, setBarberos] = useState([
-    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional' },
-    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior' },
-    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba' }
+    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo' },
+    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo' },
+    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Activo' }
   ]);
 
   const [servicios, setServicios] = useState([
@@ -45,41 +46,27 @@ export default function App() {
     }
   ]);
 
+  // Manejo de autenticación estricta
   const handleLoginSuccess = (userObj) => {
     setUsuarioAutenticado(userObj);
     setIsLoginOpen(false);
-    const rol = (userObj.role || '').toLowerCase();
-    setActiveRole(rol);
   };
 
   const handleCerrarSesion = () => {
     setUsuarioAutenticado(null);
-    setActiveRole('cliente');
   };
-
-  const normalizarRol = (rol) => {
-    const r = (rol || '').toLowerCase();
-    if (r === 'barbero') return 'barbero';
-    if (['admin', 'superadmin', 'evaluacion', 'evaluación', 'sucursal', 'demo-sena', 'demo-cliente'].includes(r)) {
-      return 'admin';
-    }
-    return 'cliente';
-  };
-
-  const vistaActual = normalizarRol(activeRole);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar 
-        activeRole={activeRole} 
-        setActiveRole={setActiveRole}
-        onOpenLogin={() => setIsLoginOpen(true)}
         usuarioAutenticado={usuarioAutenticado}
+        onOpenLogin={() => setIsLoginOpen(true)}
         onCerrarSesion={handleCerrarSesion}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-        {vistaActual === 'cliente' && (
+        {/* VISTA PÚBLICA / CLIENTE: Agendamiento sin autenticación */}
+        {!usuarioAutenticado && (
           <ClienteView 
             barberos={barberos}
             servicios={servicios}
@@ -88,22 +75,37 @@ export default function App() {
           />
         )}
 
-        {vistaActual === 'barbero' && (
+        {/* VISTA PROTEGIDA 1: ROL BARBERO */}
+        {usuarioAutenticado && usuarioAutenticado.role === 'barbero' && (
           <BarberoView 
-            barberoActual={barberos[0]}
+            barberoActual={usuarioAutenticado}
             citas={citas}
             setCitas={setCitas}
             onCerrarSesion={handleCerrarSesion}
           />
         )}
 
-        {vistaActual === 'admin' && (
+        {/* VISTA PROTEGIDA 2: ROL ADMINISTRADOR / SUCURSAL / EVALUACIÓN SENA */}
+        {usuarioAutenticado && ['admin', 'sucursal', 'evaluacion'].includes(usuarioAutenticado.role) && (
           <AdminView 
+            usuario={usuarioAutenticado}
             citas={citas}
             setCitas={setCitas}
             barberos={barberos}
             setBarberos={setBarberos}
             servicios={servicios}
+            setServicios={setServicios}
+          />
+        )}
+
+        {/* VISTA PROTEGIDA 3: ROL SUPERADMIN / DESARROLLADOR */}
+        {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
+          <SuperAdminView 
+            usuario={usuarioAutenticado}
+            citas={citas}
+            barberos={barberos}
+            servicios={servicios}
+            setBarberos={setBarberos}
             setServicios={setServicios}
           />
         )}
