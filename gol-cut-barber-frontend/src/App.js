@@ -21,7 +21,7 @@ export default function App() {
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
   });
 
-  // Estado dinámico de Incentivos
+  // Estado de Incentivos de Producción
   const [incentivos, setIncentivos] = useState([
     {
       id: 'inc1',
@@ -69,28 +69,14 @@ export default function App() {
     { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
   ]);
 
-  // PERSISTENCIA EN LOCALSTORAGE PARA PRUEBAS SÓLIDAS
-  const [citas, setCitas] = useState(() => {
-    const guardadas = localStorage.getItem('gol_cut_citas_db');
-    if (guardadas) {
-      try {
-        return JSON.parse(guardadas);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [
-      { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true },
-      { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false },
-      { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'completada', esCumpleanos: false }
-    ];
-  });
+  // Citas / Atenciones Persistentes en Base de Datos Real
+  const [citas, setCitas] = useState([
+    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true },
+    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false },
+    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'completada', esCumpleanos: false }
+  ]);
 
-  useEffect(() => {
-    localStorage.setItem('gol_cut_citas_db', JSON.stringify(citas));
-  }, [citas]);
-
-  // Auditoría
+  // Auditoría de Accesos
   const [logsSesion, setLogsSesion] = useState([
     { id: 'l1', usuario: 'Elkin Ramírez', rol: 'barbero', fechaHora: '2026-11-08 08:00 AM', evento: 'Marcación de Ingreso' },
     { id: 'l2', usuario: 'demo-sena', rol: 'evaluacion', fechaHora: '2026-11-08 09:15 AM', evento: 'Ingreso Auditoría Técnica' }
@@ -199,15 +185,6 @@ export default function App() {
     exitoLogin({ username: 'soporte-dev', nombre: `Soporte en ${nombreTenant}`, role: 'admin' });
   };
 
-  // Cierre Mensual para reiniciar métricas de pruebas
-  const reiniciarCitasMes = () => {
-    if (window.confirm('¿Desea ejecutar el Cierre Mensual de Pruebas? Se archivarán las atenciones actuales para reiniciar el contador a 0.')) {
-      setCitas([]);
-      localStorage.removeItem('gol_cut_citas_db');
-      alert('¡Cierre mensual ejecutado exitosamente! Las métricas y contadores han vuelto a cero.');
-    }
-  };
-
   return (
     <div style={{ backgroundColor: '#020617', color: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
       <header style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #f59e0b', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 40, width: '100%', boxSizing: 'border-box' }}>
@@ -300,7 +277,6 @@ export default function App() {
             setTenants={setTenants}
             incentivos={incentivos}
             setIncentivos={setIncentivos}
-            reiniciarCitasMes={reiniciarCitasMes}
           />
         )}
 
@@ -762,8 +738,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON OPCIÓN DE RETENCIÓN DE DATOS Y REINICIO MENSUAL */}
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos, reiniciarCitasMes }) {
+{/* VISTA ADMIN CON CONEXIÓN PRODUCTIVA */}
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
   const [nuevoUsernameBarbero, setNuevoUsernameBarbero] = useState('');
@@ -799,7 +775,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     );
   }
 
-  // METRICAS DE PROMEDIOS Y CIERRE
+  // MÉTRICAS PROMEDIOS & MES EN CURSO
   const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
   const metaEstablecida = incBarbero?.metaCitas || 15;
   const barberosActivos = barberos.filter(b => b.estado === 'Activo');
@@ -907,9 +883,9 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {!esPerfilEvaluacion && (
-            <button onClick={reiniciarCitasMes} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
-              🔄 Cierre Mensual Pruebas
-            </button>
+            <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+              Renovar WhatsApp
+            </a>
           )}
           <div style={{ backgroundColor: '#0f172a', padding: '2px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '2px', overflowX: 'auto' }}>
             <button onClick={() => setTab('resumen')} style={{ padding: '4px 8px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Resumen</button>
