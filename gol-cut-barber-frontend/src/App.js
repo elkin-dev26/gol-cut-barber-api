@@ -15,16 +15,32 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Configuración WhatsApp de Soporte & Incentivos
+  // Configuración WhatsApp de Soporte & Lista de Incentivos Editables
   const [devConfig, setDevConfig] = useState({
     whatsappSoporte: '573001234567',
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
-    incentivoCumpleanosActivo: true,
-    porcentajeCumpleanos: 10,
-    incentivoBarberoActivo: true,
-    porcentajeDescuentoSilla: 5,
-    metaUsoCitasBarbero: 15
   });
+
+  // Estado dinámico de Incentivos (Pausar, Activar, Eliminar)
+  const [incentivos, setIncentivos] = useState([
+    {
+      id: 'inc1',
+      tipo: 'cumpleanos',
+      titulo: 'Descuento Cumpleaños Cliente',
+      descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar el día de su cumpleaños.',
+      activo: true,
+      porcentaje: 10
+    },
+    {
+      id: 'inc2',
+      tipo: 'barbero',
+      titulo: 'Premio Alquiler Silla Barbero',
+      descripcion: 'Barberos que registren más de 15 citas ganan 5% de descuento en su alquiler de silla.',
+      activo: true,
+      metaCitas: 15,
+      porcentaje: 5
+    }
+  ]);
 
   // Multi-Tenant SaaS (Barberías Registradas con Nombre Anterior y Conteo Mensual)
   const [tenants, setTenants] = useState([
@@ -228,7 +244,7 @@ export default function App() {
             servicios={servicios} 
             citas={citas} 
             setCitas={setCitas} 
-            devConfig={devConfig}
+            incentivos={incentivos}
           />
         )}
 
@@ -241,6 +257,7 @@ export default function App() {
             onCerrarSesion={handleCerrarSesion} 
             devConfig={devConfig}
             licenciaVencida={licenciaVencida}
+            incentivos={incentivos}
           />
         )}
 
@@ -259,6 +276,8 @@ export default function App() {
             licenciaVencida={licenciaVencida}
             tenants={tenants}
             setTenants={setTenants}
+            incentivos={incentivos}
+            setIncentivos={setIncentivos}
           />
         )}
 
@@ -335,7 +354,7 @@ export default function App() {
 }
 
 {/* VISTA CLIENTE */}
-function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
+function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
   const [modo, setModo] = useState('programada');
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
@@ -344,6 +363,8 @@ function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
   const [fecha, setFecha] = useState('2026-11-09');
   const [hora, setHora] = useState('10:00 AM');
   const [citaCreada, setCitaCreada] = useState(null);
+
+  const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
 
   const esCumpleanos = () => {
     if (!fechaNac) return false;
@@ -359,8 +380,8 @@ function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
     const cumple = esCumpleanos();
     let precioFinal = servObj ? servObj.precio : 25000;
 
-    if (cumple && devConfig?.incentivoCumpleanosActivo) {
-      const desc = (precioFinal * devConfig.porcentajeCumpleanos) / 100;
+    if (cumple && incCumple) {
+      const desc = (precioFinal * incCumple.porcentaje) / 100;
       precioFinal = precioFinal - desc;
     }
 
@@ -373,7 +394,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
       hora: modo === 'qr_walkin' ? 'Atención Inmediata (QR)' : hora,
       precio: precioFinal,
       estado: 'confirmada',
-      esCumpleanos: cumple
+      esCumpleanos: cumple && !!incCumple
     };
 
     setCitas([nueva, ...citas]);
@@ -436,10 +457,10 @@ function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
               />
             </div>
 
-            {esCumpleanos() && devConfig?.incentivoCumpleanosActivo && (
+            {esCumpleanos() && incCumple && (
               <div style={{ backgroundColor: 'rgba(5, 150, 105, 0.2)', border: '1px solid #059669', padding: '8px', borderRadius: '6px', color: '#34d399', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Gift style={{ width: '16px', height: '16px' }} />
-                <span><strong>¡Felicidades!</strong> Recibes un {devConfig.porcentajeCumpleanos}% de descuento especial.</span>
+                <span><strong>¡Felicidades!</strong> Recibes un {incCumple.porcentaje}% de descuento especial.</span>
               </div>
             )}
 
@@ -539,7 +560,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
 }
 
 {/* VISTA BARBERO */}
-function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida }) {
+function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
 
@@ -560,9 +581,10 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     );
   }
 
+  const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
   const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || '').toLowerCase());
   const atencionesBarbero = citasBarbero.filter(c => c.estado === 'completada').length;
-  const meta = devConfig?.metaUsoCitasBarbero || 15;
+  const meta = incBarbero?.metaCitas || 15;
   const porcentajeAvance = Math.min(Math.round((atencionesBarbero / meta) * 100), 100);
 
   const handleEstadoCita = (id, nuevoEstado) => {
@@ -601,7 +623,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
         </div>
       </div>
 
-      {devConfig?.incentivoBarberoActivo && (
+      {incBarbero && (
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -614,7 +636,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>
             {porcentajeAvance >= 100 
-              ? `¡Felicitaciones! Ganaste el ${devConfig.porcentajeDescuentoSilla}% de descuento en tu pago de alquiler de silla.` 
+              ? `¡Felicitaciones! Ganaste el ${incBarbero.porcentaje}% de descuento en tu pago de alquiler de silla.` 
               : `Registra ${meta - atencionesBarbero} citas más en la app para obtener tu beneficio.`}
           </p>
         </div>
@@ -685,8 +707,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON CAMBIO DE NOMBRE DE BARBERÍA */}
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants }) {
+{/* VISTA ADMIN CON CONTROL DE PAUSAR Y ELIMINAR INCENTIVOS */}
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
   const [nuevoUsernameBarbero, setNuevoUsernameBarbero] = useState('');
@@ -741,12 +763,16 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     alert(`Nombre de la barbería actualizado a: "${inputNuevoNombreBarberia}". Se reflejará automáticamente en la consola del desarrollador.`);
   };
 
-  const toggleIncentivoCumple = () => {
-    setDevConfig({ ...devConfig, incentivoCumpleanosActivo: !devConfig.incentivoCumpleanosActivo });
+  // Lógica para alternar estado (Pausar / Activar) de un incentivo
+  const toggleEstadoIncentivo = (id) => {
+    setIncentivos(incentivos.map(inc => inc.id === id ? { ...inc, activo: !inc.activo } : inc));
   };
 
-  const toggleIncentivoBarbero = () => {
-    setDevConfig({ ...devConfig, incentivoBarberoActivo: !devConfig.incentivoBarberoActivo });
+  // Lógica para eliminar un incentivo
+  const eliminarIncentivo = (id, titulo) => {
+    if (window.confirm(`¿Está seguro de eliminar el incentivo "${titulo}"?`)) {
+      setIncentivos(incentivos.filter(inc => inc.id !== id));
+    }
   };
 
   const toggleBarbero = (id) => {
@@ -823,7 +849,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
       {tab === 'resumen' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* FORMULARIO PARA CAMBIAR EL NOMBRE DE LA BARBERÍA */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
             <h4 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Edit3 style={{ width: '16px', height: '16px' }} /> Cambiar Nombre Comercial de la Barbería
@@ -860,35 +885,46 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
       )}
 
+      {/* PESTAÑA INCENTIVOS CON BOTONES DE PAUSAR / ACTIVAR Y ELIMINAR */}
       {tab === 'incentivos' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
-          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0, color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Gift style={{ width: '16px', height: '16px' }} /> Descuento Cumpleaños Cliente
-              </h4>
-              <button onClick={toggleIncentivoCumple} style={{ padding: '4px 8px', backgroundColor: devConfig?.incentivoCumpleanosActivo ? '#059669' : '#450a0a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                {devConfig?.incentivoCumpleanosActivo ? 'Activo' : 'Pausado'}
-              </button>
-            </div>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '6px 0 0 0' }}>
-              Los clientes obtienen {devConfig?.porcentajeCumpleanos}% de descuento automático al reservar el día de su cumpleaños.
-            </p>
-          </div>
+          {incentivos.map(inc => (
+            <div key={inc.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <h4 style={{ margin: 0, color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {inc.tipo === 'cumpleanos' ? <Gift style={{ width: '16px', height: '16px' }} /> : <Award style={{ width: '16px', height: '16px' }} />}
+                    {inc.titulo}
+                  </h4>
+                  <span style={{ fontSize: '10px', color: inc.activo ? '#34d399' : '#f43f5e', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: inc.activo ? 'rgba(52, 211, 153, 0.15)' : 'rgba(244, 63, 94, 0.15)' }}>
+                    {inc.activo ? 'Activo' : 'Pausado'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>{inc.descripcion}</p>
+              </div>
 
-          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0, color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Award style={{ width: '16px', height: '16px' }} /> Premio Alquiler Silla Barbero
-              </h4>
-              <button onClick={toggleIncentivoBarbero} style={{ padding: '4px 8px', backgroundColor: devConfig?.incentivoBarberoActivo ? '#059669' : '#450a0a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                {devConfig?.incentivoBarberoActivo ? 'Activo' : 'Pausado'}
-              </button>
+              <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid #1e293b', paddingTop: '8px' }}>
+                <button 
+                  onClick={() => toggleEstadoIncentivo(inc.id)} 
+                  style={{ flex: 1, padding: '6px 8px', backgroundColor: inc.activo ? '#020617' : '#064e3b', color: inc.activo ? '#cbd5e1' : '#34d399', border: inc.activo ? '1px solid #334155' : '1px solid #059669', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
+                >
+                  {inc.activo ? '⏸️ Pausar Incentivo' : '▶️ Activar Incentivo'}
+                </button>
+                <button 
+                  onClick={() => eliminarIncentivo(inc.id, inc.titulo)} 
+                  style={{ padding: '6px 10px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
+                >
+                  🗑️ Eliminar
+                </button>
+              </div>
             </div>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '6px 0 0 0' }}>
-              Barberos que registren más de {devConfig?.metaUsoCitasBarbero} citas ganan {devConfig?.porcentajeDescuentoSilla}% de descuento en su alquiler.
-            </p>
-          </div>
+          ))}
+
+          {incentivos.length === 0 && (
+            <div style={{ gridColumn: '1 / -1', padding: '24px', backgroundColor: '#0f172a', borderRadius: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #334155' }}>
+              No hay incentivos activos ni configurados en este momento.
+            </div>
+          )}
         </div>
       )}
 
