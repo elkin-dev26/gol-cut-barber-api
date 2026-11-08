@@ -1,89 +1,120 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
+import LoginModal from './components/LoginModal';
 import ClienteView from './components/ClienteView';
-import AdminView from './components/AdminView';
 import BarberoView from './components/BarberoView';
+import AdminView from './components/AdminView';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('cliente');
+  const [activeRole, setActiveRole] = useState('cliente'); // 'cliente', 'barbero', 'admin', 'superadmin'
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
-  const [config, setConfig] = useState({
-    nombreNegocio: 'Peluquería Gol Cut Barber'
-  });
-
+  // Datos globales del sistema
   const [barberos, setBarberos] = useState([
-    { id: 1, nombre: 'Elkin Ramírez', estadoSilla: 'Al Día' },
-    { id: 2, nombre: 'Mateo Gómez', estadoSilla: 'Al Día' },
-    { id: 3, nombre: 'Carlos Andrés', estadoSilla: 'Moroso' }
+    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional' },
+    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior' },
+    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba' }
   ]);
 
   const [servicios, setServicios] = useState([
-    { id: 1, nombre: 'Corte Clásico / Fade', precio: 25000 },
-    { id: 2, nombre: 'Barba Completa con Toalla Caliente', precio: 15000 },
-    { id: 3, nombre: 'Combo Gol Cut (Corte + Barba)', precio: 35000 }
+    { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' },
+    { id: 's2', nombre: 'Barba Tradicional con Toalla Caliente', precio: 15000, duracion: '20 min' },
+    { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
   ]);
 
   const [citas, setCitas] = useState([
-    {
-      id: 1,
-      cliente: 'Juan Pablo',
-      servicio: 'Combo Gol Cut (Corte + Barba)',
-      barbero: 'Elkin Ramírez',
-      hora: '02:00 PM',
-      estado: 'Confirmada',
-      tipo: 'Programada'
+    { 
+      id: 'c1', 
+      cliente: 'Juan Pérez', 
+      barbero: 'Elkin Ramírez', 
+      servicio: 'Corte de Cabello Clásico', 
+      fecha: '2026-11-08', 
+      hora: '10:00 AM', 
+      precio: 25000, 
+      estado: 'confirmada' 
+    },
+    { 
+      id: 'c2', 
+      cliente: 'Carlos Gómez', 
+      barbero: 'Mateo Gómez', 
+      servicio: 'Combo Corte + Barba', 
+      fecha: '2026-11-08', 
+      hora: '11:30 AM', 
+      precio: 35000, 
+      estado: 'completada' 
     }
   ]);
 
-  const handleAgregarCita = (nuevaCita) => {
-    const citaCompleta = {
-      id: Date.now(),
-      ...nuevaCita,
-      estado: 'Pendiente'
-    };
-    setCitas((prevCitas) => [citaCompleta, ...prevCitas]);
+  // Manejador de Login que asigna el perfil y la vista correspondiente
+  const handleLoginSuccess = (userObj) => {
+    setUsuarioAutenticado(userObj);
+    setIsLoginOpen(false);
+
+    // Mapeo estricto de vistas según el rol autenticado
+    if (userObj.role === 'barbero') {
+      setActiveRole('barbero');
+    } else if (userObj.role === 'admin' || userObj.role === 'superadmin' || userObj.role === 'evaluacion' || userObj.role === 'sucursal') {
+      setActiveRole('admin');
+    } else {
+      setActiveRole('cliente');
+    }
+  };
+
+  const handleCerrarSesion = () => {
+    setUsuarioAutenticado(null);
+    setActiveRole('cliente');
   };
 
   return (
-    <div className="min-h-screen bg-[#141414] text-white flex flex-col font-sans">
-      <Navbar
-        activeRole={activeRole}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      <Navbar 
+        activeRole={activeRole} 
         setActiveRole={setActiveRole}
-        config={config}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        usuarioAutenticado={usuarioAutenticado}
+        onCerrarSesion={handleCerrarSesion}
       />
 
-      <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+        {/* VISTA 1: CLIENTE (Formulario de Agendamiento de Citas) */}
         {activeRole === 'cliente' && (
-          <ClienteView
+          <ClienteView 
             barberos={barberos}
             servicios={servicios}
-            onAgregarCita={handleAgregarCita}
+            citas={citas}
+            setCitas={setCitas}
           />
         )}
 
-        {(activeRole === 'admin' || activeRole === 'superadmin' || activeRole === 'demo' || activeRole === 'demo-sena' || activeRole === 'demo-cliente') && (
-          <AdminView
-            config={config}
-            setConfig={setConfig}
+        {/* VISTA 2: BARBERO (Agenda de Turnos y Marcar Citas) */}
+        {activeRole === 'barbero' && (
+          <BarberoView 
+            barberoActual={barberos[0]}
+            citas={citas}
+            setCitas={setCitas}
+            onCerrarSesion={handleCerrarSesion}
+          />
+        )}
+
+        {/* VISTA 3: ADMINISTRADOR / SUPERADMIN / EVALUACIÓN (Métricas, Control de Barberos y Citas Globales) */}
+        {(activeRole === 'admin' || activeRole === 'superadmin') && (
+          <AdminView 
+            citas={citas}
+            setCitas={setCitas}
             barberos={barberos}
             setBarberos={setBarberos}
             servicios={servicios}
             setServicios={setServicios}
-            citas={citas}
-            setCitas={setCitas}
-            activeRole={activeRole}
-          />
-        )}
-
-        {activeRole === 'barbero' && (
-          <BarberoView
-            barberoActual={barberos[0]}
-            citas={citas}
-            setCitas={setCitas}
-            onCerrarSesion={() => setActiveRole('cliente')}
           />
         )}
       </main>
+
+      <LoginModal 
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }
