@@ -15,7 +15,7 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // WhatsApp de Soporte (Editable solo por SuperAdmin)
+  // Configuración WhatsApp de Soporte
   const [devConfig, setDevConfig] = useState({
     whatsappSoporte: '573001234567',
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.'
@@ -24,8 +24,8 @@ export default function App() {
   // Multi-Tenant SaaS (Barberías Registradas)
   const [tenants, setTenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
-    { id: 't2', nombreBarberia: 'Barbería Demo SENA', dueno: 'Instructor SENA', estadoLicencia: 'Activa', diasRestantes: 30 },
-    { id: 't3', nombreBarberia: 'Barbería Demo Cliente', dueno: 'Cliente Comercial', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 15 }
+    { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 },
+    { id: 't3', nombreBarberia: 'Barbería Demo Comercial', dueno: 'Cliente Comercial', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 15 }
   ]);
 
   // Barberos con control de cupos, clave de acceso y estado
@@ -56,7 +56,7 @@ export default function App() {
   // Auditoría de Accesos
   const [logsSesion, setLogsSesion] = useState([
     { id: 'l1', usuario: 'Elkin Ramírez', rol: 'barbero', fechaHora: '2026-11-08 08:00 AM', evento: 'Marcación de Ingreso' },
-    { id: 'l2', usuario: 'demo-sena', rol: 'evaluacion', fechaHora: '2026-11-08 09:15 AM', evento: 'Ingreso Audit SENA' }
+    { id: 'l2', usuario: 'demo-sena', rol: 'evaluacion', fechaHora: '2026-11-08 09:15 AM', evento: 'Ingreso Auditoría Técnica' }
   ]);
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function App() {
     const p = passwordInput.trim();
 
     if (u === 'demo-sena' && p === 'sena2026') {
-      exitoLogin({ username: 'demo-sena', nombre: 'Auditor SENA', role: 'evaluacion' });
+      exitoLogin({ username: 'demo-sena', nombre: 'Auditoría Técnica', role: 'evaluacion' });
     } else if (u === 'demo-cliente' && p === 'demo2026') {
       exitoLogin({ username: 'demo-cliente', nombre: 'Sucursal Demo', role: 'sucursal' });
     } else if (u === 'admin' && p === 'admin123') {
@@ -108,7 +108,6 @@ export default function App() {
     setActiveRole('cliente');
   };
 
-  // Cambio seguro de rol desde la interfaz
   const handleCambioSeleccion = (e) => {
     const targetRole = e.target.value;
     if (targetRole === 'cliente') {
@@ -123,7 +122,6 @@ export default function App() {
     }
   };
 
-  // Impersonación de soporte por parte del Desarrollador
   const ingresarComoSoporteAdmin = (nombreTenant) => {
     exitoLogin({ username: 'soporte-dev', nombre: `Soporte en ${nombreTenant}`, role: 'admin' });
   };
@@ -146,7 +144,6 @@ export default function App() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Selector de perfiles (El perfil Desarrollador queda OCULTO) */}
             <select
               value={activeRole}
               onChange={handleCambioSeleccion}
@@ -155,7 +152,7 @@ export default function App() {
               <option value="cliente">Vista: Cliente (Reservas)</option>
               <option value="barbero">Vista: Barbero</option>
               <option value="admin">Vista: Administrador</option>
-              <option value="evaluacion">Perfil Evaluación / SENA</option>
+              <option value="evaluacion">Perfil Evaluación Técnica</option>
               <option value="sucursal">Perfil Demostración / Sucursal</option>
               {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
                 <option value="superadmin">🔒 Consola Desarrollador Root</option>
@@ -204,7 +201,7 @@ export default function App() {
 
         {['admin', 'sucursal', 'evaluacion'].includes(activeRole) && (
           <VistaAdmin 
-            usuario={usuarioAutenticado || { nombre: 'Local / Auditoría' }} 
+            usuario={usuarioAutenticado || { nombre: 'Auditoría Técnica' }} 
             citas={citas} 
             setCitas={setCitas} 
             barberos={barberos} 
@@ -227,7 +224,7 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL DE LOGIN REQUERIDO */}
+      {/* MODAL LOGIN */}
       {isLoginOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', maxWidth: '400px', width: '100%', padding: '24px', position: 'relative' }}>
@@ -288,7 +285,7 @@ export default function App() {
   );
 }
 
-{/* SUBCOMPONENTE VISTA CLIENTE CON CÓDIGO QR MEJORADO */}
+{/* VISTA CLIENTE */}
 function VistaCliente({ barberos, servicios, citas, setCitas }) {
   const [nombre, setNombre] = useState('');
   const [barbero, setBarbero] = useState(barberos[0]?.nombre || '');
@@ -512,13 +509,12 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* SUBCOMPONENTE VISTA ADMIN CON INVENTARIO Y REINICIO DE CLAVES */}
+{/* VISTA ADMIN */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoBarbero, setNuevoBarbero] = useState('');
   const [especialidad, setEspecialidad] = useState('');
 
-  // Estados de inventario
   const [nombreProd, setNombreProd] = useState('');
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
@@ -549,7 +545,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     setEspecialidad('');
   };
 
-  // Agregar Producto al Inventario
   const handleAgregarProducto = (e) => {
     e.preventDefault();
     if (!nombreProd.trim()) return;
@@ -565,6 +560,9 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
   const ingresosTotales = citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
+  // Verificación estricta: Oculta el botón de WhatsApp si es Perfil Evaluación Técnica
+  const esPerfilEvaluacion = usuario?.role === 'evaluacion' || usuario?.nombre?.includes('Evaluación') || usuario?.username === 'demo-sena';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '16px' }}>
@@ -573,9 +571,11 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
           <p style={{ color: '#94a3b8', fontSize: '14px', margin: '4px 0 0 0' }}>Control de alquiler de cupos, inventario de productos y auditoría</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>
-            Renovar WhatsApp
-          </a>
+          {!esPerfilEvaluacion && (
+            <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>
+              Renovar WhatsApp
+            </a>
+          )}
           <div style={{ backgroundColor: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
             <button onClick={() => setTab('resumen')} style={{ padding: '6px 12px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Resumen</button>
             <button onClick={() => setTab('cupos')} style={{ padding: '6px 12px', background: tab === 'cupos' ? '#f59e0b' : 'none', color: tab === 'cupos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Barberos & Claves</button>
@@ -632,7 +632,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
       )}
 
-      {/* MÓDULO DE INVENTARIO Y PRODUCTOS */}
       {tab === 'productos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <form onSubmit={handleAgregarProducto} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '8px', backgroundColor: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
@@ -697,7 +696,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-{/* CONSOLA COMPLETA DEL DESARROLLADOR ROOT */}
+{/* CONSOLA SUPERADMIN */}
 function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngresarComoSoporte }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
