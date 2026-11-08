@@ -28,11 +28,11 @@ export default function App() {
     { id: 't3', nombreBarberia: 'Barbería Demo Comercial', dueno: 'Cliente Comercial', estadoLicencia: 'Prueba 1 Mes', diasRestantes: 15 }
   ]);
 
-  // Barberos con control de cupos, clave de acceso y estado
+  // Barberos con control de cupos, clave de acceso, estado y fecha de expiración a 3 meses
   const [barberos, setBarberos] = useState([
-    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', cupoPago: true, claveAcceso: 'barbero123' },
-    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', cupoPago: true, claveAcceso: 'mateo2026' },
-    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Inactivo', cupoPago: false, claveAcceso: 'carlos2026' }
+    { id: 'b1', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', cupoPago: true, claveAcceso: 'barbero123', fechaExpiracion: '2027-02-08' },
+    { id: 'b2', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', cupoPago: true, claveAcceso: 'mateo2026', fechaExpiracion: '2027-02-08' },
+    { id: 'b3', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Inactivo', cupoPago: false, claveAcceso: 'carlos2026', fechaExpiracion: '2026-08-01' }
   ]);
 
   // Catálogo de Productos (Champús, Ceras, Geles)
@@ -81,6 +81,16 @@ export default function App() {
     } else if (u === 'elkin-dev26' && p === 'elkin2026') {
       exitoLogin({ username: 'elkin-dev26', nombre: 'SuperAdmin / Desarrollador', role: 'superadmin' });
     } else if (u === 'barbero' && p === 'barbero123') {
+      // Verificación de expiración de 3 meses para el barbero
+      const miBarbero = barberos.find(b => b.claveAcceso === p || b.nombre.toLowerCase().includes('elkin'));
+      const hoy = new Date();
+      const fechaVencimiento = miBarbero ? new Date(miBarbero.fechaExpiracion) : new Date('2027-01-01');
+
+      if (miBarbero && hoy > fechaVencimiento) {
+        setLoginError('Su acceso ha caducado por superar el período limite de 3 meses. Solicite la reactivación al Administrador.');
+        return;
+      }
+
       exitoLogin({ username: 'barbero', nombre: 'Elkin Ramírez', role: 'barbero' });
     } else {
       setLoginError('Credenciales incorrectas. Verifique su usuario y contraseña.');
@@ -434,12 +444,11 @@ function VistaCliente({ barberos, servicios, citas, setCitas }) {
   );
 }
 
-{/* VISTA BARBERO (CON OPCIÓN DE CANCELAR POR INASISTENCIA) */}
+{/* VISTA BARBERO */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
 
-  // Filtra las citas confirmadas o pendientes del barbero
   const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || 'barbero').toLowerCase());
 
   const handleEstadoCita = (id, nuevoEstado) => {
@@ -506,7 +515,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
               <span style={{ color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</span>
             </div>
 
-            {/* BOTONERA DE ACCIÓN DEL BARBERO: CONFIRMAR O MARCAR INASISTENCIA */}
             {c.estado !== 'completada' && c.estado !== 'cancelada' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button 
@@ -531,7 +539,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN */}
+{/* VISTA ADMIN (CON FECHA Y RENOVACIÓN DE 3 MESES PARA BARBEROS) */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoBarbero, setNuevoBarbero] = useState('');
@@ -545,6 +553,16 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
   const toggleBarbero = (id) => {
     setBarberos(barberos.map(b => b.id === id ? { ...b, estado: b.estado === 'Activo' ? 'Inactivo' : 'Activo' } : b));
+  };
+
+  const renovarCupo3Meses = (id, nombre) => {
+    // Suma 90 días a la fecha actual
+    const nuevaFecha = new Date();
+    nuevaFecha.setDate(nuevaFecha.getDate() + 90);
+    const fechaString = nuevaFecha.toISOString().split('T')[0];
+
+    setBarberos(barberos.map(b => b.id === id ? { ...b, estado: 'Activo', fechaExpiracion: fechaString } : b));
+    alert(`Se renovó la licencia de 3 meses para ${nombre} hasta el ${fechaString}`);
   };
 
   const eliminarBarbero = (id) => {
@@ -562,7 +580,20 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const handleAgregarBarbero = (e) => {
     e.preventDefault();
     if (!nuevoBarbero.trim()) return;
-    setBarberos([...barberos, { id: 'b' + Date.now(), nombre: nuevoBarbero, especialidad: especialidad || 'Barbero Profesional', estado: 'Activo', claveAcceso: 'barbero123' }]);
+
+    // Calcula expiración inicial a 3 meses (90 días)
+    const fechaExp = new Date();
+    fechaExp.setDate(fechaExp.getDate() + 90);
+
+    setBarberos([...barberos, { 
+      id: 'b' + Date.now(), 
+      nombre: nuevoBarbero, 
+      especialidad: especialidad || 'Barbero Profesional', 
+      estado: 'Activo', 
+      claveAcceso: 'barbero123',
+      fechaExpiracion: fechaExp.toISOString().split('T')[0]
+    }]);
+
     setNuevoBarbero('');
     setEspecialidad('');
   };
@@ -628,27 +659,35 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
           <form onSubmit={handleAgregarBarbero} style={{ display: 'flex', gap: '8px', backgroundColor: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
             <input type="text" placeholder="Nombre del barbero..." value={nuevoBarbero} onChange={(e) => setNuevoBarbero(e.target.value)} style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px' }} required />
             <input type="text" placeholder="Especialidad" value={especialidad} onChange={(e) => setEspecialidad(e.target.value)} style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px' }} />
-            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Crear Barbero</button>
+            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Crear Barbero (3 Meses)</button>
           </form>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-            {barberos.map(b => (
-              <div key={b.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>
-                    <h4 style={{ margin: 0, color: '#fff' }}>{b.nombre}</h4>
-                    <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8' }}>Clave Actual: <span style={{ color: '#fbbf24' }}>{b.claveAcceso || 'barbero123'}</span></p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            {barberos.map(b => {
+              const estaVencido = new Date() > new Date(b.fechaExpiracion);
+
+              return (
+                <div key={b.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div>
+                      <h4 style={{ margin: 0, color: '#fff' }}>{b.nombre}</h4>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Clave: <span style={{ color: '#fbbf24' }}>{b.claveAcceso || 'barbero123'}</span></p>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#cbd5e1' }}>Caduca: <span style={{ color: estaVencido ? '#f43f5e' : '#34d399', fontWeight: 'bold' }}>{b.fechaExpiracion}</span></p>
+                    </div>
+                    <span style={{ fontSize: '11px', color: estaVencido ? '#f43f5e' : b.estado === 'Activo' ? '#34d399' : '#f43f5e', fontWeight: 'bold' }}>
+                      {estaVencido ? 'Expirado (3m)' : b.estado}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '12px', color: b.estado === 'Activo' ? '#34d399' : '#f43f5e', fontWeight: 'bold' }}>{b.estado}</span>
+
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
+                    <button onClick={() => renovarCupo3Meses(b.id, b.nombre)} style={{ flex: 1, padding: '6px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Renovar +3 Meses</button>
+                    <button onClick={() => toggleBarbero(b.id)} style={{ padding: '6px', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}>{b.estado === 'Activo' ? 'Pausar' : 'Activar'}</button>
+                    <button onClick={() => reiniciarClaveBarbero(b.id, b.nombre)} style={{ padding: '6px', backgroundColor: '#1e1b4b', color: '#818cf8', border: '1px solid #4338ca', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}>Clave</button>
+                    <button onClick={() => eliminarBarbero(b.id)} style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}>Eliminar</button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>
-                  <button onClick={() => toggleBarbero(b.id)} style={{ flex: 1, padding: '6px', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
-                    {b.estado === 'Activo' ? 'Pausar/Bloquear' : 'Activar (Pago)'}
-                  </button>
-                  <button onClick={() => reiniciarClaveBarbero(b.id, b.nombre)} style={{ padding: '6px', backgroundColor: '#1e1b4b', color: '#818cf8', border: '1px solid #4338ca', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Reinicio Clave</button>
-                  <button onClick={() => eliminarBarbero(b.id)} style={{ padding: '6px 10px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Eliminar</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
