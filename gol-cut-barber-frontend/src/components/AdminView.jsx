@@ -12,26 +12,25 @@ export default function AdminView({
   setBarberos = () => {}, 
   servicios = [], 
   setServicios = () => {}, 
-  logsSesion = [], 
-  devConfig = { whatsappSoporte: '573001234567', mensajeRenovacion: 'Hola' } 
+  logsSesion = [] 
 }) {
   const [activeTab, setActiveTab] = useState('resumen');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState('todas');
+
   const [nuevoBarbero, setNuevoBarbero] = useState('');
   const [especialidad, setEspecialidad] = useState('');
 
-  // Valores a prueba de fallos nulos
-  const configSegura = devConfig || { whatsappSoporte: '573001234567', mensajeRenovacion: 'Hola' };
-  const numWhatsapp = configSegura.whatsappSoporte || '573001234567';
-  const msjWhatsapp = configSegura.mensajeRenovacion || 'Hola, deseo renovar mi membresia mensual de Gol Cut Barber.';
+  // Constantes de WhatsApp internas independientes para cero errores
+  const numWhatsapp = '573001234567';
+  const msjWhatsapp = 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.';
 
-  const totalCitas = citas.length;
-  const citasCompletadas = citas.filter(c => c.estado === 'completada').length;
-  const citasPendientes = citas.filter(c => c.estado === 'confirmada' || c.estado === 'pendiente').length;
+  const totalCitas = citas ? citas.length : 0;
+  const citasCompletadas = citas ? citas.filter(c => c.estado === 'completada').length : 0;
+  const citasPendientes = citas ? citas.filter(c => c.estado === 'confirmada' || c.estado === 'pendiente').length : 0;
   const ingresosTotales = citas
-    .filter(c => c.estado === 'completada')
-    .reduce((sum, c) => sum + (c.precio || 0), 0);
+    ? citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0)
+    : 0;
 
   const toggleEstadoBarbero = (id) => {
     setBarberos(barberos.map(b => {
@@ -62,7 +61,7 @@ export default function AdminView({
     setCitas(citas.map(c => c.id === id ? { ...c, estado: 'cancelada' } : c));
   };
 
-  const citasFiltradas = citas.filter(c => {
+  const citasFiltradas = (citas || []).filter(c => {
     const coincideBusqueda = (c.cliente || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (c.barbero || '').toLowerCase().includes(searchTerm.toLowerCase());
     const coincideEstado = filterEstado === 'todas' || c.estado === filterEstado;
