@@ -15,7 +15,7 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Configuración WhatsApp de Soporte & Lista de Incentivos Editables
+  // Configuración WhatsApp de Soporte
   const [devConfig, setDevConfig] = useState({
     whatsappSoporte: '573001234567',
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
@@ -27,7 +27,7 @@ export default function App() {
       id: 'inc1',
       tipo: 'cumpleanos',
       titulo: 'Descuento Cumpleaños Cliente',
-      descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar el día de su cumpleaños.',
+      descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar o registrar corte el día de su cumpleaños.',
       activo: true,
       porcentaje: 10
     },
@@ -42,7 +42,7 @@ export default function App() {
     }
   ]);
 
-  // Multi-Tenant SaaS (Barberías Registradas con Nombre Anterior y Conteo Mensual)
+  // Multi-Tenant SaaS
   const [tenants, setTenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: null, dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
     { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', nombreAnterior: 'Barbería Inicial Demo', dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 },
@@ -70,7 +70,7 @@ export default function App() {
   ]);
 
   const [citas, setCitas] = useState([
-    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 25000, estado: 'confirmada', esCumpleanos: true },
+    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'confirmada', esCumpleanos: true },
     { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Mateo Gómez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false }
   ]);
 
@@ -86,7 +86,6 @@ export default function App() {
     return () => document.removeEventListener('contextmenu', handleContextMenu);
   }, []);
 
-  // Validación de estado de licencia de la barbería activa (Sede Principal)
   const tenantPrincipal = tenants[0]; 
   const licenciaVencida = tenantPrincipal?.diasRestantes <= 0 || tenantPrincipal?.estadoLicencia === 'Pausada (Vencida)';
 
@@ -186,7 +185,6 @@ export default function App() {
 
   return (
     <div style={{ backgroundColor: '#020617', color: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
-      {/* NAVBAR RESPONSIVE */}
       <header style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #f59e0b', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 40, width: '100%', boxSizing: 'border-box' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -236,7 +234,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* VISTAS MAIN */}
       <main style={{ maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '16px', flex: 1, boxSizing: 'border-box' }}>
         {activeRole === 'cliente' && (
           <VistaCliente 
@@ -292,7 +289,6 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL LOGIN RESPONSIVE */}
       {isLoginOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', maxWidth: '380px', width: '100%', padding: '20px', position: 'relative', boxSizing: 'border-box' }}>
@@ -559,10 +555,11 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
   );
 }
 
-{/* VISTA BARBERO */}
+{/* VISTA BARBERO CON CHECKBOX MANUAL DE CUMPLEAÑOS */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
+  const [esCumpleanosCheck, setEsCumpleanosCheck] = useState(false);
 
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola')}`;
 
@@ -581,6 +578,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     );
   }
 
+  const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
   const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
   const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || '').toLowerCase());
   const atencionesBarbero = citasBarbero.filter(c => c.estado === 'completada').length;
@@ -591,8 +589,21 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado } : c));
   };
 
+  const handleCambioServicio = (nombreServ) => {
+    setServicioRapido(nombreServ);
+    const sObj = servicios.find(s => s.nombre === nombreServ);
+    if (sObj) setPrecioRapido(sObj.precio);
+  };
+
   const handleCorteDirecto = (e) => {
     e.preventDefault();
+    let valorFinal = Number(precioRapido);
+
+    if (esCumpleanosCheck && incCumple) {
+      const descuento = (valorFinal * incCumple.porcentaje) / 100;
+      valorFinal = valorFinal - descuento;
+    }
+
     const nueva = {
       id: 'c' + Date.now(),
       cliente: 'Cliente Presencial (Walk-in)',
@@ -600,10 +611,13 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       servicio: servicioRapido,
       fecha: new Date().toISOString().split('T')[0],
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      precio: Number(precioRapido),
-      estado: 'completada'
+      precio: valorFinal,
+      estado: 'completada',
+      esCumpleanos: esCumpleanosCheck && !!incCumple
     };
+
     setCitas([nueva, ...citas]);
+    setEsCumpleanosCheck(false);
   };
 
   const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
@@ -642,14 +656,30 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
         </div>
       )}
 
+      {/* BOTONERA EXPRESA CON BOTÓN DE DESCUENTO CUMPLEAÑOS */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
         <h3 style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', margin: '0 0 8px 0' }}>Botonera Expresa (Atención Directa en Silla)</h3>
-        <form onSubmit={handleCorteDirecto} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-          <select value={servicioRapido} onChange={(e) => setServicioRapido(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }}>
-            {servicios.map(s => <option key={s.id} value={s.nombre}>{s.nombre}</option>)}
-          </select>
-          <input type="number" value={precioRapido} onChange={(e) => setPrecioRapido(e.target.value)} placeholder="Valor ($)" style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} required />
-          <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Sumar a Mi Caja</button>
+        <form onSubmit={handleCorteDirecto} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+            <select value={servicioRapido} onChange={(e) => handleCambioServicio(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }}>
+              {servicios.map(s => <option key={s.id} value={s.nombre}>{s.nombre}</option>)}
+            </select>
+            <input type="number" value={precioRapido} onChange={(e) => setPrecioRapido(e.target.value)} placeholder="Valor ($)" style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} required />
+            <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Sumar a Mi Caja</button>
+          </div>
+
+          {incCumple && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#fbbf24', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', cursor: 'pointer', width: 'fit-content' }}>
+              <input 
+                type="checkbox" 
+                checked={esCumpleanosCheck} 
+                onChange={(e) => setEsCumpleanosCheck(e.target.checked)} 
+                style={{ cursor: 'pointer' }}
+              />
+              <Gift style={{ width: '14px', height: '14px' }} />
+              <span>Aplicar Descuento de Cumpleaños ({incCumple.porcentaje}%) a este cliente</span>
+            </label>
+          )}
         </form>
       </div>
 
@@ -668,9 +698,9 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
               </div>
 
               {c.esCumpleanos && (
-                <div style={{ margin: '6px 0', padding: '4px 6px', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', borderRadius: '4px', color: '#fbbf24', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ margin: '6px 0', padding: '4px 6px', backgroundColor: 'rgba(5, 150, 105, 0.2)', border: '1px solid #059669', borderRadius: '4px', color: '#34d399', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Gift style={{ width: '12px', height: '12px' }} />
-                  <span><strong>¡Cumpleañero!</strong> Descuento Aplicado.</span>
+                  <span><strong>🎁 Cumpleaños:</strong> Descuento Aplicado.</span>
                 </div>
               )}
 
@@ -707,7 +737,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON CONTROL DE PAUSAR Y ELIMINAR INCENTIVOS */}
+{/* VISTA ADMIN CON VERIFICACIÓN DE CUMPLEAÑOS Y REPORTES */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
@@ -719,7 +749,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
 
-  // Edición Nombre de Barbería
   const barberiaActual = tenants[0];
   const [inputNuevoNombreBarberia, setInputNuevoNombreBarberia] = useState(barberiaActual?.nombreBarberia || '');
 
@@ -763,12 +792,10 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     alert(`Nombre de la barbería actualizado a: "${inputNuevoNombreBarberia}". Se reflejará automáticamente en la consola del desarrollador.`);
   };
 
-  // Lógica para alternar estado (Pausar / Activar) de un incentivo
   const toggleEstadoIncentivo = (id) => {
     setIncentivos(incentivos.map(inc => inc.id === id ? { ...inc, activo: !inc.activo } : inc));
   };
 
-  // Lógica para eliminar un incentivo
   const eliminarIncentivo = (id, titulo) => {
     if (window.confirm(`¿Está seguro de eliminar el incentivo "${titulo}"?`)) {
       setIncentivos(incentivos.filter(inc => inc.id !== id));
@@ -878,14 +905,48 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
               <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{citas.filter(c => c.estado === 'completada').length}</p>
             </div>
             <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-              <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Productos Registrados</span>
-              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{productos.length}</p>
+              <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Descuentos Cumpleaños</span>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#34d399' }}>{citas.filter(c => c.esCumpleanos).length}</p>
             </div>
+          </div>
+
+          {/* TABLA DE AUDITORÍA DE ATENCIONES PARA EL ADMINISTRADOR */}
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px', overflowX: 'auto' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '12px' }}>Historial & Auditoría de Atenciones</h4>
+            <table style={{ width: '100%', textAlign: 'left', fontSize: '11px', color: '#cbd5e1' }}>
+              <thead>
+                <tr style={{ color: '#fbbf24', borderBottom: '1px solid #334155' }}>
+                  <th style={{ padding: '6px' }}>Cliente</th>
+                  <th style={{ padding: '6px' }}>Barbero</th>
+                  <th style={{ padding: '6px' }}>Servicio</th>
+                  <th style={{ padding: '6px' }}>Caja / Cobro</th>
+                  <th style={{ padding: '6px' }}>Observación Auditoría</th>
+                </tr>
+              </thead>
+              <tbody>
+                {citas.map(c => (
+                  <tr key={c.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                    <td style={{ padding: '6px', fontWeight: 'bold', color: '#fff' }}>{c.cliente}</td>
+                    <td style={{ padding: '6px' }}>{c.barbero}</td>
+                    <td style={{ padding: '6px' }}>{c.servicio}</td>
+                    <td style={{ padding: '6px', color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</td>
+                    <td style={{ padding: '6px' }}>
+                      {c.esCumpleanos ? (
+                        <span style={{ color: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
+                          🎁 Descuento Cumpleaños
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>Tarifa Normal</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* PESTAÑA INCENTIVOS CON BOTONES DE PAUSAR / ACTIVAR Y ELIMINAR */}
       {tab === 'incentivos' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
           {incentivos.map(inc => (
@@ -999,7 +1060,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-{/* CONSOLA SUPERADMIN CON RASTREO DE NOMBRE ANTERIOR */}
+{/* CONSOLA SUPERADMIN */}
 function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngresarComoSoporte }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
