@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Scissors, User, Lock, LogOut, Calendar, Clock, 
   CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3
+  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare
 } from 'lucide-react';
 
 export default function App() {
@@ -21,7 +21,7 @@ export default function App() {
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
   });
 
-  // Estado dinámico de Incentivos (Pausar, Activar, Eliminar)
+  // Estado dinámico de Incentivos con Metas y Promedios
   const [incentivos, setIncentivos] = useState([
     {
       id: 'inc1',
@@ -35,7 +35,7 @@ export default function App() {
       id: 'inc2',
       tipo: 'barbero',
       titulo: 'Premio Alquiler Silla Barbero',
-      descripcion: 'Barberos que registren más de 15 citas ganan 5% de descuento en su alquiler de silla.',
+      descripcion: 'Barberos que superen la meta mensual ganan descuento directo en la cuota de alquiler de silla.',
       activo: true,
       metaCitas: 15,
       porcentaje: 5
@@ -51,9 +51,9 @@ export default function App() {
 
   // Base de datos de Barberos
   const [barberos, setBarberos] = useState([
-    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', cupoPago: true, claveAcceso: 'barbero123', fechaExpiracion: '2027-02-08', atencionesApp: 18 },
-    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', cupoPago: true, claveAcceso: 'mateo2026', fechaExpiracion: '2027-02-08', atencionesApp: 12 },
-    { id: 'b3', username: 'carlos', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Inactivo', cupoPago: false, claveAcceso: 'carlos2026', fechaExpiracion: '2026-08-01', atencionesApp: 4 }
+    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', cupoPago: true, claveAcceso: 'barbero123', fechaExpiracion: '2027-02-08' },
+    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', cupoPago: true, claveAcceso: 'mateo2026', fechaExpiracion: '2027-02-08' },
+    { id: 'b3', username: 'carlos', nombre: 'Carlos Andrés', especialidad: 'Especialista en Barba', estado: 'Inactivo', cupoPago: false, claveAcceso: 'carlos2026', fechaExpiracion: '2026-08-01' }
   ]);
 
   // Catálogo de Productos
@@ -70,8 +70,9 @@ export default function App() {
   ]);
 
   const [citas, setCitas] = useState([
-    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'confirmada', esCumpleanos: true },
-    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Mateo Gómez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false }
+    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true },
+    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false },
+    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'completada', esCumpleanos: false }
   ]);
 
   // Auditoría
@@ -555,7 +556,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
   );
 }
 
-{/* VISTA BARBERO CON CHECKBOX MANUAL DE CUMPLEAÑOS */}
+{/* VISTA BARBERO */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
@@ -656,7 +657,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
         </div>
       )}
 
-      {/* BOTONERA EXPRESA CON BOTÓN DE DESCUENTO CUMPLEAÑOS */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
         <h3 style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', margin: '0 0 8px 0' }}>Botonera Expresa (Atención Directa en Silla)</h3>
         <form onSubmit={handleCorteDirecto} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -737,7 +737,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON VERIFICACIÓN DE CUMPLEAÑOS Y REPORTES */}
+{/* VISTA ADMIN CON PROMEDIO DE BARBEROS Y AUDITORÍA DE CIERRE DE MES */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
@@ -773,6 +773,28 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       </div>
     );
   }
+
+  // CÁLCULO DE PROMEDIOS & METAS INDIVIDUALES DE BARBEROS (INCENTIVO SILLA)
+  const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
+  const metaEstablecida = incBarbero?.metaCitas || 15;
+  const barberosActivos = barberos.filter(b => b.estado === 'Activo');
+
+  const metricasBarberos = barberosActivos.map(b => {
+    const atenciones = citas.filter(c => c.barbero.toLowerCase() === b.nombre.toLowerCase() && c.estado === 'completada').length;
+    const porcentaje = Math.min(Math.round((atenciones / metaEstablecida) * 100), 100);
+    const cumpleMeta = atenciones >= metaEstablecida;
+
+    return {
+      ...b,
+      atenciones,
+      porcentaje,
+      cumpleMeta
+    };
+  });
+
+  const promedioGeneralBarberia = barberosActivos.length > 0 
+    ? Math.round(metricasBarberos.reduce((sum, b) => sum + b.porcentaje, 0) / barberosActivos.length)
+    : 0;
 
   const handleGuardarNuevoNombreBarberia = (e) => {
     e.preventDefault();
@@ -830,8 +852,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       especialidad: especialidad || 'Barbero Profesional', 
       estado: 'Activo', 
       claveAcceso: nuevaClaveBarbero || 'barbero123',
-      fechaExpiracion: fechaExp.toISOString().split('T')[0],
-      atencionesApp: 0
+      fechaExpiracion: fechaExp.toISOString().split('T')[0]
     }]);
 
     setNuevoNombreBarbero('');
@@ -910,7 +931,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
             </div>
           </div>
 
-          {/* TABLA DE AUDITORÍA DE ATENCIONES PARA EL ADMINISTRADOR */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px', overflowX: 'auto' }}>
             <h4 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '12px' }}>Historial & Auditoría de Atenciones</h4>
             <table style={{ width: '100%', textAlign: 'left', fontSize: '11px', color: '#cbd5e1' }}>
@@ -947,45 +967,91 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
       )}
 
+      {/* PESTAÑA INCENTIVOS CON CÁLCULO PROMEDIO Y AUDITORÍA DE FIN DE MES POR BARBERO */}
       {tab === 'incentivos' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
-          {incentivos.map(inc => (
-            <div key={inc.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <h4 style={{ margin: 0, color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {inc.tipo === 'cumpleanos' ? <Gift style={{ width: '16px', height: '16px' }} /> : <Award style={{ width: '16px', height: '16px' }} />}
-                    {inc.titulo}
-                  </h4>
-                  <span style={{ fontSize: '10px', color: inc.activo ? '#34d399' : '#f43f5e', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: inc.activo ? 'rgba(52, 211, 153, 0.15)' : 'rgba(244, 63, 94, 0.15)' }}>
-                    {inc.activo ? 'Activo' : 'Pausado'}
-                  </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* MÓDULO DE PROMEDIOS DE RENDIMIENTO Y CIERRE DE MES */}
+          {incBarbero && (
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '12px', padding: '16px', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#60a5fa', fontSize: '15px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Award style={{ width: '18px', height: '18px' }} /> Auditoría de Cierre de Mes: Premio Alquiler de Sillas
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                    Meta por Barbero: <strong>{metaEstablecida} citas</strong> | Descuento Cuota Silla: <strong>{incBarbero.porcentaje}%</strong>
+                  </p>
                 </div>
-                <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>{inc.descripcion}</p>
+                <div style={{ backgroundColor: '#020617', border: '1px solid #3b82f6', padding: '6px 12px', borderRadius: '8px', textAlign: 'right' }}>
+                  <span style={{ fontSize: '10px', color: '#93c5fd', display: 'block' }}>Promedio Rendimiento Sede</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#60a5fa' }}>{promedioGeneralBarberia}%</span>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid #1e293b', paddingTop: '8px' }}>
-                <button 
-                  onClick={() => toggleEstadoIncentivo(inc.id)} 
-                  style={{ flex: 1, padding: '6px 8px', backgroundColor: inc.activo ? '#020617' : '#064e3b', color: inc.activo ? '#cbd5e1' : '#34d399', border: inc.activo ? '1px solid #334155' : '1px solid #059669', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
-                >
-                  {inc.activo ? '⏸️ Pausar Incentivo' : '▶️ Activar Incentivo'}
-                </button>
-                <button 
-                  onClick={() => eliminarIncentivo(inc.id, inc.titulo)} 
-                  style={{ padding: '6px 10px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
-                >
-                  🗑️ Eliminar
-                </button>
-              </div>
-            </div>
-          ))}
+              {/* LISTADO DE PROMEDIO INDIVIDUAL POR BARBERO */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+                {metricasBarberos.map(b => (
+                  <div key={b.id} style={{ backgroundColor: '#020617', border: b.cumpleMeta ? '1px solid #059669' : '1px solid #334155', borderRadius: '8px', padding: '10px', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
+                      <span style={{ fontSize: '11px', color: b.cumpleMeta ? '#34d399' : '#fbbf24', fontWeight: 'bold' }}>
+                        {b.atenciones} / {metaEstablecida} citas ({b.porcentaje}%)
+                      </span>
+                    </div>
 
-          {incentivos.length === 0 && (
-            <div style={{ gridColumn: '1 / -1', padding: '24px', backgroundColor: '#0f172a', borderRadius: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #334155' }}>
-              No hay incentivos activos ni configurados en este momento.
+                    <div style={{ width: '100%', height: '6px', backgroundColor: '#0f172a', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+                      <div style={{ width: `${b.porcentaje}%`, height: '100%', backgroundColor: b.cumpleMeta ? '#34d399' : '#f59e0b', transition: 'width 0.3s ease' }}></div>
+                    </div>
+
+                    {b.cumpleMeta ? (
+                      <div style={{ backgroundColor: 'rgba(5, 150, 105, 0.15)', border: '1px solid #059669', color: '#34d399', fontSize: '10px', padding: '4px 6px', borderRadius: '4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <CheckSquare style={{ width: '12px', height: '12px' }} /> 🏆 Ganador Beneficio Alquiler Silla (-{incBarbero.porcentaje}%)
+                      </div>
+                    ) : (
+                      <div style={{ color: '#94a3b8', fontSize: '10px' }}>
+                        Faltan {metaEstablecida - b.atenciones} citas para alcanzar la meta.
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
+          {/* LISTA GENERAL DE REGLAS DE INCENTIVO */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+            {incentivos.map(inc => (
+              <div key={inc.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <h4 style={{ margin: 0, color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {inc.tipo === 'cumpleanos' ? <Gift style={{ width: '16px', height: '16px' }} /> : <Award style={{ width: '16px', height: '16px' }} />}
+                      {inc.titulo}
+                    </h4>
+                    <span style={{ fontSize: '10px', color: inc.activo ? '#34d399' : '#f43f5e', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: inc.activo ? 'rgba(52, 211, 153, 0.15)' : 'rgba(244, 63, 94, 0.15)' }}>
+                      {inc.activo ? 'Activo' : 'Pausado'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>{inc.descripcion}</p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid #1e293b', paddingTop: '8px' }}>
+                  <button 
+                    onClick={() => toggleEstadoIncentivo(inc.id)} 
+                    style={{ flex: 1, padding: '6px 8px', backgroundColor: inc.activo ? '#020617' : '#064e3b', color: inc.activo ? '#cbd5e1' : '#34d399', border: inc.activo ? '1px solid #334155' : '1px solid #059669', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
+                  >
+                    {inc.activo ? '⏸️ Pausar Incentivo' : '▶️ Activar Incentivo'}
+                  </button>
+                  <button 
+                    onClick={() => eliminarIncentivo(inc.id, inc.titulo)} 
+                    style={{ padding: '6px 10px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
+                  >
+                    🗑️ Eliminar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
