@@ -1,9 +1,7 @@
-JavaScript
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Scissors, User, Lock, LogOut, Calendar, Clock, 
-  CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare, Database, PlusSquare, HelpCircle, Smartphone, ArrowRightLeft
+  Scissors, Lock, Calendar, Smartphone, CheckCircle, 
+  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle 
 } from 'lucide-react';
 
 export default function App() {
@@ -35,7 +33,7 @@ export default function App() {
       id: 'inc1',
       tipo: 'cumpleanos',
       titulo: 'Descuento Cumpleaños Cliente',
-      descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar o registrar corte el día de su cumpleaños.',
+      descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar.',
       activo: true,
       porcentaje: 10
     },
@@ -43,7 +41,7 @@ export default function App() {
       id: 'inc2',
       tipo: 'barbero',
       titulo: 'Premio Alquiler Silla Barbero',
-      descripcion: 'Barberos que superen la meta mensual y registren el 100% de transferencias ganan descuento en alquiler.',
+      descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
       activo: true,
       metaCitas: 15,
       porcentaje: 5
@@ -52,17 +50,17 @@ export default function App() {
 
   // Multi-Tenant SaaS
   const [tenants, setTenants] = useState([
-    { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: null, dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
-    { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', nombreAnterior: null, dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 }
+    { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
+    { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 }
   ]);
 
   // Base de datos de Barberos (Empleados)
   const [barberos, setBarberos] = useState([
-    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', fechaExpiracion: '2027-02-08' },
-    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', fechaExpiracion: '2027-02-08' }
+    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123' },
+    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026' }
   ]);
 
-  // Base de Datos Independiente para Perfil Solista (Barbería Autónoma Nueva)
+  // Base de Datos Independiente para Perfil Solista (Autónomo)
   const [perfilIndependiente, setPerfilIndependiente] = useState({
     nombreNegocio: 'Barbería Independiente (Solista)',
     username: 'independiente',
@@ -123,7 +121,7 @@ export default function App() {
 
     if (barberoEncontrado) {
       if (barberoEncontrado.estado === 'Inactivo') {
-        setLoginError('Su usuario se encuentra inactivo en la barbería.');
+        setLoginError('Su usuario se encuentra inactivo.');
         return;
       }
       exitoLogin({ 
@@ -173,10 +171,6 @@ export default function App() {
     } else {
       setActiveRole(targetRole);
     }
-  };
-
-  const ingresarComoSoporteAdmin = (nombreTenant) => {
-    exitoLogin({ username: 'soporte-dev', nombre: `Soporte en ${nombreTenant}`, role: 'admin' });
   };
 
   return (
@@ -291,13 +285,10 @@ export default function App() {
 
         {activeRole === 'superadmin' && (
           <VistaSuperAdmin 
-            tenants={tenants} 
-            setTenants={setTenants} 
             devConfig={devConfig} 
             setDevConfig={setDevConfig} 
             barberos={barberos}
             setBarberos={setBarberos}
-            onIngresarComoSoporte={ingresarComoSoporteAdmin}
           />
         )}
       </main>
@@ -592,7 +583,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState('efectivo');
-  const [esCumpleanosCheck, setEsCumpleanosCheck] = useState(false);
+  const [esCumpleanosCheck] = useState(false);
 
   const [citaACancelar, setCitaACancelar] = useState(null);
   const [motivoPreset, setMotivoPreset] = useState('Cliente no asistió a la cita');
@@ -672,7 +663,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     };
 
     setCitas([nueva, ...citas]);
-    setEsCumpleanosCheck(false);
   };
 
   const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
@@ -704,7 +694,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
             <div style={{ width: `${porcentajeAvance}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.3s ease' }}></div>
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>
-            💡 Recuerda registrar todas tus transferencias en la app. No registrarlas descuenta puntos en tu puntaje de incentivos de alquiler.
+            💡 Recuerda registrar todas tus transferencias en la app. No registrarlas descuenta puntos en tu puntaje de incentivos.
           </p>
         </div>
       )}
@@ -795,7 +785,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* PERFIL BARBERO INDEPENDIENTE / SOLISTA (BARBERÍA NUEVA PROPIA AUTÓNOMA) */}
+{/* PERFIL BARBERO INDEPENDIENTE / SOLISTA */}
 function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente, citas, setCitas, onCerrarSesion, devConfig }) {
   const [servicioNombre, setServicioNombre] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
@@ -807,7 +797,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent('Hola Elkin, soy barbero independiente y deseo renovar mi suscripción mensual a la plataforma.')}`;
 
-  // Citas exclusivas de este barbero solista
   const misCitas = citas.filter(c => c.barbero.toLowerCase() === perfilIndependiente.propietario.toLowerCase());
   const ingresosTotales = misCitas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
@@ -829,7 +818,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
     setServicioNombre('');
     setServicioPrecio('');
-    alert(`¡Corte "${nuevoServ.nombre}" creado exitosamente en tu barbería independiente!`);
+    alert(`¡Corte "${nuevoServ.nombre}" creado exitosamente!`);
   };
 
   const handleSeleccionarServicioCatalogo = (nombre) => {
@@ -872,7 +861,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
         </div>
       </div>
 
-      {/* CONSOLIDADO DE GANANCIAS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
           <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Mis Ingresos Totales (Caja)</span>
@@ -884,7 +872,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
         </div>
       </div>
 
-      {/* CREAR NUEVOS CORTES Y PRECIOS PROPIOS */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ fontSize: '14px', color: '#fbbf24', margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Tus Propios Cortes y Definir Precios
@@ -905,7 +892,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
         </div>
       </div>
 
-      {/* REGISTRAR COBRO RÁPIDO (EFECTIVO O TRANSFERENCIA) */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ fontSize: '14px', color: '#fbbf24', margin: '0 0 10px 0' }}>Registrar Cobro (Efectivo o Transferencia Personal)</h3>
         <form onSubmit={handleCobroIndependiente} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
@@ -924,25 +910,21 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   );
 }
 
-{/* VISTA ADMIN CON TODO INCLUIDO Y SIN QUITAR NADA */}
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin }) {
+{/* VISTA ADMIN */}
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin }) {
   const [tab, setTab] = useState('resumen');
   
-  // Seguridad Admin
   const [nuevoUserAdmin, setNuevoUserAdmin] = useState(credencialesAdmin.username);
   const [nuevoPassAdmin, setNuevoPassAdmin] = useState(credencialesAdmin.password);
   const [nuevoNombreAdmin, setNuevoNombreAdmin] = useState(credencialesAdmin.nombre);
 
-  // Reasistencia Citas
   const [citaAReasignar, setCitaAReasignar] = useState(null);
   const [nuevoBarberoDestino, setNuevoBarberoDestino] = useState(barberos[0]?.nombre || '');
 
-  // Servicios Generales Sede
   const [nombreServ, setNombreServ] = useState('');
   const [precioServ, setPrecioServ] = useState('');
   const [duracionServ, setDuracionServ] = useState('30 min');
 
-  // Formularios Originales Admin (Barberos y Productos)
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
   const [nuevoUsernameBarbero, setNuevoUsernameBarbero] = useState('');
   const [nuevaClaveBarbero, setNuevaClaveBarbero] = useState('');
@@ -997,8 +979,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const handleAgregarBarbero = (e) => {
     e.preventDefault();
     if (!nuevoNombreBarbero.trim() || !nuevoUsernameBarbero.trim()) return;
-    const fechaExp = new Date();
-    fechaExp.setDate(fechaExp.getDate() + 90);
 
     setBarberos([...barberos, { 
       id: 'b' + Date.now(), 
@@ -1006,8 +986,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       nombre: nuevoNombreBarbero, 
       especialidad: especialidad || 'Barbero Profesional', 
       estado: 'Activo', 
-      claveAcceso: nuevaClaveBarbero || 'barbero123',
-      fechaExpiracion: fechaExp.toISOString().split('T')[0]
+      claveAcceso: nuevaClaveBarbero || 'barbero123'
     }]);
     setNuevoNombreBarbero('');
     setNuevoUsernameBarbero('');
@@ -1044,7 +1023,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
       {tab === 'resumen' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* TOTAL DIARIO Y DESGLOSE INDIVIDUAL */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
             <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
               <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Total Dinero Ingresado Hoy (Sede)</span>
@@ -1070,7 +1048,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
             </div>
           </div>
 
-          {/* AGENDA Y REASIGNACIÓN SI BARBERO NO ASISTIÓ */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '14px', overflowX: 'auto' }}>
             <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control de Agendas, Citas & Reasistencia por Ausencia</h4>
             <table style={{ width: '100%', textAlign: 'left', fontSize: '11px', color: '#cbd5e1' }}>
@@ -1228,7 +1205,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 }
 
 {/* CONSOLA SUPERADMIN */}
-function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, barberos, setBarberos, onIngresarComoSoporte }) {
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
 
   const handleWhatsappSave = (e) => {
