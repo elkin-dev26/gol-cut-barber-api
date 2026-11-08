@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Scissors, User, Lock, LogOut, Calendar, Clock, 
   CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle
+  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3
 } from 'lucide-react';
 
 export default function App() {
@@ -26,11 +26,11 @@ export default function App() {
     metaUsoCitasBarbero: 15
   });
 
-  // Multi-Tenant SaaS (Barberías Registradas con Conteo Regresivo)
+  // Multi-Tenant SaaS (Barberías Registradas con Nombre Anterior y Conteo Mensual)
   const [tenants, setTenants] = useState([
-    { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
-    { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 },
-    { id: 't3', nombreBarberia: 'Barbería Ejemplo Vencida', dueno: 'Cliente Moroso', estadoLicencia: 'Pausada (Vencida)', diasRestantes: 0 }
+    { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: null, dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
+    { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', nombreAnterior: 'Barbería Inicial Demo', dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 },
+    { id: 't3', nombreBarberia: 'Barbería Ejemplo Vencida', nombreAnterior: null, dueno: 'Cliente Moroso', estadoLicencia: 'Pausada (Vencida)', diasRestantes: 0 }
   ]);
 
   // Base de datos de Barberos
@@ -70,8 +70,8 @@ export default function App() {
     return () => document.removeEventListener('contextmenu', handleContextMenu);
   }, []);
 
-  // Validación de estado de licencia de la barbería activa
-  const tenantPrincipal = tenants[0]; // Sede en uso
+  // Validación de estado de licencia de la barbería activa (Sede Principal)
+  const tenantPrincipal = tenants[0]; 
   const licenciaVencida = tenantPrincipal?.diasRestantes <= 0 || tenantPrincipal?.estadoLicencia === 'Pausada (Vencida)';
 
   const handleLoginSubmit = (e) => {
@@ -179,7 +179,7 @@ export default function App() {
             </div>
             <div>
               <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#fbbf24', letterSpacing: '0.03em' }}>
-                GOL CUT BARBER
+                {tenantPrincipal.nombreBarberia.toUpperCase()}
               </h1>
               <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8' }}>Gestión & Reservas SaaS</p>
             </div>
@@ -257,6 +257,8 @@ export default function App() {
             devConfig={devConfig}
             setDevConfig={setDevConfig}
             licenciaVencida={licenciaVencida}
+            tenants={tenants}
+            setTenants={setTenants}
           />
         )}
 
@@ -271,7 +273,7 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL LOGIN */}
+      {/* MODAL LOGIN RESPONSIVE */}
       {isLoginOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', maxWidth: '380px', width: '100%', padding: '20px', position: 'relative', boxSizing: 'border-box' }}>
@@ -536,7 +538,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, devConfig }) {
   );
 }
 
-{/* VISTA BARBERO CON BLOQUEO POR LICENCIA VENCIDA */}
+{/* VISTA BARBERO */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
@@ -683,8 +685,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON BLOQUEO Y BOTÓN EXCLUSIVO DE WHATSAPP AL ESTAR VENCIDA */}
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida }) {
+{/* VISTA ADMIN CON CAMBIO DE NOMBRE DE BARBERÍA */}
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
   const [nuevoUsernameBarbero, setNuevoUsernameBarbero] = useState('');
@@ -694,6 +696,10 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const [nombreProd, setNombreProd] = useState('');
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
+
+  // Edición Nombre de Barbería
+  const barberiaActual = tenants[0];
+  const [inputNuevoNombreBarberia, setInputNuevoNombreBarberia] = useState(barberiaActual?.nombreBarberia || '');
 
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.')}`;
 
@@ -716,6 +722,24 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       </div>
     );
   }
+
+  const handleGuardarNuevoNombreBarberia = (e) => {
+    e.preventDefault();
+    if (!inputNuevoNombreBarberia.trim()) return;
+
+    setTenants(tenants.map((t, idx) => {
+      if (idx === 0) {
+        return {
+          ...t,
+          nombreAnterior: t.nombreBarberia,
+          nombreBarberia: inputNuevoNombreBarberia.trim()
+        };
+      }
+      return t;
+    }));
+
+    alert(`Nombre de la barbería actualizado a: "${inputNuevoNombreBarberia}". Se reflejará automáticamente en la consola del desarrollador.`);
+  };
 
   const toggleIncentivoCumple = () => {
     setDevConfig({ ...devConfig, incentivoCumpleanosActivo: !devConfig.incentivoCumpleanosActivo });
@@ -798,18 +822,40 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       </div>
 
       {tab === 'resumen' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* FORMULARIO PARA CAMBIAR EL NOMBRE DE LA BARBERÍA */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-            <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Ingresos Totales</span>
-            <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>${ingresosTotales.toLocaleString()}</p>
+            <h4 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Edit3 style={{ width: '16px', height: '16px' }} /> Cambiar Nombre Comercial de la Barbería
+            </h4>
+            <form onSubmit={handleGuardarNuevoNombreBarberia} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <input 
+                type="text" 
+                value={inputNuevoNombreBarberia} 
+                onChange={(e) => setInputNuevoNombreBarberia(e.target.value)} 
+                placeholder="Nuevo nombre comercial..." 
+                style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }} 
+                required 
+              />
+              <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>
+                Actualizar Nombre
+              </button>
+            </form>
           </div>
-          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-            <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Citas Atendidas</span>
-            <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{citas.filter(c => c.estado === 'completada').length}</p>
-          </div>
-          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-            <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Productos Registrados</span>
-            <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{productos.length}</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
+              <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Ingresos Totales</span>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>${ingresosTotales.toLocaleString()}</p>
+            </div>
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
+              <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Citas Atendidas</span>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{citas.filter(c => c.estado === 'completada').length}</p>
+            </div>
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
+              <span style={{ fontSize: '10px', color: '#fbbf24', fontWeight: 'bold' }}>Productos Registrados</span>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{productos.length}</p>
+            </div>
           </div>
         </div>
       )}
@@ -917,7 +963,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-{/* CONSOLA SUPERADMIN ROOT */}
+{/* CONSOLA SUPERADMIN CON RASTREO DE NOMBRE ANTERIOR */}
 function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngresarComoSoporte }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
@@ -959,6 +1005,7 @@ function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngre
     setTenants([...tenants, { 
       id: 't' + Date.now(), 
       nombreBarberia: nuevoNombreBarberia, 
+      nombreAnterior: null,
       dueno: nuevoDueno || 'Cliente Nuevo', 
       estadoLicencia: 'Activa', 
       diasRestantes: 30 
@@ -975,7 +1022,7 @@ function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngre
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador (`elkin-dev26`)
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control de pagos mensuales, conteo de días e impersonación</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control de pagos mensuales, traza de nombres e impersonación</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
@@ -1004,7 +1051,7 @@ function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngre
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '12px' }}>Control de Licencias Mensuales</h3>
+        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '12px' }}>Control de Licencias & Trazabilidad de Nombre</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {tenants.map(t => {
             const estaVencida = t.diasRestantes <= 0 || t.estadoLicencia.includes('Vencida');
@@ -1012,7 +1059,14 @@ function VistaSuperAdmin({ tenants, setTenants, devConfig, setDevConfig, onIngre
             return (
               <div key={t.id} style={{ backgroundColor: '#020617', padding: '8px', borderRadius: '6px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #1e293b', gap: '6px' }}>
                 <div>
-                  <p style={{ margin: 0, fontWeight: 'bold', color: '#fff', fontSize: '12px' }}>{t.nombreBarberia}</p>
+                  <p style={{ margin: 0, fontWeight: 'bold', color: '#fff', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {t.nombreBarberia}
+                    {t.nombreAnterior && (
+                      <span style={{ fontSize: '10px', color: '#fbbf24', backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                        (Antes: "{t.nombreAnterior}")
+                      </span>
+                    )}
+                  </p>
                   <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>
                     Dueño: {t.dueno} | Estado: <span style={{ color: estaVencida ? '#f43f5e' : '#34d399', fontWeight: 'bold' }}>{estaVencida ? 'Pausada (Vencida)' : t.estadoLicencia}</span> | Quedan: <span style={{ color: estaVencida ? '#f43f5e' : '#fbbf24', fontWeight: 'bold' }}>{t.diasRestantes} días</span>
                   </p>
