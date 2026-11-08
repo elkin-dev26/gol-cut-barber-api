@@ -23,8 +23,8 @@ export default function Navbar({ usuarioAutenticado, onOpenLogin, onCerrarSesion
               <div className="bg-slate-950 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <Shield className="w-4 h-4 text-amber-400" />
                 <div className="text-left">
-                  <p className="text-xs font-bold text-slate-200">{usuarioAutenticado.nombre}</p>
-                  <p className="text-[10px] text-amber-400 capitalize">{usuarioAutenticado.role}</p>
+                  <p className="text-xs font-bold text-slate-200">{usuarioAutenticado.nombre || 'Usuario'}</p>
+                  <p className="text-[10px] text-amber-400 capitalize">{usuarioAutenticado.role || 'Rol'}</p>
                 </div>
               </div>
               <button

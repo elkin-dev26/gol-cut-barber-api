@@ -107,9 +107,9 @@ export default function App() {
         {/* VISTA PÚBLICA / CLIENTE: Agendamiento y QR Expreso */}
         {!usuarioAutenticado && (
           <ClienteView 
-            barberos={barberos.filter(b => b.estado === 'Activo')}
-            servicios={servicios}
-            citas={citas}
+            barberos={(barberos || []).filter(b => b.estado === 'Activo')}
+            servicios={servicios || []}
+            citas={citas || []}
             setCitas={setCitas}
           />
         )}
@@ -118,9 +118,9 @@ export default function App() {
         {usuarioAutenticado && usuarioAutenticado.role === 'barbero' && (
           <BarberoView 
             barberoActual={usuarioAutenticado}
-            citas={citas}
+            citas={citas || []}
             setCitas={setCitas}
-            servicios={servicios}
+            servicios={servicios || []}
             onCerrarSesion={handleCerrarSesion}
           />
         )}
@@ -129,14 +129,14 @@ export default function App() {
         {usuarioAutenticado && ['admin', 'sucursal', 'evaluacion', 'superadmin'].includes(usuarioAutenticado.role) && (
           <AdminView 
             usuario={usuarioAutenticado}
-            citas={citas}
+            citas={citas || []}
             setCitas={setCitas}
-            barberos={barberos}
+            barberos={barberos || []}
             setBarberos={setBarberos}
-            servicios={servicios}
+            servicios={servicios || []}
             setServicios={setServicios}
-            logsSesion={logsSesion}
-            tenants={tenants}
+            logsSesion={logsSesion || []}
+            tenants={tenants || []}
           />
         )}
       </main>
