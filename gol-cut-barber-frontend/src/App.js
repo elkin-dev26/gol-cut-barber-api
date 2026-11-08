@@ -10,6 +10,7 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
+  // Configuración con objeto garantizado para evitar 'whatsappSoporte of undefined'
   const [devConfig, setDevConfig] = useState({
     whatsappSoporte: '573001234567',
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.'
@@ -76,6 +77,12 @@ export default function App() {
     setUsuarioAutenticado(null);
   };
 
+  // Configuración de respaldo por seguridad extrema
+  const safeDevConfig = devConfig || {
+    whatsappSoporte: '573001234567',
+    mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.'
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       <Navbar 
@@ -114,7 +121,7 @@ export default function App() {
             servicios={servicios}
             setServicios={setServicios}
             logsSesion={logsSesion}
-            devConfig={devConfig}
+            devConfig={safeDevConfig}
           />
         )}
 
@@ -123,7 +130,7 @@ export default function App() {
             usuario={usuarioAutenticado}
             tenants={tenants}
             setTenants={setTenants}
-            devConfig={devConfig}
+            devConfig={safeDevConfig}
             setDevConfig={setDevConfig}
           />
         )}
