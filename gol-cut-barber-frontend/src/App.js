@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Scissors, User, Lock, LogOut, Calendar, Clock, 
   CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play
+  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle
 } from 'lucide-react';
 
 export default function App() {
@@ -434,11 +434,12 @@ function VistaCliente({ barberos, servicios, citas, setCitas }) {
   );
 }
 
-{/* VISTA BARBERO */}
+{/* VISTA BARBERO (CON OPCIÓN DE CANCELAR POR INASISTENCIA) */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
 
+  // Filtra las citas confirmadas o pendientes del barbero
   const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || 'barbero').toLowerCase());
 
   const handleEstadoCita = (id, nuevoEstado) => {
@@ -491,16 +492,37 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
         {citasBarbero.map(c => (
           <div key={c.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', padding: '16px' }}>
-            <h4 style={{ margin: 0, color: '#f8fafc' }}>{c.cliente}</h4>
-            <p style={{ margin: '4px 0', color: '#fbbf24', fontSize: '12px' }}>{c.servicio}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h4 style={{ margin: 0, color: '#f8fafc' }}>{c.cliente}</h4>
+                <p style={{ margin: '4px 0', color: '#fbbf24', fontSize: '12px' }}>{c.servicio}</p>
+              </div>
+              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', backgroundColor: c.estado === 'completada' ? 'rgba(52, 211, 153, 0.2)' : c.estado === 'cancelada' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: c.estado === 'completada' ? '#34d399' : c.estado === 'cancelada' ? '#f43f5e' : '#fbbf24', fontWeight: 'bold' }}>
+                {c.estado}
+              </span>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8', borderTop: '1px solid #1e293b', paddingTop: '8px', marginTop: '8px' }}>
               <span>{c.fecha} - {c.hora}</span>
               <span style={{ color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</span>
             </div>
-            {c.estado !== 'completada' && (
-              <button onClick={() => handleEstadoCita(c.id, 'completada')} style={{ width: '100%', marginTop: '12px', padding: '8px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                Confirmar Atención
-              </button>
+
+            {/* BOTONERA DE ACCIÓN DEL BARBERO: CONFIRMAR O MARCAR INASISTENCIA */}
+            {c.estado !== 'completada' && c.estado !== 'cancelada' && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button 
+                  onClick={() => handleEstadoCita(c.id, 'completada')} 
+                  style={{ flex: 1, padding: '8px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}
+                >
+                  Confirmar Atención
+                </button>
+                <button 
+                  onClick={() => handleEstadoCita(c.id, 'cancelada')} 
+                  style={{ padding: '8px 12px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}
+                  title="Marcar cita como no atendida / inasistencia"
+                >
+                  No Asistió
+                </button>
+              </div>
             )}
           </div>
         ))}
@@ -560,7 +582,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
   const ingresosTotales = citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
-  // Verificación estricta: Oculta el botón de WhatsApp si es Perfil Evaluación Técnica
   const esPerfilEvaluacion = usuario?.role === 'evaluacion' || usuario?.nombre?.includes('Evaluación') || usuario?.username === 'demo-sena';
 
   return (
