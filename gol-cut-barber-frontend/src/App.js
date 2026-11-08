@@ -73,7 +73,7 @@ export default function App() {
   const [citas, setCitas] = useState([
     { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true, motivoCancelacion: null },
     { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false, motivoCancelacion: null },
-    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'confirmada', esCumpleanos: false, motivoCancelacion: null }
+    { id: 'c3', cliente: 'Andrés López', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'confirmada', esCumpleanos: false, motivoCancelacion: null }
   ]);
 
   // Auditoría de Accesos
@@ -558,7 +558,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
   );
 }
 
-{/* VISTA BARBERO CON CANCELACIÓN JUSTIFICADA */}
+{/* VISTA BARBERO CON ACCESOS DE ATENCIÓN Y CANCELACIÓN JUSTIFICADA */}
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
