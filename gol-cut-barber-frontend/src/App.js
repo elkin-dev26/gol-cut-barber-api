@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Scissors, User, Lock, LogOut, Calendar, Clock, 
   CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare, Database
+  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare, Database, PlusSquare
 } from 'lucide-react';
 
 export default function App() {
@@ -643,7 +643,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Award style={{ width: '14px', height: '14px' }} /> Meta Uso App (Descuento Alquiler Silla):
+              <Award style={{ width: '14px', height: '14px' }} /> Meta Uso App ({incBarbero.titulo}):
             </span>
             <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: 'bold' }}>{atencionesBarbero} / {meta} Citas ({porcentajeAvance}%)</span>
           </div>
@@ -652,7 +652,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>
             {porcentajeAvance >= 100 
-              ? `¡Felicitaciones! Ganaste el ${incBarbero.porcentaje}% de descuento en tu pago de alquiler de silla.` 
+              ? `¡Felicitaciones! Ganaste el beneficio de ${incBarbero.porcentaje}% configurado por la administración.` 
               : `Registra ${meta - atencionesBarbero} citas más en la app para obtener tu beneficio.`}
           </p>
         </div>
@@ -738,7 +738,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON CONEXIÓN PRODUCTIVA */}
+{/* VISTA ADMIN CON FORMULARIO PARA REGISTRAR INCENTIVOS PROPIOS */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
@@ -749,6 +749,12 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const [nombreProd, setNombreProd] = useState('');
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
+
+  // Formulario para Crear Nuevos Incentivos
+  const [nuevoTituloInc, setNuevoTituloInc] = useState('');
+  const [nuevaDescInc, setNuevaDescInc] = useState('');
+  const [nuevaMetaInc, setNuevaMetaInc] = useState(15);
+  const [nuevoPorcentajeInc, setNuevoPorcentajeInc] = useState(5);
 
   const barberiaActual = tenants[0];
   const [inputNuevoNombreBarberia, setInputNuevoNombreBarberia] = useState(barberiaActual?.nombreBarberia || '');
@@ -813,6 +819,28 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     }));
 
     alert(`Nombre de la barbería actualizado a: "${inputNuevoNombreBarberia}". Se reflejará automáticamente en la consola del desarrollador.`);
+  };
+
+  const handleCrearNuevoIncentivo = (e) => {
+    e.preventDefault();
+    if (!nuevoTituloInc.trim()) return;
+
+    const nuevo = {
+      id: 'inc' + Date.now(),
+      tipo: 'barbero',
+      titulo: nuevoTituloInc.trim(),
+      descripcion: nuevaDescInc.trim() || 'Beneficio personalizado configurado por el Administrador.',
+      activo: true,
+      metaCitas: Number(nuevaMetaInc),
+      porcentaje: Number(nuevoPorcentajeInc)
+    };
+
+    setIncentivos([...incentivos, nuevo]);
+    setNuevoTituloInc('');
+    setNuevaDescInc('');
+    setNuevaMetaInc(15);
+    setNuevoPorcentajeInc(5);
+    alert(`¡Incentivo "${nuevo.titulo}" creado activado exitosamente!`);
   };
 
   const toggleEstadoIncentivo = (id) => {
@@ -970,6 +998,52 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
       {tab === 'incentivos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* FORMULARIO PARA CREAR NUEVO INCENTIVO PROPIO */}
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '12px', boxSizing: 'border-box' }}>
+            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <PlusSquare style={{ width: '16px', height: '16px' }} /> Registrar Nuevo Beneficio o Acuerdos con Barberos
+            </h4>
+            <form onSubmit={handleCrearNuevoIncentivo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+              <input 
+                type="text" 
+                placeholder="Título (Ej: Bono Ventas Cera)" 
+                value={nuevoTituloInc} 
+                onChange={(e) => setNuevoTituloInc(e.target.value)} 
+                style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} 
+                required 
+              />
+              <input 
+                type="text" 
+                placeholder="Descripción del acuerdo..." 
+                value={nuevaDescInc} 
+                onChange={(e) => setNuevaDescInc(e.target.value)} 
+                style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} 
+              />
+              <input 
+                type="number" 
+                placeholder="Meta Citas (Ej: 20)" 
+                value={nuevaMetaInc} 
+                onChange={(e) => setNuevaMetaInc(e.target.value)} 
+                style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} 
+                required 
+              />
+              <input 
+                type="number" 
+                placeholder="Porcentaje Premio (%)" 
+                value={nuevoPorcentajeInc} 
+                onChange={(e) => setNuevoPorcentajeInc(e.target.value)} 
+                style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} 
+                required 
+              />
+              <button 
+                type="submit" 
+                style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}
+              >
+                Activar Nuevo Beneficio en Sistema
+              </button>
+            </form>
+          </div>
+
           {incBarbero && (
             <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '12px', padding: '16px', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
