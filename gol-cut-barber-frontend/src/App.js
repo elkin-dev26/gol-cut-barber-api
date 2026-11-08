@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Scissors, User, Lock, LogOut, Calendar, Clock, 
   CheckCircle, Plus, Trash2, Shield, Search, Unlock, 
-  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare
+  History, MessageCircle, QrCode, PlusCircle, DollarSign, Terminal, Package, Key, Edit, Pause, Play, XCircle, Gift, Award, TrendingUp, AlertCircle, Server, Building, RefreshCw, AlertTriangle, Edit3, Users, CheckSquare, Database
 } from 'lucide-react';
 
 export default function App() {
@@ -21,7 +21,7 @@ export default function App() {
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
   });
 
-  // Estado dinámico de Incentivos con Metas y Promedios
+  // Estado dinámico de Incentivos
   const [incentivos, setIncentivos] = useState([
     {
       id: 'inc1',
@@ -69,11 +69,26 @@ export default function App() {
     { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
   ]);
 
-  const [citas, setCitas] = useState([
-    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true },
-    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false },
-    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'completada', esCumpleanos: false }
-  ]);
+  // PERSISTENCIA EN LOCALSTORAGE PARA PRUEBAS SÓLIDAS
+  const [citas, setCitas] = useState(() => {
+    const guardadas = localStorage.getItem('gol_cut_citas_db');
+    if (guardadas) {
+      try {
+        return JSON.parse(guardadas);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', esCumpleanos: true },
+      { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', esCumpleanos: false },
+      { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'completada', esCumpleanos: false }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_citas_db', JSON.stringify(citas));
+  }, [citas]);
 
   // Auditoría
   const [logsSesion, setLogsSesion] = useState([
@@ -184,6 +199,15 @@ export default function App() {
     exitoLogin({ username: 'soporte-dev', nombre: `Soporte en ${nombreTenant}`, role: 'admin' });
   };
 
+  // Cierre Mensual para reiniciar métricas de pruebas
+  const reiniciarCitasMes = () => {
+    if (window.confirm('¿Desea ejecutar el Cierre Mensual de Pruebas? Se archivarán las atenciones actuales para reiniciar el contador a 0.')) {
+      setCitas([]);
+      localStorage.removeItem('gol_cut_citas_db');
+      alert('¡Cierre mensual ejecutado exitosamente! Las métricas y contadores han vuelto a cero.');
+    }
+  };
+
   return (
     <div style={{ backgroundColor: '#020617', color: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
       <header style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #f59e0b', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 40, width: '100%', boxSizing: 'border-box' }}>
@@ -276,6 +300,7 @@ export default function App() {
             setTenants={setTenants}
             incentivos={incentivos}
             setIncentivos={setIncentivos}
+            reiniciarCitasMes={reiniciarCitasMes}
           />
         )}
 
@@ -737,8 +762,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* VISTA ADMIN CON PROMEDIO DE BARBEROS Y AUDITORÍA DE CIERRE DE MES */}
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos }) {
+{/* VISTA ADMIN CON OPCIÓN DE RETENCIÓN DE DATOS Y REINICIO MENSUAL */}
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, logsSesion, devConfig, setDevConfig, licenciaVencida, tenants, setTenants, incentivos, setIncentivos, reiniciarCitasMes }) {
   const [tab, setTab] = useState('resumen');
   const [nuevoNombreBarbero, setNuevoNombreBarbero] = useState('');
   const [nuevoUsernameBarbero, setNuevoUsernameBarbero] = useState('');
@@ -774,7 +799,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     );
   }
 
-  // CÁLCULO DE PROMEDIOS & METAS INDIVIDUALES DE BARBEROS (INCENTIVO SILLA)
+  // METRICAS DE PROMEDIOS Y CIERRE
   const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
   const metaEstablecida = incBarbero?.metaCitas || 15;
   const barberosActivos = barberos.filter(b => b.estado === 'Activo');
@@ -882,9 +907,9 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {!esPerfilEvaluacion && (
-            <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
-              Renovar WhatsApp
-            </a>
+            <button onClick={reiniciarCitasMes} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
+              🔄 Cierre Mensual Pruebas
+            </button>
           )}
           <div style={{ backgroundColor: '#0f172a', padding: '2px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '2px', overflowX: 'auto' }}>
             <button onClick={() => setTab('resumen')} style={{ padding: '4px 8px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Resumen</button>
@@ -967,10 +992,8 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
       )}
 
-      {/* PESTAÑA INCENTIVOS CON CÁLCULO PROMEDIO Y AUDITORÍA DE FIN DE MES POR BARBERO */}
       {tab === 'incentivos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* MÓDULO DE PROMEDIOS DE RENDIMIENTO Y CIERRE DE MES */}
           {incBarbero && (
             <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '12px', padding: '16px', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
@@ -988,7 +1011,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                 </div>
               </div>
 
-              {/* LISTADO DE PROMEDIO INDIVIDUAL POR BARBERO */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
                 {metricasBarberos.map(b => (
                   <div key={b.id} style={{ backgroundColor: '#020617', border: b.cumpleMeta ? '1px solid #059669' : '1px solid #334155', borderRadius: '8px', padding: '10px', boxSizing: 'border-box' }}>
@@ -1018,7 +1040,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
             </div>
           )}
 
-          {/* LISTA GENERAL DE REGLAS DE INCENTIVO */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
             {incentivos.map(inc => (
               <div key={inc.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
