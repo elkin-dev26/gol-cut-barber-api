@@ -814,7 +814,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* PERFIL BARBERO INDEPENDIENTE / SOLISTA CON VISOR DE CITAS CORREGIDO */}
+{/* PERFIL BARBERO INDEPENDIENTE / SOLISTA CON BOTÓN DE SOPORTE WHATSAPP Y VISOR DE CITAS */}
 function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente, citas, setCitas, onCerrarSesion, devConfig }) {
   const [servicioNombre, setServicioNombre] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
@@ -828,7 +828,8 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   const [motivoPresetIndep, setMotivoPresetIndep] = useState('Cliente no asistió a la cita');
   const [motivoLibreIndep, setMotivoLibreIndep] = useState('');
 
-  const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent('Hola Elkin, soy barbero independiente y deseo renovar mi suscripción mensual.')}`;
+  // Enlace WhatsApp restaurado y operativo para renovación / soporte del independiente
+  const urlWhatsappIndep = `https://wa.me/${perfilIndependiente.whatsappContacto || devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(`Hola, soy ${perfilIndependiente.propietario} de la barbería independiente "${perfilIndependiente.nombreBarberia}" y deseo gestionar mi renovación o soporte.`)}`;
 
   // Filtro corregido: detecta citas cuyo barbero contenga el nombre del independiente
   const misCitasIndependiente = citas.filter(c => c.barbero.toLowerCase().includes(perfilIndependiente.propietario.toLowerCase()));
@@ -906,8 +907,8 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>⭐ {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Tu propia barbería autónoma con control total de tus citas, cortes y ganancias</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <a href={urlWhatsappIndep} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <MessageCircle style={{ width: '14px', height: '14px' }} /> WhatsApp Soporte / Renovar
           </a>
           <button onClick={onCerrarSesion} style={{ padding: '8px 12px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
@@ -1033,7 +1034,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   );
 }
 
-{/* VISTA ADMIN CON CAMBIO DE NOMBRE DE BARBERÍA */}
+{/* VISTA ADMIN CON CAMBIO DE NOMBRE DE BARBERÍA Y BOTÓN WHATSAPP DE RENOVACIÓN */}
 function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants }) {
   const [tab, setTab] = useState('resumen');
   
@@ -1060,7 +1061,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
 
-  const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola Elkin')}`;
+  const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola Elkin, deseo renovar mi membresía mensual.')}`;
 
   if (licenciaVencida) {
     return (
@@ -1153,12 +1154,19 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({usuario?.nombre})</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de ingresos, barberos, inventario y seguridad</p>
         </div>
-        <div style={{ backgroundColor: '#0f172a', padding: '2px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '2px', overflowX: 'auto' }}>
-          <button onClick={() => setTab('resumen')} style={{ padding: '6px 10px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Resumen & Ingresos</button>
-          <button onClick={() => setTab('barberos')} style={{ padding: '6px 10px', background: tab === 'barberos' ? '#f59e0b' : 'none', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Barberos</button>
-          <button onClick={() => setTab('servicios')} style={{ padding: '6px 10px', background: tab === 'servicios' ? '#f59e0b' : 'none', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Servicios & Precios</button>
-          <button onClick={() => setTab('productos')} style={{ padding: '6px 10px', background: tab === 'productos' ? '#f59e0b' : 'none', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Inventario</button>
-          <button onClick={() => setTab('config_admin')} style={{ padding: '6px 10px', background: tab === 'config_admin' ? '#f59e0b' : 'none', color: tab === 'config_admin' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Ajustes & Barbería</button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Botón WhatsApp de Renovación en la cabecera del Admin */}
+          <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <MessageCircle style={{ width: '14px', height: '14px' }} /> WhatsApp Soporte / Renovar
+          </a>
+
+          <div style={{ backgroundColor: '#0f172a', padding: '2px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '2px', overflowX: 'auto' }}>
+            <button onClick={() => setTab('resumen')} style={{ padding: '6px 10px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Resumen & Ingresos</button>
+            <button onClick={() => setTab('barberos')} style={{ padding: '6px 10px', background: tab === 'barberos' ? '#f59e0b' : 'none', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Barberos</button>
+            <button onClick={() => setTab('servicios')} style={{ padding: '6px 10px', background: tab === 'servicios' ? '#f59e0b' : 'none', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Servicios & Precios</button>
+            <button onClick={() => setTab('productos')} style={{ padding: '6px 10px', background: tab === 'productos' ? '#f59e0b' : 'none', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Inventario</button>
+            <button onClick={() => setTab('config_admin')} style={{ padding: '6px 10px', background: tab === 'config_admin' ? '#f59e0b' : 'none', color: tab === 'config_admin' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Ajustes & Barbería</button>
+          </div>
         </div>
       </div>
 
@@ -1382,6 +1390,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   // Estados temporales para editar el barbero independiente desde el desarrollador
   const [editNombreNegocio, setEditNombreNegocio] = useState(perfilIndependiente.nombreBarberia);
   const [editPropietario, setEditPropietario] = useState(perfilIndependiente.propietario);
+  const [editWpIndep, setEditWpIndep] = useState(perfilIndependiente.whatsappContacto || '573001234567');
 
   const handleWhatsappSave = (e) => {
     e.preventDefault();
@@ -1417,7 +1426,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       ...perfilIndependiente,
       nombreAnterior: nombreAntiguo,
       nombreBarberia: editNombreNegocio.trim(),
-      propietario: editPropietario.trim()
+      propietario: editPropietario.trim(),
+      whatsappContacto: editWpIndep.trim()
     });
     alert(`¡Perfil Independiente actualizado con éxito! Nuevo nombre: "${editNombreNegocio.trim()}" (Propietario: ${editPropietario.trim()}).`);
   };
@@ -1462,6 +1472,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     alert(`Accediendo en tiempo real a la barbería independiente de ${perfilIndependiente.propietario}.`);
     setActiveRole('barbero_independiente');
   };
+
+  const urlSoporteIndepDev = `https://wa.me/${perfilIndependiente.whatsappContacto || '573001234567'}?text=${encodeURIComponent(`Hola ${perfilIndependiente.propietario}, te contactamos desde Soporte Gol Cut Barber respecto a tu perfil independiente "${perfilIndependiente.nombreBarberia}".`)}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
@@ -1512,14 +1524,14 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         </form>
       </div>
 
-      {/* GESTIÓN DEL BARBERO INDEPENDIENTE (CON CAMBIO DE NOMBRE Y PROPIETARIO) */}
+      {/* GESTIÓN DEL BARBERO INDEPENDIENTE (CON WHATSAPP RESTAURADO Y CONFIGURABLE) */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Edit3 style={{ width: '16px', height: '16px' }} /> Control Desarrollador: Perfil Barbero Independiente / Solista
         </h3>
-        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>Modifica el nombre del negocio o del propietario independiente si cambia de dueño. Trazabilidad garantizada.</p>
+        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>Modifica el nombre del negocio, propietario independiente y su WhatsApp de soporte para renovación.</p>
 
-        <form onSubmit={handleGuardarCambiosIndependienteDev} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+        <form onSubmit={handleGuardarCambiosIndependienteDev} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '12px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Nombre de la Barbería Independiente</label>
             <input 
@@ -1540,9 +1552,19 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
               required 
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>WhatsApp de Soporte / Renovar</label>
+            <input 
+              type="text" 
+              value={editWpIndep} 
+              onChange={(e) => setEditWpIndep(e.target.value)} 
+              style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} 
+              required 
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gridColumn: '1 / -1' }}>
             <button type="submit" style={{ width: '100%', backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>
-              Actualizar Datos Independiente
+              Actualizar Datos del Independiente
             </button>
           </div>
         </form>
@@ -1558,10 +1580,10 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
             <p style={{ fontSize: '10px', color: perfilIndependiente.estadoLicencia === 'Activa' ? '#34d399' : '#f43f5e', margin: '2px 0 0 0', fontWeight: 'bold' }}>
               Estado: {perfilIndependiente.estadoLicencia} ({perfilIndependiente.diasRestantes} días restantes)
             </p>
-            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0' }}>Propietario: {perfilIndependiente.propietario}</p>
+            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0' }}>Propietario: {perfilIndependiente.propietario} | WhatsApp: {perfilIndependiente.whatsappContacto}</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             <button 
               onClick={accederIndependienteTiempoReal} 
               style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -1574,6 +1596,15 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
             >
               {perfilIndependiente.estadoLicencia === 'Activa' ? <><Pause style={{ width: '12px', height: '12px' }} /> Pausar</> : <><Play style={{ width: '12px', height: '12px' }} /> Activar</>}
             </button>
+            {/* Botón WhatsApp de Soporte desde la consola root */}
+            <a 
+              href={urlSoporteIndepDev} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ backgroundColor: '#047857', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <MessageCircle style={{ width: '12px', height: '12px' }} /> Soporte
+            </a>
           </div>
         </div>
       </div>
