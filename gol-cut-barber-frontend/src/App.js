@@ -1426,7 +1426,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       propietario: editPropietario.trim(),
       whatsappContacto: editWpIndep.trim()
     });
-    alert(`¡Perfil Independiente actualizado con éxito!`);
+    alert('¡Perfil Independiente actualizado con éxito!');
   };
 
   const handleCrearPerfilIndependienteNuevo = (e) => {
@@ -1518,7 +1518,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (`elkin-dev26`)
+            <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (elkin-dev26)
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de creación de sedes, perfil independiente, licencias y trazabilidad</p>
         </div>
