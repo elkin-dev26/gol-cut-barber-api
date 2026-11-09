@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Scissors, Lock, Smartphone, CheckCircle, 
-  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3
+  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink
 } from 'lucide-react';
 
 export default function App() {
@@ -49,7 +49,7 @@ export default function App() {
     }
   ]);
 
-  // Multi-Tenant SaaS (Con control de nombres anterior/actual, pausa y eliminación)
+  // Multi-Tenant SaaS (Con trazabilidad de nombres anterior/actual, pausa, soporte y creación)
   const [tenants, setTenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: 'Gol Cut Barber Inicial', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, whatsappContacto: '573001234567' },
     { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
@@ -313,6 +313,7 @@ export default function App() {
             setBarberos={setBarberos}
             tenants={tenants}
             setTenants={setTenants}
+            setActiveRole={setActiveRole}
           />
         )}
       </main>
@@ -1197,7 +1198,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
             <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Edit3 style={{ width: '16px', height: '16px' }} /> Cambiar Nombre de la Barbería
             </h3>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>Personaliza el nombre comercial de tu sede. El cambio se reportará al desarrollador.</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>Personaliza el nombre comercial de tu sede. El cambio se reportará al desarrollador con trazabilidad completa.</p>
             
             <form onSubmit={handleGuardarNombreBarberia} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
@@ -1261,14 +1262,40 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-{/* CONSOLA SUPERADMIN CON CONTROL DE LICENCIAS, SOPORTE WHATSAPP Y ELIMINACIÓN DE BARBERÍAS */}
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants }) {
+{/* CONSOLA SUPERADMIN CON CREACIÓN, ACCESO EN TIEMPO REAL, SOPORTE Y TRAZABILIDAD */}
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, setActiveRole }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
+
+  // Estado para crear nueva barbería
+  const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
+  const [nuevoDuenoBarberia, setNuevoDuenoBarberia] = useState('');
+  const [nuevoWpBarberia, setNuevoWpBarberia] = useState('');
 
   const handleWhatsappSave = (e) => {
     e.preventDefault();
     setDevConfig({ ...devConfig, whatsappSoporte: whatsapp });
     alert('¡WhatsApp de soporte actualizado!');
+  };
+
+  const handleCrearTenant = (e) => {
+    e.preventDefault();
+    if (!nuevoNombreBarberia.trim() || !nuevoDuenoBarberia.trim()) return;
+
+    const nuevaSede = {
+      id: 't' + Date.now(),
+      nombreBarberia: nuevoNombreBarberia.trim(),
+      nombreAnterior: 'Nueva Sede (Creada por Dev)',
+      dueno: nuevoDuenoBarberia.trim(),
+      estadoLicencia: 'Activa',
+      diasRestantes: 30,
+      whatsappContacto: nuevoWpBarberia.trim() || '573001234567'
+    };
+
+    setTenants([...tenants, nuevaSede]);
+    setNuevoNombreBarberia('');
+    setNuevoDuenoBarberia('');
+    setNuevoWpBarberia('');
+    alert(`¡Barbería "${nuevaSede.nombreBarberia}" creada con éxito!`);
   };
 
   const eliminarBarberoSuperAdmin = (id, nombre) => {
@@ -1293,6 +1320,11 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     }
   };
 
+  const accederTenantTiempoReal = (tenantObj) => {
+    alert(`Accediendo en tiempo real a la barbería: ${tenantObj.nombreBarberia}. Cambiando a vista administrativa de la sede.`);
+    setActiveRole('admin');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1300,34 +1332,80 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (`elkin-dev26`)
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de claves, perfiles, soporte y licencias SaaS</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de creación de sedes, licencias, tiempo real y trazabilidad</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
 
-      {/* GESTIÓN DE LICENCIAS, SOPORTE, ELIMINACIÓN Y NOMBRES ANTERIORES */}
+      {/* FORMULARIO PARA CREAR NUEVA BARBERÍA */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Nueva Barbería (SaaS Tenant)
+        </h3>
+        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>Agrega una nueva sede o cliente para gestionar su licencia y operaciones.</p>
+        
+        <form onSubmit={handleCrearTenant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+          <input 
+            type="text" 
+            placeholder="Nombre de la barbería..." 
+            value={nuevoNombreBarberia} 
+            onChange={(e) => setNuevoNombreBarberia(e.target.value)} 
+            style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} 
+            required 
+          />
+          <input 
+            type="text" 
+            placeholder="Nombre del propietario..." 
+            value={nuevoDuenoBarberia} 
+            onChange={(e) => setNuevoDuenoBarberia(e.target.value)} 
+            style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} 
+            required 
+          />
+          <input 
+            type="text" 
+            placeholder="WhatsApp de contacto (ej: 57300...)" 
+            value={nuevoWpBarberia} 
+            onChange={(e) => setNuevoWpBarberia(e.target.value)} 
+            style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} 
+          />
+          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>
+            Registrar Barbería SaaS
+          </button>
+        </form>
+      </div>
+
+      {/* GESTIÓN DE BARBERÍAS EXISTENTES (ACCESO TIEMPO REAL, SOPORTE, PAUSA, ELIMINACIÓN Y TRAZABILIDAD) */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
         <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Building style={{ width: '16px', height: '16px' }} /> Control SaaS: Licencias, Soporte y Trazabilidad de Barberías
+          <Building style={{ width: '16px', height: '16px' }} /> Control SaaS: Barberías Registradas y Trazabilidad de Nombres
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
           {tenants.map(t => {
             const urlSoporteBarberia = `https://wa.me/${t.whatsappContacto || '573001234567'}?text=${encodeURIComponent(`Hola ${t.dueno}, te contactamos desde Soporte Gol Cut Barber respecto a tu barbería "${t.nombreBarberia}".`)}`;
             return (
-              <div key={t.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div key={t.id} style={{ backgroundColor: '#020617', padding: '14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div>
                   <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia}</span>
                   {t.nombreAnterior && (
-                    <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0', fontStyle: 'italic' }}>
-                      Nombre anterior: <span style={{ color: '#cbd5e1' }}>{t.nombreAnterior}</span>
+                    <p style={{ fontSize: '10px', color: '#f59e0b', margin: '2px 0 0 0', fontStyle: 'italic' }}>
+                      🏷️ Nombre anterior (Trazabilidad): <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{t.nombreAnterior}</span>
                     </p>
                   )}
                   <p style={{ fontSize: '10px', color: t.estadoLicencia === 'Activa' ? '#34d399' : '#f43f5e', margin: '2px 0 0 0', fontWeight: 'bold' }}>
                     Estado: {t.estadoLicencia} ({t.diasRestantes} días restantes)
                   </p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0' }}>Propietario: {t.dueno}</p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingTop: '4px', borderTop: '1px solid #1e293b' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid #1e293b' }}>
+                  {/* Botón de Acceso en Tiempo Real */}
+                  <button 
+                    onClick={() => accederTenantTiempoReal(t)} 
+                    style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <ExternalLink style={{ width: '12px', height: '12px' }} /> Ver en Tiempo Real
+                  </button>
+
                   {/* Botón Pausar / Activar */}
                   <button 
                     onClick={() => togglePausarTenant(t.id)} 
@@ -1362,7 +1440,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
         <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Key style={{ width: '16px', height: '16px' }} /> Control Desarrollador: Crear, Ver o Eliminar Claves de Cualquier Perfil
+          <Key style={{ width: '16px', height: '16px' }} /> Control Desarrollador: Claves de Barberos
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
           {barberos.map(b => (
