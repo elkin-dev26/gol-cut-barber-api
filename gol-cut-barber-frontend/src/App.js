@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  Scissors, Lock, Calendar, Smartphone, CheckCircle, 
-  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle 
+  Scissors, Lock, Smartphone, CheckCircle, 
+  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, RefreshCw, Shield, Users
 } from 'lucide-react';
 
 export default function App() {
@@ -13,6 +13,7 @@ export default function App() {
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [rolPendientePassword, setRolPendientePassword] = useState(null);
 
   // Credenciales Administrativas Dinámicas
   const [credencialesAdmin, setCredencialesAdmin] = useState({
@@ -48,10 +49,10 @@ export default function App() {
     }
   ]);
 
-  // Multi-Tenant SaaS
+  // Multi-Tenant SaaS (Con capacidad de pausar o activar barberías)
   const [tenants, setTenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28 },
-    { id: 't2', nombreBarberia: 'Barbería Demo Evaluación', dueno: 'Evaluador Técnico', estadoLicencia: 'Activa', diasRestantes: 30 }
+    { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30 }
   ]);
 
   // Base de datos de Barberos (Empleados)
@@ -117,6 +118,19 @@ export default function App() {
       return;
     }
 
+    // Validación para perfiles demo protegidos por contraseña
+    if (rolPendientePassword === 'evaluacion_evaluador' && u === 'evaluador' && p === 'evalua2026') {
+      exitoLogin({ username: 'evaluador', nombre: 'Perfil Evaluador Técnico', role: 'admin' });
+      setRolPendientePassword(null);
+      return;
+    }
+
+    if (rolPendientePassword === 'sucursal_demo' && u === 'sucursal' && p === 'sucursal2026') {
+      exitoLogin({ username: 'sucursal', nombre: 'Demostración Sucursal', role: 'admin' });
+      setRolPendientePassword(null);
+      return;
+    }
+
     const barberoEncontrado = barberos.find(b => b.username.toLowerCase() === u && b.claveAcceso === p);
 
     if (barberoEncontrado) {
@@ -142,6 +156,7 @@ export default function App() {
     setIsLoginOpen(false);
     setUsernameInput('');
     setPasswordInput('');
+    setRolPendientePassword(null);
   };
 
   const handleCerrarSesion = () => {
@@ -156,16 +171,26 @@ export default function App() {
       setActiveRole('cliente');
       return;
     }
-    if (targetRole === 'evaluacion_sena') {
-      exitoLogin({ username: 'demo-sena', nombre: 'Auditoría Técnica SENA', role: 'admin' });
+
+    // Exigir contraseña obligatoria para perfiles demo y administrativos
+    if (targetRole === 'evaluacion_evaluador') {
+      setRolPendientePassword('evaluacion_evaluador');
+      setUsernameInput('evaluador');
+      setPasswordInput('');
+      setIsLoginOpen(true);
       return;
     }
+
     if (targetRole === 'sucursal_demo') {
-      exitoLogin({ username: 'sucursal', nombre: 'Demostración Sucursal', role: 'admin' });
+      setRolPendientePassword('sucursal_demo');
+      setUsernameInput('sucursal');
+      setPasswordInput('');
+      setIsLoginOpen(true);
       return;
     }
 
     if (!usuarioAutenticado || (usuarioAutenticado.role !== targetRole && targetRole !== 'admin')) {
+      setRolPendientePassword(null);
       setIsLoginOpen(true);
       setUsernameInput(targetRole === 'admin' ? 'admin' : targetRole === 'barbero_independiente' ? 'independiente' : 'elkin');
     } else {
@@ -189,7 +214,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '480px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '500px' }}>
             <select
               value={activeRole}
               onChange={handleCambioSeleccion}
@@ -199,8 +224,8 @@ export default function App() {
               <option value="barbero">✂️ Vista: Barbero (Empleado)</option>
               <option value="barbero_independiente">⭐ Vista: Barbero Solista / Independiente</option>
               <option value="admin">🛠️ Vista: Administrador General</option>
-              <option value="evaluacion_sena">🎓 Perfil Demo: Evaluación SENA</option>
-              <option value="sucursal_demo">🏢 Perfil Demo: Sucursal Externa</option>
+              <option value="evaluacion_evaluador">🎓 Perfil Demo: Perfil Evaluador (Seguro)</option>
+              <option value="sucursal_demo">🏢 Perfil Demo: Sucursal Externa (Seguro)</option>
               {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
                 <option value="superadmin">🔒 Consola Desarrollador Root</option>
               )}
@@ -272,12 +297,8 @@ export default function App() {
             servicios={servicios}
             setServicios={setServicios}
             devConfig={devConfig}
-            setDevConfig={setDevConfig}
             licenciaVencida={licenciaVencida}
-            tenants={tenants}
-            setTenants={setTenants}
             incentivos={incentivos}
-            setIncentivos={setIncentivos}
             credencialesAdmin={credencialesAdmin}
             setCredencialesAdmin={setCredencialesAdmin}
           />
@@ -289,6 +310,8 @@ export default function App() {
             setDevConfig={setDevConfig} 
             barberos={barberos}
             setBarberos={setBarberos}
+            tenants={tenants}
+            setTenants={setTenants}
           />
         )}
       </main>
@@ -297,7 +320,7 @@ export default function App() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', maxWidth: '380px', width: '100%', padding: '20px', position: 'relative', boxSizing: 'border-box' }}>
             <button 
-              onClick={() => setIsLoginOpen(false)} 
+              onClick={() => { setIsLoginOpen(false); setRolPendientePassword(null); }} 
               style={{ position: 'absolute', top: '12px', right: '12px', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
             >
               ✕
@@ -307,7 +330,9 @@ export default function App() {
                 <Lock style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
               </div>
               <h3 style={{ margin: 0, color: '#fbbf24', fontSize: '18px', fontWeight: 'bold' }}>Ingreso Seguro</h3>
-              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>Ingrese sus credenciales personales</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                {rolPendientePassword ? 'Ingrese contraseña para acceso Demo' : 'Ingrese sus credenciales personales'}
+              </p>
             </div>
 
             {loginError && (
@@ -323,7 +348,7 @@ export default function App() {
                   type="text"
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
-                  placeholder="Ej: admin, elkin, independiente"
+                  placeholder="Ej: admin, elkin, evaluador"
                   style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#f8fafc', fontSize: '13px', boxSizing: 'border-box' }}
                   required
                 />
@@ -568,8 +593,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
             </div>
           ) : (
             <div style={{ color: '#64748b' }}>
-              <Calendar style={{ width: '40px', height: '40px', margin: '0 auto 8px auto' }} />
-              <p style={{ margin: 0, fontSize: '12px' }}>Complete el formulario para programar su espacio</p>
+              <span style={{ fontSize: '12px' }}>Complete el formulario para programar su espacio</span>
             </div>
           )}
         </div>
@@ -583,7 +607,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState('efectivo');
-  const [esCumpleanosCheck] = useState(false);
 
   const [citaACancelar, setCitaACancelar] = useState(null);
   const [motivoPreset, setMotivoPreset] = useState('Cliente no asistió a la cita');
@@ -604,7 +627,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     );
   }
 
-  const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
   const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
   const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || '').toLowerCase());
   const atencionesBarbero = citasBarbero.filter(c => c.estado === 'completada').length;
@@ -640,12 +662,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
 
   const handleCorteDirecto = (e) => {
     e.preventDefault();
-    let valorFinal = Number(precioRapido);
-
-    if (esCumpleanosCheck && incCumple) {
-      const descuento = (valorFinal * incCumple.porcentaje) / 100;
-      valorFinal = valorFinal - descuento;
-    }
+    const valorFinal = Number(precioRapido);
 
     const nueva = {
       id: 'c' + Date.now(),
@@ -658,7 +675,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       estado: 'completada',
       metodoPago: metodoPagoSeleccionado,
       registradoEnApp: true,
-      esCumpleanos: esCumpleanosCheck && !!incCumple,
       motivoCancelacion: null
     };
 
@@ -693,9 +709,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           <div style={{ width: '100%', height: '8px', backgroundColor: '#020617', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{ width: `${porcentajeAvance}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.3s ease' }}></div>
           </div>
-          <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>
-            💡 Recuerda registrar todas tus transferencias en la app. No registrarlas descuenta puntos en tu puntaje de incentivos.
-          </p>
         </div>
       )}
 
@@ -795,7 +808,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   const [precioCobro, setPrecioCobro] = useState(perfilIndependiente.serviciosPropios[0]?.precio || 30000);
   const [metodoPago, setMetodoPago] = useState('efectivo');
 
-  const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent('Hola Elkin, soy barbero independiente y deseo renovar mi suscripción mensual a la plataforma.')}`;
+  const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent('Hola Elkin, soy barbero independiente y deseo renovar mi suscripción mensual.')}`;
 
   const misCitas = citas.filter(c => c.barbero.toLowerCase() === perfilIndependiente.propietario.toLowerCase());
   const ingresosTotales = misCitas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
@@ -1204,8 +1217,8 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-{/* CONSOLA SUPERADMIN */}
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos }) {
+{/* CONSOLA SUPERADMIN CON GESTIÓN DE LICENCIAS Y PAUSAR BARBERÍAS */}
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
 
   const handleWhatsappSave = (e) => {
@@ -1220,6 +1233,16 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos }) {
     }
   };
 
+  const togglePausarTenant = (id) => {
+    setTenants(tenants.map(t => {
+      if (t.id === id) {
+        const nuevoEstado = t.estadoLicencia === 'Activa' ? 'Pausada (Vencida)' : 'Activa';
+        return { ...t, estadoLicencia: nuevoEstado, diasRestantes: nuevoEstado === 'Activa' ? 30 : 0 };
+      }
+      return t;
+    }));
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1230,6 +1253,31 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos }) {
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de claves, perfiles y licencias SaaS</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
+      </div>
+
+      {/* GESTIÓN DE LICENCIAS Y PAUSAR BARBERÍAS */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Building style={{ width: '16px', height: '16px' }} /> Control de Licencias y Pausa de Barberías SaaS
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+          {tenants.map(t => (
+            <div key={t.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia}</span>
+                <p style={{ fontSize: '10px', color: t.estadoLicencia === 'Activa' ? '#34d399' : '#f43f5e', margin: '2px 0 0 0', fontWeight: 'bold' }}>
+                  Estado: {t.estadoLicencia} ({t.diasRestantes} días restantes)
+                </p>
+              </div>
+              <button 
+                onClick={() => togglePausarTenant(t.id)} 
+                style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                {t.estadoLicencia === 'Activa' ? <><Pause style={{ width: '12px', height: '12px' }} /> Pausar</> : <><Play style={{ width: '12px', height: '12px' }} /> Activar</>}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
