@@ -808,7 +808,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-{/* PERFIL BARBERO INDEPENDIENTE / SOLISTA */}
+{/* PERFIL BARBERO INDEPENDIENTE / SOLISTA CON VISOR DE CITAS CORREGIDO */}
 function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente, citas, setCitas, onCerrarSesion, devConfig }) {
   const [servicioNombre, setServicioNombre] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
@@ -818,10 +818,15 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   const [precioCobro, setPrecioCobro] = useState(perfilIndependiente.serviciosPropios[0]?.precio || 30000);
   const [metodoPago, setMetodoPago] = useState('efectivo');
 
+  const [citaACancelarIndep, setCitaACancelarIndep] = useState(null);
+  const [motivoPresetIndep, setMotivoPresetIndep] = useState('Cliente no asistió a la cita');
+  const [motivoLibreIndep, setMotivoLibreIndep] = useState('');
+
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent('Hola Elkin, soy barbero independiente y deseo renovar mi suscripción mensual.')}`;
 
-  const misCitas = citas.filter(c => c.barbero.toLowerCase().includes(perfilIndependiente.propietario.toLowerCase()));
-  const ingresosTotales = misCitas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
+  // Filtro corregido: detecta citas cuyo barbero contenga el nombre del independiente
+  const misCitasIndependiente = citas.filter(c => c.barbero.toLowerCase().includes(perfilIndependiente.propietario.toLowerCase()));
+  const ingresosTotales = misCitasIndependiente.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   const handleCrearServicioPropio = (e) => {
     e.preventDefault();
@@ -869,12 +874,31 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
     alert('Cobro registrado en tu caja independiente.');
   };
 
+  const handleEstadoCitaIndep = (id, nuevoEstado) => {
+    setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado, registradoEnApp: true } : c));
+  };
+
+  const handleConfirmarCancelacionIndep = (e) => {
+    e.preventDefault();
+    if (!citaACancelarIndep) return;
+    const justificacionFinal = motivoPresetIndep === 'Otro motivo...' ? motivoLibreIndep.trim() : motivoPresetIndep;
+
+    setCitas(citas.map(c => c.id === citaACancelarIndep.id ? { 
+      ...c, 
+      estado: 'cancelada', 
+      motivoCancelacion: justificacionFinal 
+    } : c));
+
+    setCitaACancelarIndep(null);
+    setMotivoLibreIndep('');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', gap: '8px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>⭐ Perfil Independiente / Solista ({perfilIndependiente.propietario})</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Tu propia barbería autónoma con control total de tus cortes, precios y ganancias</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Tu propia barbería autónoma con control total de tus citas, cortes y ganancias</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -890,8 +914,56 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
           <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#34d399' }}>${ingresosTotales.toLocaleString()}</p>
         </div>
         <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-          <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 'bold' }}>✂️ Total Atenciones Realizadas</span>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{misCitas.length}</p>
+          <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 'bold' }}>✂️ Total Atenciones / Citas</span>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{misCitasIndependiente.length}</p>
+        </div>
+      </div>
+
+      {/* SECCIÓN DE CITAS AGENDADAS POR CLIENTES */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ fontSize: '14px', color: '#fbbf24', margin: '0 0 10px 0' }}>📅 Citas Agendadas por Clientes (En Tiempo Real)</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+          {misCitasIndependiente.length > 0 ? (
+            misCitasIndependiente.map(c => (
+              <div key={c.id} style={{ backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{c.cliente}</h4>
+                    <p style={{ margin: '2px 0', color: '#fbbf24', fontSize: '11px' }}>{c.servicio}</p>
+                  </div>
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: c.estado === 'completada' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: c.estado === 'completada' ? '#34d399' : '#fbbf24', fontWeight: 'bold' }}>
+                    {c.estado}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', borderTop: '1px solid #1e293b', paddingTop: '6px', marginTop: '6px' }}>
+                  <span>{c.fecha} - {c.hora}</span>
+                  <span style={{ color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</span>
+                </div>
+
+                {c.estado !== 'completada' && c.estado !== 'cancelada' && (
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                    <button 
+                      onClick={() => handleEstadoCitaIndep(c.id, 'completada')} 
+                      style={{ flex: 1, padding: '6px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
+                    >
+                      Marcar Atendido
+                    </button>
+                    <button 
+                      onClick={() => setCitaACancelarIndep(c)} 
+                      style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ gridColumn: '1 / -1', padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+              No tienes citas agendadas aún.
+            </div>
+          )}
         </div>
       </div>
 
@@ -929,6 +1001,28 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
           <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Sumar a mi Caja</button>
         </form>
       </div>
+
+      {citaACancelarIndep && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', maxWidth: '400px', width: '100%', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#f43f5e', fontSize: '16px' }}>Justificar Cancelación / Ausencia</h3>
+            <form onSubmit={handleConfirmarCancelacionIndep} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <select value={motivoPresetIndep} onChange={(e) => setMotivoPresetIndep(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px' }}>
+                <option value="Cliente no asistió">Cliente no asistió a la cita</option>
+                <option value="Barbero ausente / calamidad">Barbero ausente / calamidad</option>
+                <option value="Otro motivo...">Otro motivo...</option>
+              </select>
+              {motivoPresetIndep === 'Otro motivo...' && (
+                <textarea rows={3} value={motivoLibreIndep} onChange={(e) => setMotivoLibreIndep(e.target.value)} placeholder="Describa el motivo..." style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px' }} required />
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" onClick={() => setCitaACancelarIndep(null)} style={{ flex: 1, backgroundColor: '#334155', color: '#fff', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Volver</button>
+                <button type="submit" style={{ flex: 1, backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '8px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
