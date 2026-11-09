@@ -21,7 +21,7 @@ export default function App() {
   });
 
   const [agendaPausadaSede, setAgendaPausadaSede] = useState(false);
-  const [mensajePausa Sede, setMensajePausa Sede] = useState('Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.');
+  const [mensajePausaGeneral, setMensajePausaGeneral] = useState('Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.');
 
   const [devConfig, setDevConfig] = useState({
     whatsappSoporte: '573001234567',
@@ -280,7 +280,7 @@ export default function App() {
             setCitas={setCitas} 
             incentivos={incentivos}
             agendaPausadaSede={agendaPausadaSede}
-            mensajePausa Sede={mensajePausa Sede}
+            mensajePausaGeneral={mensajePausaGeneral}
           />
         )}
 
@@ -329,8 +329,8 @@ export default function App() {
             tenants={tenants}
             agendaPausadaSede={agendaPausadaSede}
             setAgendaPausadaSede={setAgendaPausadaSede}
-            mensajePausa Sede={mensajePausa Sede}
-            setMensajePausa Sede={setMensajePausa Sede}
+            mensajePausaGeneral={mensajePausaGeneral}
+            setMensajePausaGeneral={setMensajePausaGeneral}
           />
         )}
 
@@ -411,7 +411,7 @@ export default function App() {
   );
 }
 
-function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCitas, incentivos, agendaPausadaSede, mensajePausa Sede }) {
+function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCitas, incentivos, agendaPausadaSede, mensajePausaGeneral }) {
   const [modo, setModo] = useState('programada');
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
@@ -483,7 +483,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', padding: '24px', textAlign: 'center', maxWidth: '500px', margin: '40px auto' }}>
         <AlertTriangle style={{ width: '48px', height: '48px', color: '#f43f5e', margin: '0 auto 12px auto' }} />
         <h3 style={{ color: '#f43f5e', margin: '0 0 8px 0', fontSize: '18px' }}>Agenda Temporalmente Suspendida</h3>
-        <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>{mensajePausa Sede}</p>
+        <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>{mensajePausaGeneral}</p>
       </div>
     );
   }
@@ -1172,7 +1172,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   );
 }
 
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausa Sede, setMensajePausa Sede }) {
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausaGeneral, setMensajePausaGeneral }) {
   const [tab, setTab] = useState('resumen');
   
   const [nuevoUserAdmin, setNuevoUserAdmin] = useState(credencialesAdmin.username);
@@ -1509,7 +1509,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                   {agendaPausadaSede ? 'Activar Sede' : 'Pausar Sede'}
                 </button>
               </div>
-              <input type="text" value={mensajePausa Sede} onChange={(e) => setMensajePausa Sede(e.target.value)} placeholder="Mensaje disculpa general..." style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+              <input type="text" value={mensajePausaGeneral} onChange={(e) => setMensajePausaGeneral(e.target.value)} placeholder="Mensaje disculpa general..." style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
             </div>
           </div>
 
