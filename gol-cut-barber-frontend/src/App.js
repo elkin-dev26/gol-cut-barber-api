@@ -9,30 +9,25 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
-  // Modal Login State
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [rolPendientePassword, setRolPendientePassword] = useState(null);
 
-  // Credenciales Administrativas Dinámicas
   const [credencialesAdmin, setCredencialesAdmin] = useState({
     username: 'admin',
     password: 'admin123',
     nombre: 'Administrador Local'
   });
 
-  // Control de Pausa / Bloqueo General de Agenda Sede
   const [agendaPausadaSede, setAgendaPausadaSede] = useState(false);
   const [mensajePausa Sede, setMensajePausa Sede] = useState('Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.');
 
-  // Configuración WhatsApp de Soporte
   const [devConfig, setDevConfig] = useState({
     whatsappSoporte: '573001234567',
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
   });
 
-  // Estado de Incentivos de Producción
   const [incentivos, setIncentivos] = useState([
     {
       id: 'inc1',
@@ -53,19 +48,16 @@ export default function App() {
     }
   ]);
 
-  // Multi-Tenant SaaS
   const [tenants, setTenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: 'Gol Cut Barber Inicial', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, whatsappContacto: '573001234567' },
     { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
   ]);
 
-  // Base de datos de Barberos (Empleados) - Incluye estado de pausa individual por barbero
   const [barberos, setBarberos] = useState([
     { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.' },
     { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.' }
   ]);
 
-  // Base de Datos Independiente para Perfil Solista (Autónomo)
   const [perfilIndependiente, setPerfilIndependiente] = useState({
     id: 'indep_tenant',
     nombreBarberia: 'Barbería Independiente (Solista)',
@@ -85,7 +77,6 @@ export default function App() {
     ]
   });
 
-  // Catálogo de Productos y Servicios Generales
   const [productos, setProductos] = useState([
     { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 15 },
     { id: 'p2', nombre: 'Champú Anticaída Barba & Cabello', precio: 45000, stock: 10 }
@@ -97,7 +88,6 @@ export default function App() {
     { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
   ]);
 
-  // Citas / Atenciones con persistencia de un mes y reinicio automático de ciclo
   const [citas, setCitas] = useState(() => {
     const saved = localStorage.getItem('gol_cut_citas_mes');
     const lastReset = localStorage.getItem('gol_cut_last_reset');
@@ -441,7 +431,6 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
 
   const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
 
-  // Franjas horarias cada hora y cada media hora
   const horasDisponibles = [
     '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', 
     '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', 
@@ -499,7 +488,6 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
     );
   }
 
-  // Comprobar si el barbero seleccionado individualmente está pausado
   const barberoSeleccionadoObj = barberos.find(b => b.nombre === barbero);
   const esIndependienteSeleccionado = barbero.includes(perfilIndependiente?.propietario || '');
 
