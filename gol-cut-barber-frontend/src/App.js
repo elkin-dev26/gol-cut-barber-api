@@ -252,6 +252,7 @@ export default function App() {
         {activeRole === 'cliente' && (
           <VistaCliente 
             barberos={barberos.filter(b => b.estado === 'Activo')} 
+            perfilIndependiente={perfilIndependiente}
             servicios={servicios} 
             citas={citas} 
             setCitas={setCitas} 
@@ -380,12 +381,19 @@ export default function App() {
   );
 }
 
-{/* VISTA CLIENTE */}
-function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
+{/* VISTA CLIENTE CON INTEGRACIÓN DE BARBERO INDEPENDIENTE */}
+function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCitas, incentivos }) {
   const [modo, setModo] = useState('programada');
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
-  const [barbero, setBarbero] = useState(barberos[0]?.nombre || '');
+  
+  // Unimos los barberos de la sede con el barbero independiente
+  const listaCompletaBarberos = [
+    ...barberos,
+    { id: 'indep_gen', nombre: `${perfilIndependiente.propietario} (Independiente / Solista)`, especialidad: 'Barbero Autónomo' }
+  ];
+
+  const [barbero, setBarbero] = useState(listaCompletaBarberos[0]?.nombre || '');
   const [servicio, setServicio] = useState(servicios[0]?.nombre || '');
   
   const hoyStr = new Date().toISOString().split('T')[0];
@@ -423,7 +431,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
     const nueva = {
       id: 'c' + Date.now(),
       cliente: nombre,
-      barbero: barbero || barberos[0]?.nombre,
+      barbero: barbero || listaCompletaBarberos[0]?.nombre,
       servicio,
       fecha: modo === 'qr_walkin' ? hoyStr : fecha,
       hora: modo === 'qr_walkin' ? 'Atención Inmediata (QR)' : hora,
@@ -447,7 +455,7 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
           <Smartphone style={{ width: '22px', height: '22px' }} />
           Módulo de Reservas Móvil (Mes Completo)
         </h2>
-        <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>Interfaz táctil optimizada para teléfonos celulares</p>
+        <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>Reserva con barberos de sede o con tu barbero independiente preferido</p>
       </div>
 
       <div style={{ display: 'flex', gap: '8px', backgroundColor: '#0f172a', padding: '6px', borderRadius: '10px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
@@ -498,13 +506,13 @@ function VistaCliente({ barberos, servicios, citas, setCitas, incentivos }) {
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Seleccionar Barbero</label>
+              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Seleccionar Barbero (Sede o Independiente ⭐)</label>
               <select
                 value={barbero}
                 onChange={(e) => setBarbero(e.target.value)}
-                style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#f8fafc', fontSize: '13px', boxSizing: 'border-box' }}
+                style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '10px', color: '#f8fafc', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold' }}
               >
-                {barberos.map(b => (
+                {listaCompletaBarberos.map(b => (
                   <option key={b.id} value={b.nombre}>{b.nombre} ({b.especialidad})</option>
                 ))}
               </select>
@@ -812,7 +820,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent('Hola Elkin, soy barbero independiente y deseo renovar mi suscripción mensual.')}`;
 
-  const misCitas = citas.filter(c => c.barbero.toLowerCase() === perfilIndependiente.propietario.toLowerCase());
+  const misCitas = citas.filter(c => c.barbero.toLowerCase().includes(perfilIndependiente.propietario.toLowerCase()));
   const ingresosTotales = misCitas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   const handleCrearServicioPropio = (e) => {
@@ -847,7 +855,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
     const nueva = {
       id: 'c' + Date.now(),
       cliente: metodoPago === 'transferencia' ? 'Cliente (Pago por Transferencia)' : 'Cliente Presencial (Efectivo)',
-      barbero: perfilIndependiente.propietario,
+      barbero: `${perfilIndependiente.propietario} (Independiente / Solista)`,
       servicio: servicioSeleccionado,
       fecha: new Date().toISOString().split('T')[0],
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
