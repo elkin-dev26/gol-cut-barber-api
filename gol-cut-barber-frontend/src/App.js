@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Scissors, Lock, Smartphone, CheckCircle, 
   Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink
@@ -21,6 +21,10 @@ export default function App() {
     password: 'admin123',
     nombre: 'Administrador Local'
   });
+
+  // Control de Pausa / Bloqueo General de Agenda Sede
+  const [agendaPausadaSede, setAgendaPausadaSede] = useState(false);
+  const [mensajePausa Sede, setMensajePausa Sede] = useState('Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.');
 
   // Configuración WhatsApp de Soporte
   const [devConfig, setDevConfig] = useState({
@@ -55,10 +59,10 @@ export default function App() {
     { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
   ]);
 
-  // Base de datos de Barberos (Empleados)
+  // Base de datos de Barberos (Empleados) - Incluye estado de pausa individual por barbero
   const [barberos, setBarberos] = useState([
-    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123' },
-    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026' }
+    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.' },
+    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.' }
   ]);
 
   // Base de Datos Independiente para Perfil Solista (Autónomo)
@@ -72,6 +76,9 @@ export default function App() {
     estadoLicencia: 'Activa',
     diasRestantes: 30,
     whatsappContacto: '573001234567',
+    agendaPausada: false,
+    mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
+    ingresosMesAnterior: 1450000,
     serviciosPropios: [
       { id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' },
       { id: 'si2', nombre: 'Arreglo de Barba Pro', precio: 20000, duracion: '20 min' }
@@ -90,12 +97,26 @@ export default function App() {
     { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
   ]);
 
-  // Citas / Atenciones Persistentes
-  const [citas, setCitas] = useState([
-    { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', metodoPago: 'efectivo', registradoEnApp: true, motivoCancelacion: null },
-    { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', metodoPago: 'transferencia', registradoEnApp: true, motivoCancelacion: null },
-    { id: 'c3', cliente: 'Andrés López', barbero: 'Mateo Gómez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '02:00 PM', precio: 25000, estado: 'confirmada', metodoPago: 'efectivo', registradoEnApp: false, motivoCancelacion: null }
-  ]);
+  // Citas / Atenciones con persistencia de un mes y reinicio automático de ciclo
+  const [citas, setCitas] = useState(() => {
+    const saved = localStorage.getItem('gol_cut_citas_mes');
+    const lastReset = localStorage.getItem('gol_cut_last_reset');
+    const now = Date.now();
+    const unMesMs = 30 * 24 * 60 * 60 * 1000;
+
+    if (!lastReset || now - Number(lastReset) > unMesMs) {
+      localStorage.setItem('gol_cut_last_reset', String(now));
+      return [
+        { id: 'c1', cliente: 'Juan Pérez', barbero: 'Elkin Ramírez', servicio: 'Corte de Cabello Clásico', fecha: '2026-11-08', hora: '10:00 AM', precio: 22500, estado: 'completada', metodoPago: 'efectivo', registradoEnApp: true, motivoCancelacion: null },
+        { id: 'c2', cliente: 'Carlos Gómez', barbero: 'Elkin Ramírez', servicio: 'Combo Corte + Barba', fecha: '2026-11-08', hora: '11:30 AM', precio: 35000, estado: 'completada', metodoPago: 'transferencia', registradoEnApp: true, motivoCancelacion: null }
+      ];
+    }
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_citas_mes', JSON.stringify(citas));
+  }, [citas]);
 
   const tenantPrincipal = tenants[0]; 
   const licenciaVencida = tenantPrincipal?.diasRestantes <= 0 || tenantPrincipal?.estadoLicencia === 'Pausada (Vencida)';
@@ -268,6 +289,8 @@ export default function App() {
             citas={citas} 
             setCitas={setCitas} 
             incentivos={incentivos}
+            agendaPausadaSede={agendaPausadaSede}
+            mensajePausa Sede={mensajePausa Sede}
           />
         )}
 
@@ -314,6 +337,10 @@ export default function App() {
             tenantPrincipal={tenantPrincipal}
             setTenants={setTenants}
             tenants={tenants}
+            agendaPausadaSede={agendaPausadaSede}
+            setAgendaPausadaSede={setAgendaPausadaSede}
+            mensajePausa Sede={mensajePausa Sede}
+            setMensajePausa Sede={setMensajePausa Sede}
           />
         )}
 
@@ -394,14 +421,14 @@ export default function App() {
   );
 }
 
-function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCitas, incentivos }) {
+function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCitas, incentivos, agendaPausadaSede, mensajePausa Sede }) {
   const [modo, setModo] = useState('programada');
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
   
   const listaCompletaBarberos = [
-    ...barberos,
-    ...(perfilIndependiente ? [{ id: 'indep_gen', nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo' }] : [])
+    ...barberos.filter(b => !b.pausado),
+    ...(perfilIndependiente && !perfilIndependiente.agendaPausada ? [{ id: 'indep_gen', nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }] : [])
   ];
 
   const [barbero, setBarbero] = useState(listaCompletaBarberos[0]?.nombre || '');
@@ -409,15 +436,18 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
   
   const hoyStr = new Date().toISOString().split('T')[0];
   const [fecha, setFecha] = useState(hoyStr);
-  const [hora, setHora] = useState('10:00 AM');
+  const [hora, setHora] = useState('08:00 AM');
   const [citaCreada, setCitaCreada] = useState(null);
 
   const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
 
+  // Franjas horarias cada hora y cada media hora
   const horasDisponibles = [
-    '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', 
-    '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', 
-    '05:00 PM', '06:00 PM', '07:00 PM'
+    '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', 
+    '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', 
+    '12:00 PM', '12:30 PM', '02:00 PM', '02:30 PM', 
+    '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', 
+    '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM'
   ];
 
   const esCumpleanos = () => {
@@ -458,6 +488,37 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
     setCitaCreada(nueva);
     setNombre('');
   };
+
+  if (agendaPausadaSede) {
+    return (
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', padding: '24px', textAlign: 'center', maxWidth: '500px', margin: '40px auto' }}>
+        <AlertTriangle style={{ width: '48px', height: '48px', color: '#f43f5e', margin: '0 auto 12px auto' }} />
+        <h3 style={{ color: '#f43f5e', margin: '0 0 8px 0', fontSize: '18px' }}>Agenda Temporalmente Suspendida</h3>
+        <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>{mensajePausa Sede}</p>
+      </div>
+    );
+  }
+
+  // Comprobar si el barbero seleccionado individualmente está pausado
+  const barberoSeleccionadoObj = barberos.find(b => b.nombre === barbero);
+  const esIndependienteSeleccionado = barbero.includes(perfilIndependiente?.propietario || '');
+
+  if ((barberoSeleccionadoObj && barberoSeleccionadoObj.pausado) || (esIndependienteSeleccionado && perfilIndependiente?.agendaPausada)) {
+    const mensajeBarberoPausado = barberoSeleccionadoObj?.pausado ? barberoSeleccionadoObj.mensajePausa : perfilIndependiente?.mensajePausa;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Módulo de Reservas Móvil</h2>
+        </div>
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', padding: '24px', textAlign: 'center', maxWidth: '500px', margin: '20px auto', width: '100%', boxSizing: 'border-box' }}>
+          <AlertTriangle style={{ width: '48px', height: '48px', color: '#f43f5e', margin: '0 auto 12px auto' }} />
+          <h3 style={{ color: '#f43f5e', margin: '0 0 8px 0', fontSize: '18px' }}>Barbero No disponible hoy</h3>
+          <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>{mensajeBarberoPausado}</p>
+          <button onClick={() => setBarbero(listaCompletaBarberos[0]?.nombre || '')} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>Seleccionar otro barbero</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
@@ -555,8 +616,8 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '6px' }}>Seleccione Horario (Táctil)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '6px' }}>Seleccione Horario (Hora y Media Hora)</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', maxHeight: '160px', overflowY: 'auto' }}>
                     {horasDisponibles.map(h => (
                       <button
                         key={h}
@@ -657,6 +718,12 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
 
   const handleEstadoCita = (id, nuevoEstado) => {
     setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado, registradoEnApp: true } : c));
+  };
+
+  const handleEliminarCitaBarbero = (id) => {
+    if (window.confirm('¿Desea eliminar definitivamente esta cita de la lista?')) {
+      setCitas(citas.filter(c => c.id !== id));
+    }
   };
 
   const handleConfirmarCancelacion = (e) => {
@@ -768,22 +835,30 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                 <span style={{ color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</span>
               </div>
 
-              {c.estado !== 'completada' && c.estado !== 'cancelada' && (
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                {c.estado !== 'completada' && c.estado !== 'cancelada' && (
                   <button 
                     onClick={() => handleEstadoCita(c.id, 'completada')} 
                     style={{ flex: 1, padding: '6px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                   >
                     Atendido
                   </button>
+                )}
+                {c.estado !== 'cancelada' && c.estado !== 'completada' && (
                   <button 
                     onClick={() => setCitaACancelar(c)} 
                     style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                   >
-                    Cancelar / No Asistió
+                    No Asistió
                   </button>
-                </div>
-              )}
+                )}
+                <button 
+                  onClick={() => handleEliminarCitaBarbero(c.id)} 
+                  style={{ backgroundColor: '#334155', color: '#f87171', border: '1px solid #64748b', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           ))
         ) : (
@@ -857,6 +932,37 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
     alert(`¡Corte "${nuevoServ.nombre}" creado exitosamente!`);
   };
 
+  const handleEliminarServicioPropio = (id, nombre) => {
+    if (window.confirm(`¿Desea eliminar el corte "${nombre}" de su catálogo?`)) {
+      setPerfilIndependiente({
+        ...perfilIndependiente,
+        serviciosPropios: perfilIndependiente.serviciosPropios.filter(s => s.id !== id)
+      });
+    }
+  };
+
+  const handleEliminarCuentaIndependiente = () => {
+    if (window.confirm('¿Está seguro de eliminar por completo su perfil independiente y todos sus registros? Esta acción no se puede deshacer.')) {
+      setPerfilIndependiente(null);
+      onCerrarSesion();
+      alert('Perfil independiente eliminado con éxito.');
+    }
+  };
+
+  const handleTogglePausarAgendaIndep = () => {
+    const nuevoEstado = !perfilIndependiente.agendaPausada;
+    setPerfilIndependiente({
+      ...perfilIndependiente,
+      agendaPausada: nuevoEstado
+    });
+    alert(nuevoEstado ? 'Su agenda independiente ha sido PAUSADA. Los clientes verán aviso de disculpa.' : 'Su agenda independiente ha sido ACTIVADA.');
+  };
+
+  const handleGuardarMensajePausaIndep = (e) => {
+    e.preventDefault();
+    alert('¡Mensaje de ausencia actualizado correctamente para sus clientes!');
+  };
+
   const handleSeleccionarServicioCatalogo = (nombre) => {
     setServicioSeleccionado(nombre);
     const s = perfilIndependiente.serviciosPropios.find(item => item.nombre === nombre);
@@ -884,6 +990,12 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const handleEstadoCitaIndep = (id, nuevoEstado) => {
     setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado, registradoEnApp: true } : c));
+  };
+
+  const handleEliminarCitaIndep = (id) => {
+    if (window.confirm('¿Desea eliminar esta cita de su lista?')) {
+      setCitas(citas.filter(c => c.id !== id));
+    }
   };
 
   const handleConfirmarCancelacionIndep = (e) => {
@@ -918,12 +1030,34 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
-          <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Mis Ingresos Totales (Caja)</span>
+          <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Mis Ingresos Mes Actual (Caja)</span>
           <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#34d399' }}>${ingresosTotales.toLocaleString()}</p>
+        </div>
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '14px', borderRadius: '10px' }}>
+          <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: 'bold' }}>📊 Consolidado Mes Anterior (Comparativa)</span>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#60a5fa' }}>${(perfilIndependiente.ingresosMesAnterior || 0).toLocaleString()}</p>
         </div>
         <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
           <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 'bold' }}>✂️ Total Atenciones / Citas</span>
           <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{misCitasIndependiente.length}</p>
+        </div>
+      </div>
+
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ fontSize: '14px', color: '#fbbf24', margin: '0 0 10px 0' }}>🛑 Control de Pausa / Bloqueo de Agenda Autónoma</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155' }}>
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>Estado Agenda: {perfilIndependiente.agendaPausada ? 'Pausada (No Labora Hoy)' : 'Activa (Recibiendo Citas)'}</span>
+            </div>
+            <button onClick={handleTogglePausarAgendaIndep} style={{ backgroundColor: perfilIndependiente.agendaPausada ? '#065f46' : '#78350f', color: perfilIndependiente.agendaPausada ? '#34d399' : '#fcd34d', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+              {perfilIndependiente.agendaPausada ? 'Activar Agenda' : 'Pausar Agenda'}
+            </button>
+          </div>
+          <form onSubmit={handleGuardarMensajePausaIndep} style={{ display: 'flex', gap: '8px' }}>
+            <input type="text" value={perfilIndependiente.mensajePausa || ''} onChange={(e) => setPerfilIndependiente({ ...perfilIndependiente, mensajePausa: e.target.value })} placeholder="Mensaje de disculpa para los clientes..." style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+            <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Guardar Mensaje</button>
+          </form>
         </div>
       </div>
 
@@ -948,22 +1082,27 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
                   <span style={{ color: '#34d399', fontWeight: 'bold' }}>${(c.precio || 0).toLocaleString()}</span>
                 </div>
 
-                {c.estado !== 'completada' && c.estado !== 'cancelada' && (
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                  {c.estado !== 'completada' && c.estado !== 'cancelada' && (
                     <button 
                       onClick={() => handleEstadoCitaIndep(c.id, 'completada')} 
                       style={{ flex: 1, padding: '6px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                     >
-                      Marcar Atendido
+                      Atendido
                     </button>
+                  )}
+                  {c.estado !== 'cancelada' && c.estado !== 'completada' && (
                     <button 
                       onClick={() => setCitaACancelarIndep(c)} 
                       style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                     >
-                      Cancelar
+                      No Asistió
                     </button>
-                  </div>
-                )}
+                  )}
+                  <button onClick={() => handleEliminarCitaIndep(c.id)} style={{ backgroundColor: '#334155', color: '#f87171', border: '1px solid #64748b', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                    Eliminar
+                  </button>
+                </div>
               </div>
             ))
           ) : (
@@ -976,19 +1115,22 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ fontSize: '14px', color: '#fbbf24', margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Tus Propios Cortes y Definir Precios
+          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear y Gestionar Mis Propios Cortes
         </h3>
         <form onSubmit={handleCrearServicioPropio} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
           <input type="text" placeholder="Nombre del corte..." value={servicioNombre} onChange={(e) => setServicioNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
           <input type="number" placeholder="Precio ($)" value={servicioPrecio} onChange={(e) => setServicioPrecio(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
           <input type="text" placeholder="Duración (Ej: 30 min)" value={servicioDuracion} onChange={(e) => setServicioDuracion(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Guardar Corte en mi Barbería</button>
+          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Guardar Corte</button>
         </form>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
           {perfilIndependiente.serviciosPropios.map(s => (
-            <div key={s.id} style={{ backgroundColor: '#020617', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px', fontSize: '11px' }}>
-              <span style={{ color: '#fff', fontWeight: 'bold' }}>{s.nombre}</span> - <span style={{ color: '#34d399' }}>${s.precio.toLocaleString()}</span> ({s.duracion})
+            <div key={s.id} style={{ backgroundColor: '#020617', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div>
+                <span style={{ color: '#fff', fontWeight: 'bold' }}>{s.nombre}</span> - <span style={{ color: '#34d399' }}>${s.precio.toLocaleString()}</span> ({s.duracion})
+              </div>
+              <button onClick={() => handleEliminarServicioPropio(s.id, s.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
             </div>
           ))}
         </div>
@@ -1007,6 +1149,14 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
           </select>
           <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Sumar a mi Caja</button>
         </form>
+      </div>
+
+      <div style={{ backgroundColor: '#450a0a', border: '1px solid #f43f5e', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h4 style={{ margin: 0, color: '#f87171', fontSize: '13px' }}>Zona de Peligro: Eliminar Perfil Independiente</h4>
+          <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#fca5a5' }}>Borra definitivamente este perfil autónomo del sistema.</p>
+        </div>
+        <button onClick={handleEliminarCuentaIndependiente} style={{ backgroundColor: '#991b1b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Eliminar Mi Perfil Solista</button>
       </div>
 
       {citaACancelarIndep && (
@@ -1034,7 +1184,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   );
 }
 
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants }) {
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausa Sede, setMensajePausa Sede }) {
   const [tab, setTab] = useState('resumen');
   
   const [nuevoUserAdmin, setNuevoUserAdmin] = useState(credencialesAdmin.username);
@@ -1089,6 +1239,22 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     alert(`¡Nombre de la barbería actualizado exitosamente a "${nombreNegocioInput.trim()}"!`);
   };
 
+  const handleTogglePausarSede = () => {
+    setAgendaPausadaSede(!agendaPausadaSede);
+    alert(!agendaPausadaSede ? 'Agenda general de sede PAUSADA. Los clientes verán aviso de disculpa.' : 'Agenda general de sede ACTIVADA.');
+  };
+
+  const handleTogglePausarBarberoAdmin = (id, nombre) => {
+    setBarberos(barberos.map(b => b.id === id ? { ...b, pausado: !b.pausado } : b));
+    alert(`Estado de pausa actualizado para el barbero ${nombre}.`);
+  };
+
+  const handleEliminarCitaAdmin = (id) => {
+    if (window.confirm('¿Desea eliminar definitivamente esta cita de la sede?')) {
+      setCitas(citas.filter(c => c.id !== id));
+    }
+  };
+
   const handleActualizarCredencialesAdmin = (e) => {
     e.preventDefault();
     if (!nuevoUserAdmin.trim() || !nuevoPassAdmin.trim()) return;
@@ -1116,6 +1282,12 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     setPrecioServ('');
   };
 
+  const handleEliminarServicioAdmin = (id, nombre) => {
+    if (window.confirm(`¿Desea eliminar el servicio "${nombre}"?`)) {
+      setServicios(servicios.filter(s => s.id !== id));
+    }
+  };
+
   const handleAgregarBarbero = (e) => {
     e.preventDefault();
     if (!nuevoNombreBarbero.trim() || !nuevoUsernameBarbero.trim()) return;
@@ -1126,12 +1298,20 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       nombre: nuevoNombreBarbero, 
       especialidad: especialidad || 'Barbero Profesional', 
       estado: 'Activo', 
-      claveAcceso: nuevaClaveBarbero || 'barbero123'
+      claveAcceso: nuevaClaveBarbero || 'barbero123',
+      pausado: false,
+      mensajePausa: 'Barbero no disponible hoy.'
     }]);
     setNuevoNombreBarbero('');
     setNuevoUsernameBarbero('');
     setNuevaClaveBarbero('');
     setEspecialidad('');
+  };
+
+  const handleEliminarBarberoAdmin = (id, nombre) => {
+    if (window.confirm(`¿Está seguro de eliminar al barbero "${nombre}"?`)) {
+      setBarberos(barberos.filter(b => b.id !== id));
+    }
   };
 
   const handleAgregarProducto = (e) => {
@@ -1141,6 +1321,12 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     setNombreProd('');
     setPrecioProd('');
     setStockProd('');
+  };
+
+  const handleEliminarProductoAdmin = (id, nombre) => {
+    if (window.confirm(`¿Desea eliminar el producto "${nombre}" del inventario?`)) {
+      setProductos(productos.filter(p => p.id !== id));
+    }
   };
 
   const ingresosTotalesDia = citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
@@ -1171,7 +1357,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
             <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Total Dinero Ingresado Hoy (Sede)</span>
+              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Total Dinero Ingresado Mes (Sede)</span>
               <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '6px 0 0 0', color: '#34d399' }}>${ingresosTotalesDia.toLocaleString()}</p>
             </div>
           </div>
@@ -1204,7 +1390,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                   <th style={{ padding: '6px' }}>Servicio</th>
                   <th style={{ padding: '6px' }}>Pago</th>
                   <th style={{ padding: '6px' }}>Estado</th>
-                  <th style={{ padding: '6px', textAlign: 'right' }}>Acción Agenda</th>
+                  <th style={{ padding: '6px', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -1215,12 +1401,15 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                     <td style={{ padding: '6px' }}>{c.servicio}</td>
                     <td style={{ padding: '6px' }}>${(c.precio || 0).toLocaleString()} ({c.metodoPago || 'efectivo'})</td>
                     <td style={{ padding: '6px' }}><span style={{ color: '#34d399', fontWeight: 'bold' }}>{c.estado}</span></td>
-                    <td style={{ padding: '6px', textAlign: 'right' }}>
+                    <td style={{ padding: '6px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                       {c.estado !== 'completada' && c.estado !== 'cancelada' && (
                         <button onClick={() => setCitaAReasignar(c)} style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                          🔄 Reasignar Barbero
+                          🔄 Reasignar
                         </button>
                       )}
+                      <button onClick={() => handleEliminarCitaAdmin(c.id)} style={{ padding: '4px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1242,9 +1431,19 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
             {barberos.map(b => (
-              <div key={b.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-                <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{b.nombre}</h4>
-                <p style={{ margin: '2px 0', fontSize: '10px', color: '#fbbf24' }}>User: {b.username} | Clave: {b.claveAcceso}</p>
+              <div key={b.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{b.nombre}</h4>
+                  <p style={{ margin: '2px 0', fontSize: '10px', color: '#fbbf24' }}>User: {b.username} | Clave: {b.claveAcceso}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button onClick={() => handleTogglePausarBarberoAdmin(b.id, b.nombre)} style={{ backgroundColor: b.pausado ? '#065f46' : '#78350f', color: b.pausado ? '#34d399' : '#fcd34d', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    {b.pausado ? 'Activar Barbero' : 'Pausar Barbero'}
+                  </button>
+                  <button onClick={() => handleEliminarBarberoAdmin(b.id, b.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Eliminar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1262,10 +1461,13 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
             {servicios.map(s => (
-              <div key={s.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px' }}>
-                <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{s.nombre}</h4>
-                <p style={{ margin: '4px 0', color: '#34d399', fontWeight: 'bold' }}>${s.precio.toLocaleString()}</p>
-                <span style={{ fontSize: '10px', color: '#94a3b8' }}>⏱️ {s.duracion}</span>
+              <div key={s.id} style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{s.nombre}</h4>
+                  <p style={{ margin: '4px 0', color: '#34d399', fontWeight: 'bold' }}>${s.precio.toLocaleString()}</p>
+                  <span style={{ fontSize: '10px', color: '#94a3b8' }}>⏱️ {s.duracion}</span>
+                </div>
+                <button onClick={() => handleEliminarServicioAdmin(s.id, s.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
               </div>
             ))}
           </div>
@@ -1288,6 +1490,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                   <th style={{ padding: '6px' }}>Producto</th>
                   <th style={{ padding: '6px' }}>Precio</th>
                   <th style={{ padding: '6px' }}>Stock</th>
+                  <th style={{ padding: '6px', textAlign: 'right' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -1296,6 +1499,9 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                     <td style={{ padding: '6px', fontWeight: 'bold', color: '#fff' }}>{p.nombre}</td>
                     <td style={{ padding: '6px', color: '#34d399' }}>${p.precio.toLocaleString()}</td>
                     <td style={{ padding: '6px' }}>{p.stock} u.</td>
+                    <td style={{ padding: '6px', textAlign: 'right' }}>
+                      <button onClick={() => handleEliminarProductoAdmin(p.id, p.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1307,24 +1513,32 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       {tab === 'config_admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '480px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '15px' }}>🛑 Control de Pausa / Bloqueo General Sede</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>Sede: {agendaPausadaSede ? 'Pausada (Cerrada)' : 'Activa (Abierta)'}</span>
+                <button onClick={handleTogglePausarSede} style={{ backgroundColor: agendaPausadaSede ? '#065f46' : '#78350f', color: agendaPausadaSede ? '#34d399' : '#fcd34d', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+                  {agendaPausadaSede ? 'Activar Sede' : 'Pausar Sede'}
+                </button>
+              </div>
+              <input type="text" value={mensajePausa Sede} onChange={(e) => setMensajePausa Sede(e.target.value)} placeholder="Mensaje disculpa general..." style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+            </div>
+          </div>
+
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Edit3 style={{ width: '16px', height: '16px' }} /> Cambiar Nombre de la Barbería
             </h3>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px 0' }}>Personaliza el nombre comercial de tu sede.</p>
-            
             <form onSubmit={handleGuardarNombreBarberia} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre Comercial Actual</label>
-                <input 
-                  type="text" 
-                  value={nombreNegocioInput} 
-                  onChange={(e) => setNombreNegocioInput(e.target.value)} 
-                  style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} 
-                  required 
-                />
-              </div>
-              <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer', marginTop: '4px' }}>
-                Actualizar Nombre de Barbería
+              <input 
+                type="text" 
+                value={nombreNegocioInput} 
+                onChange={(e) => setNombreNegocioInput(e.target.value)} 
+                style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} 
+                required 
+              />
+              <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
+                Actualizar Nombre
               </button>
             </form>
           </div>
@@ -1443,6 +1657,9 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       estadoLicencia: 'Activa',
       diasRestantes: 30,
       whatsappContacto: nuevoIndepWp.trim() || '573001234567',
+      agendaPausada: false,
+      mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
+      ingresosMesAnterior: 1200000,
       serviciosPropios: [
         { id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' }
       ]
