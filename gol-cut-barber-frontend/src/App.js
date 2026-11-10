@@ -14,7 +14,6 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [rolPendientePassword, setRolPendientePassword] = useState(null);
 
-  // --- NUEVAS FUNCIONALIDADES SOLICITADAS ---
   const [slotDuration, setSlotDuration] = useState(30); // 30 o 60 minutos
   const [globalTimer, setGlobalTimer] = useState({ Mañana: false, Tarde: false, Noche: false });
   const [chairFeeConfig, setChairFeeConfig] = useState({ amount: 50, percentage: 20 });
@@ -237,7 +236,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Selector de intervalo de citas y roles */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '650px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '4px 8px' }}>
               <Clock style={{ width: '14px', height: '14px', color: '#fbbf24' }} />
@@ -455,21 +453,6 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
 
   const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
 
-  // Generación dinámica de horas según slotDuration (30 min o 60 min)
-  const generarHoras = () => {
-    const lista = [];
-    let horaInicio = 8; // 8 AM
-    let horaFin = 20; // 8 PM
-    for (let h = horaInicio; h < horaFin; h++) {
-      let hFormat = h > 12 ? h - 12 : h;
-      let ampm = h >= 12 ? 'PM' : 'AM';
-      lista. `${hFormat < 10 ? '0' + hFormat : hFormat}:00 ${ampm}`;
-      if (slotDuration === 30) {
-        lista.push(`${hFormat < 10 ? '0' + hFormat : hFormat}:30 ${ampm}`);
-      }
-    }
-    return lista;
-  };
   const horasDisponibles = ['08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM'];
 
   const esCumpleanos = () => {
@@ -1291,11 +1274,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     }
   };
 
-  const handleTogglePausarBarberoAdmin = (id, nombre) => {
-    setBarberos(barberos.map(b => b.id === id ? { ...b, pausado: !b.pausado } : b));
-    alert(`Estado de pausa actualizado para el barbero ${nombre}.`);
-  };
-
   const handleEliminarCitaAdmin = (id) => {
     if (window.confirm('¿Desea anular o eliminar definitivamente esta cita de la sede?')) {
       setCitas(citas.filter(c => c.id !== id));
@@ -1464,7 +1442,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
       {tab === 'barberos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* SECCIÓN: Configuración de Cobro por Silla con monto y porcentaje modificable */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '16px', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <DollarSign style={{ width: '16px', height: '16px' }} /> Configuración de Cobro por Silla (Monto y Porcentaje)
@@ -1598,7 +1575,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
       {tab === 'config_admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '520px' }}>
-          {/* SECCIÓN: Temporizador y Bloqueo de Tiempos Globales por el Administrador */}
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Clock style={{ width: '16px', height: '16px' }} /> Control de Temporizadores y Bloqueos Globales (Admin)
