@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+mport React, { useState, useEffect } from 'react';
 import { 
   Scissors, Lock, Smartphone, CheckCircle, 
   Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink, DollarSign, Clock, Percent, Users, Calendar as CalendarIcon
