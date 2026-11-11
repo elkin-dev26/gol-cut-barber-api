@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('client');
+ const [activeRole, setActiveRole] = useState('cliente');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
