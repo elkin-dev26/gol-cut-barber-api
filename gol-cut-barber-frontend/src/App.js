@@ -1794,9 +1794,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   const eliminarPerfilIndependiente = () => {
   if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
     setPerfilIndependiente(null);
-    if (typeof activeRole !== 'undefined' && activeRole === 'barbero_independiente') {
-      setActiveRole('cliente');
-    }
     alert('Perfil independiente eliminado del sistema correctamente.');
   }
 };
