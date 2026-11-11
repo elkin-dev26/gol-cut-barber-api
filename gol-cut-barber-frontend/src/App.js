@@ -1,11 +1,11 @@
-mport React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Scissors, Lock, Smartphone, CheckCircle, 
   Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink, DollarSign, Clock, Percent, Users, Calendar as CalendarIcon
 } from 'lucide-react';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('cliente');
+  const [activeRole, setActiveRole] = useState('client');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
@@ -1791,8 +1791,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     });
   };
 
-  const eliminarPerfilIndependiente = () => {
-    if (window.confirm(`¿Está seguro de eliminar definitivamente el perfil independiente de "${perfilIndependiente?.propietario}"? Esta acción no se puede deshacer.`)) {
+const eliminarPerfilIndependiente = () => {
+    if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
       setPerfilIndependiente(null);
       if (activeRole === 'barbero_independiente') {
         setActiveRole('cliente');
@@ -1802,7 +1802,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   };
 
   const eliminarTenant = (id, nombre) => {
-    if (window.confirm(`¿Está seguro de eliminar definitivamente la barbería "${nombre}"? Esta acción no se puede deshacer.`)) {
+    if (window.confirm(`¿Está seguro de eliminar definitivamente la barbería "${nombre}"?`)) {
       setTenants(tenants.filter(t => t.id !== id));
     }
   };
