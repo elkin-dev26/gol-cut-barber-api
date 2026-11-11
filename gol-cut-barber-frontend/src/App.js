@@ -1791,16 +1791,15 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     });
   };
 
-9const eliminarPerfilIndependiente = () => {
-    if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
-      setPerfilIndependiente(null);
-      // Validación segura del rol activo actual
-      if (typeof activeRole !== 'undefined' && activeRole === 'barbero_independiente') {
-        setActiveRole('cliente');
-      }
-      alert('Perfil independiente eliminado del sistema correctamente.');
+  const eliminarPerfilIndependiente = () => {
+  if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
+    setPerfilIndependiente(null);
+    if (typeof activeRole !== 'undefined' && activeRole === 'barbero_independiente') {
+      setActiveRole('cliente');
     }
-  };
+    alert('Perfil independiente eliminado del sistema correctamente.');
+  }
+};
   const eliminarTenant = (id, nombre) => {
     if (window.confirm(`¿Está seguro de eliminar definitivamente la barbería "${nombre}"?`)) {
       setTenants(tenants.filter(t => t.id !== id));
