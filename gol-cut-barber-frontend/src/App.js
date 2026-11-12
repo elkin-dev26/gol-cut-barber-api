@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Scissors, Lock, Smartphone, CheckCircle, 
-  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink, DollarSign, Clock, Percent, Users, Calendar as CalendarIcon
+  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink, DollarSign, Clock, Percent, Users, Calendar as CalendarIcon, ToggleLeft, ToggleRight
 } from 'lucide-react';
 
 export default function App() {
@@ -35,25 +35,35 @@ export default function App() {
     mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
   });
 
-  const [incentivos, setIncentivos] = useState([
-    {
-      id: 'inc1',
-      tipo: 'cumpleanos',
-      titulo: 'Descuento Cumpleaños Cliente',
-      descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar.',
-      activo: true,
-      porcentaje: 10
-    },
-    {
-      id: 'inc2',
-      tipo: 'barbero',
-      titulo: 'Premio Alquiler Silla Barbero',
-      descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
-      activo: true,
-      metaCitas: 15,
-      porcentaje: 5
-    }
-  ]);
+  const [incentivos, setIncentivos] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_incentivos');
+    if (guardado) return JSON.parse(guardado);
+    return [
+      {
+        id: 'inc1',
+        tipo: 'cumpleanos',
+        titulo: 'Descuento Cumpleaños Cliente',
+        descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar en su día.',
+        activo: true,
+        porcentaje: 10,
+        destinatario: 'Todos los Clientes'
+      },
+      {
+        id: 'inc2',
+        tipo: 'barbero',
+        titulo: 'Premio Alquiler Silla Barbero',
+        descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
+        activo: true,
+        metaCitas: 15,
+        porcentaje: 5,
+        destinatario: 'Todos los Barberos'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_incentivos', JSON.stringify(incentivos));
+  }, [incentivos]);
 
   const [tenants, setTenants] = useState([
     { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: 'Gol Cut Barber Inicial', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, whatsappContacto: '573001234567' },
@@ -385,6 +395,8 @@ export default function App() {
             perfilIndependiente={perfilIndependiente}
             setPerfilIndependiente={setPerfilIndependiente}
             setActiveRole={setActiveRole}
+            incentivos={incentivos}
+            setIncentivos={setIncentivos}
           />
         )}
       </main>
@@ -488,7 +500,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
     let precioFinal = servObj ? servObj.precio : 25000;
 
     if (cumple && incCumple) {
-      const desc = (precioFinal * incCumple.porcentaje) / 100;
+      const desc = (precioFinal * (incCumple.porcentaje || 10)) / 100;
       precioFinal = precioFinal - desc;
     }
 
@@ -595,7 +607,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
             {esCumpleanos() && incCumple && (
               <div style={{ backgroundColor: 'rgba(5, 150, 105, 0.2)', border: '1px solid #059669', padding: '8px', borderRadius: '6px', color: '#34d399', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Gift style={{ width: '16px', height: '16px' }} />
-                <span><strong>¡Felicidades!</strong> Recibes un {incCumple.porcentaje}% de descuento.</span>
+                <span><strong>¡Felicidades!</strong> Recibes un {incCumple.porcentaje || 10}% de descuento.</span>
               </div>
             )}
 
@@ -732,7 +744,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     );
   }
 
-  const incBarbero = incentivos.find(i => i.tipo === 'barbero' && i.activo);
+  const incBarbero = incentivos.find(i => (i.tipo === 'barbero' || i.tipo === 'bono_barbero') && i.activo && (i.destinatario === 'Todos los Barberos' || i.destinatario?.toLowerCase() === barberoActual?.nombre?.toLowerCase()));
   const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || '').toLowerCase());
   const atencionesBarbero = citasBarbero.filter(c => c.estado === 'completada').length;
    
@@ -813,10 +825,11 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Award style={{ width: '14px', height: '14px' }} /> Control Incentivos & Registro de Transferencias:
+              <Award style={{ width: '14px', height: '14px' }} /> {incBarbero.titulo}:
             </span>
             <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: 'bold' }}>{atencionesBarbero} Atenciones ({porcentajeAvance}%)</span>
           </div>
+          <p style={{ fontSize: '10px', color: '#94a3b8', margin: '0 0 6px 0' }}>{incBarbero.descripcion} (Destinado a: {incBarbero.destinatario})</p>
           <div style={{ width: '100%', height: '8px', backgroundColor: '#020617', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{ width: `${porcentajeAvance}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.3s ease' }}></div>
           </div>
@@ -882,9 +895,9 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                 >
                   Eliminar
                 </button>
+              </div>
             </div>
-          </div>
-        ))
+          ))
         ) : (
           <div style={{ gridColumn: '1 / -1', padding: '24px', backgroundColor: '#0f172a', borderRadius: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
             No hay citas asignadas.
@@ -1235,6 +1248,14 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
 
+  // Estados para creación/edición de incentivos dinámicos
+  const [nuevoIncTitulo, setNuevoIncTitulo] = useState('');
+  const [nuevoIncTipo, setNuevoIncTipo] = useState('cumpleanos');
+  const [nuevoIncDesc, setNuevoIncDesc] = useState('');
+  const [nuevoIncPorcentaje, setNuevoIncPorcentaje] = useState(10);
+  const [nuevoIncMeta, setNuevoIncMeta] = useState(15);
+  const [nuevoIncDestinatario, setNuevoIncDestinatario] = useState('Todos los Clientes');
+
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola Elkin, deseo renovar mi membresía mensual.')}`;
 
   if (licenciaVencida) {
@@ -1372,6 +1393,38 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     }
   };
 
+  // Funciones para gestionar incentivos dinámicos
+  const handleCrearIncentivo = (e) => {
+    e.preventDefault();
+    if (!nuevoIncTitulo.trim()) return;
+
+    const nuevo = {
+      id: 'inc_' + Date.now(),
+      titulo: nuevoIncTitulo.trim(),
+      tipo: nuevoIncTipo,
+      descripcion: nuevoIncDesc.trim() || 'Incentivo o bono especial activo en la plataforma.',
+      activo: true,
+      porcentaje: Number(nuevoIncPorcentaje),
+      metaCitas: Number(nuevoIncMeta),
+      destinatario: nuevoIncDestinatario
+    };
+
+    setIncentivos([...incentivos, nuevo]);
+    setNuevoIncTitulo('');
+    setNuevoIncDesc('');
+    alert('¡Incentivo o bono creado y aplicado exitosamente!');
+  };
+
+  const handleToggleIncentivo = (id) => {
+    setIncentivos(incentivos.map(i => i.id === id ? { ...i, activo: !i.activo } : i));
+  };
+
+  const handleEliminarIncentivo = (id) => {
+    if (window.confirm('¿Desea eliminar este incentivo permanentemente?')) {
+      setIncentivos(incentivos.filter(i => i.id !== id));
+    }
+  };
+
   const ingresosTotalesDia = citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   return (
@@ -1388,6 +1441,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
 
           <div style={{ backgroundColor: '#0f172a', padding: '2px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '2px', overflowX: 'auto' }}>
             <button onClick={() => setTab('resumen')} style={{ padding: '6px 10px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Resumen & Ingresos</button>
+            <button onClick={() => setTab('incentivos')} style={{ padding: '6px 10px', background: tab === 'incentivos' ? '#f59e0b' : 'none', color: tab === 'incentivos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>🎁 Incentivos</button>
             <button onClick={() => setTab('barberos')} style={{ padding: '6px 10px', background: tab === 'barberos' ? '#f59e0b' : 'none', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Barberos & Sillas</button>
             <button onClick={() => setTab('servicios')} style={{ padding: '6px 10px', background: tab === 'servicios' ? '#f59e0b' : 'none', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Servicios & Precios</button>
             <button onClick={() => setTab('productos')} style={{ padding: '6px 10px', background: tab === 'productos' ? '#f59e0b' : 'none', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Inventario</button>
@@ -1434,24 +1488,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
             </div>
           </div>
 
-          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>🎁 Módulo de Incentivos y Bonos (Clientes y Barberos)</h4>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button 
-                onClick={() => alert('¡Incentivo aplicado al cliente exitosamente!')}
-                style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
-              >
-                Dar Incentivo a Cliente
-              </button>
-              <button 
-                onClick={() => alert('¡Bono aplicado al barbero exitosamente!')}
-                style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
-              >
-                Dar Bono a Barbero
-              </button>
-            </div>
-          </div>
-
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '14px', overflowX: 'auto' }}>
             <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control de Agendas, Citas & Anulación por Ausencia</h4>
             <table style={{ width: '100%', textAlign: 'left', fontSize: '11px', color: '#cbd5e1' }}>
@@ -1487,6 +1523,83 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'incentivos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '16px', borderRadius: '12px' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Gift style={{ width: '16px', height: '16px' }} /> Crear / Configurar Nuevo Incentivo o Bono
+            </h3>
+            <form onSubmit={handleCrearIncentivo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Título del Incentivo:</label>
+                <input type="text" placeholder="Ej: Bono Especial Fin de Semana" value={nuevoIncTitulo} onChange={(e) => setNuevoIncTitulo(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Tipo de Regla:</label>
+                <select value={nuevoIncTipo} onChange={(e) => setNuevoIncTipo(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }}>
+                  <option value="cumpleanos">Descuento Cumpleaños (Cliente)</option>
+                  <option value="barbero">Premio / Meta Barbero</option>
+                  <option value="bono_especial">Bono Directo en Dinero / Porcentaje</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Destinatario:</label>
+                <select value={nuevoIncDestinatario} onChange={(e) => setNuevoIncDestinatario(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }}>
+                  <option value="Todos los Clientes">Todos los Clientes</option>
+                  <option value="Todos los Barberos">Todos los Barberos</option>
+                  {barberos.map(b => (
+                    <option key={b.id} value={b.nombre}>Barbero: {b.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Porcentaje de Descuento/Premio (%):</label>
+                <input type="number" value={nuevoIncPorcentaje} onChange={(e) => setNuevoIncPorcentaje(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Meta de Citas (Si aplica para barbero):</label>
+                <input type="number" value={nuevoIncMeta} onChange={(e) => setNuevoIncMeta(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Descripción:</label>
+                <input type="text" placeholder="Detalle breve del incentivo..." value={nuevoIncDesc} onChange={(e) => setNuevoIncDesc(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Crear y Aplicar Incentivo</button>
+              </div>
+            </form>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+            {incentivos.map(i => (
+              <div key={i.id} style={{ backgroundColor: '#0f172a', border: i.activo ? '1px solid #059669' : '1px solid #64748b', padding: '14px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '8px', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{i.titulo}</h4>
+                    <span style={{ fontSize: '10px', color: '#fbbf24', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>Destinatario: {i.destinatario || 'General'}</span>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: i.activo ? 'rgba(5,150,105,0.2)' : 'rgba(100,116,139,0.2)', color: i.activo ? '#34d399' : '#94a3b8' }}>
+                    {i.activo ? 'Activo' : 'Pausado'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '11px', color: '#cbd5e1', margin: 0 }}>{i.descripcion}</p>
+                <div style={{ fontSize: '11px', color: '#38bdf8' }}>
+                  {i.porcentaje ? `Beneficio: ${i.porcentaje}%` : ''} {i.metaCitas ? `| Meta: ${i.metaCitas} citas` : ''}
+                </div>
+                <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid #1e293b' }}>
+                  <button onClick={() => handleToggleIncentivo(i.id)} style={{ flex: 1, backgroundColor: i.activo ? '#78350f' : '#065f46', color: i.activo ? '#fcd34d' : '#34d399', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    {i.activo ? 'Pausar' : 'Reanudar'}
+                  </button>
+                  <button onClick={() => handleEliminarIncentivo(i.id)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '6px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1547,7 +1660,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                   <p style={{ margin: '2px 0', fontSize: '10px', color: '#fbbf24' }}>User: {b.username} | Clave: {b.claveAcceso}</p>
                   <p style={{ margin: '2px 0', fontSize: '10px', color: b.isLocked ? '#f43f5e' : '#34d399' }}>Estado Cuenta: {b.isLocked ? 'Bloqueado (Debe Cupo)' : 'Activo'}</p>
                 </div>
-                
+                 
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <select 
                     value={b.billingCycle || 'mensual'} 
@@ -1737,7 +1850,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilIndependiente, setPerfilIndependiente, setActiveRole }) {
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilIndependiente, setPerfilIndependiente, setActiveRole, incentivos, setIncentivos }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
 
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
@@ -1884,7 +1997,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (elkin-dev26)
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de creación de sedes, perfil independiente, licencias y trazabilidad</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de creación de sedes, perfil independiente, incentivos globales y licencias</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
@@ -1899,6 +2012,32 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <input type="text" placeholder="WhatsApp de contacto" value={nuevoWpBarberia} onChange={(e) => setNuevoWpBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
           <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Registrar Barbería SaaS</button>
         </form>
+      </div>
+
+      {/* Control Root de Incentivos Globales */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Gift style={{ width: '16px', height: '16px' }} /> Control Global de Incentivos y Bonos (SuperAdmin)
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+          {incentivos.map(i => (
+            <div key={i.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{i.titulo}</span>
+                <span style={{ fontSize: '10px', color: i.activo ? '#34d399' : '#f87171' }}>{i.activo ? 'Activo' : 'Pausado'}</span>
+              </div>
+              <p style={{ fontSize: '10px', color: '#94a3b8', margin: 0 }}>Destino: {i.destinatario || 'General'}</p>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                <button onClick={() => setIncentivos(incentivos.map(item => item.id === i.id ? { ...item, activo: !item.activo } : item))} style={{ backgroundColor: i.activo ? '#78350f' : '#065f46', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  {i.activo ? 'Pausar' : 'Reanudar'}
+                </button>
+                <button onClick={() => setIncentivos(incentivos.filter(item => item.id !== i.id))} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {perfilIndependiente ? (
