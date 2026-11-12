@@ -786,6 +786,10 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     e.preventDefault();
     const valorFinal = Number(precioRapido);
 
+   const handleCorteDirecto = (e) => {
+    e.preventDefault();
+    const valorFinal = Number(precioRapido);
+
     const nueva = {
       id: 'c' + Date.now(),
       cliente: metodoPagoSeleccionado === 'transferencia' ? 'Cliente (Pago por Transferencia)' : 'Cliente Presencial (Efectivo)',
@@ -803,7 +807,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     setCitas([nueva, ...citas]);
   };
 
-  ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
+  // 💡 AQUÍ ESTÁ LA CORRECCIÓN: Declaramos 'ingresosHoy' con const
+  const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
