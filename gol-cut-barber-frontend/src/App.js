@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Scissors, Lock, Smartphone, CheckCircle, 
+import {  
+  Scissors, Lock, Smartphone, CheckCircle,  
   Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Pause, Play, Trash2, Building, Edit3, ExternalLink, DollarSign, Clock, Percent, Users, Calendar as CalendarIcon, ToggleLeft, ToggleRight
 } from 'lucide-react';
 
@@ -107,7 +107,7 @@ export default function App() {
   }, [perfilIndependiente]);
 
   const [productos, setProductos] = useState([
-    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 15 },
+    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 },
     { id: 'p2', nombre: 'Champú Anticaída Barba & Cabello', precio: 45000, stock: 10 }
   ]);
 
@@ -236,13 +236,9 @@ export default function App() {
       return;
     }
 
-    if (!usuarioAutenticado || (usuarioAutenticado.role !== targetRole && targetRole !== 'admin')) {
-      setRolPendientePassword(null);
-      setIsLoginOpen(true);
-      setUsernameInput(targetRole === 'admin' ? 'admin' : targetRole === 'barbero_independiente' ? 'independiente' : 'elkin');
-    } else {
-      setActiveRole(targetRole);
-    }
+    setRolPendientePassword(null);
+    setIsLoginOpen(true);
+    setUsernameInput(targetRole === 'admin' ? credencialesAdmin.username : targetRole === 'barbero_independiente' ? (perfilIndependiente?.username || 'independiente') : targetRole === 'barbero' ? 'elkin' : '');
   };
 
   return (
@@ -282,9 +278,9 @@ export default function App() {
               <option value="cliente">📱 Vista: Cliente (Reservas / Móvil)</option>
               <option value="barbero">✂️ Vista: Barbero (Empleado)</option>
               {perfilIndependiente && (
-                <option value="barbero_independiente">⭐ Vista: Barbero Solista / Independiente</option>
+                <option value="barbero_independiente">⭐ Vista: {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</option>
               )}
-              <option value="admin">🛠️ Vista: Administrador General</option>
+              <option value="admin">🛠️ Vista: Administrador General ({tenantPrincipal.nombreBarberia})</option>
               <option value="evaluacion_evaluador">🎓 Perfil Demo: Perfil Evaluador (Seguro)</option>
               <option value="sucursal_demo">🏢 Perfil Demo: Sucursal Externa (Seguro)</option>
               {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
@@ -338,6 +334,7 @@ export default function App() {
             licenciaVencida={licenciaVencida}
             incentivos={incentivos}
             activeRole={activeRole}
+            tenantPrincipal={tenantPrincipal}
           />
         )}
 
@@ -397,6 +394,8 @@ export default function App() {
             setActiveRole={setActiveRole}
             incentivos={incentivos}
             setIncentivos={setIncentivos}
+            credencialesAdmin={credencialesAdmin}
+            setCredencialesAdmin={setCredencialesAdmin}
           />
         )}
       </main>
@@ -414,9 +413,9 @@ export default function App() {
               <div style={{ width: '40px', height: '40px', backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}>
                 <Lock style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
               </div>
-              <h3 style={{ margin: 0, color: '#fbbf24', fontSize: '18px', fontWeight: 'bold' }}>Ingreso Seguro</h3>
+              <h3 style={{ margin: 0, color: '#fbbf24', fontSize: '18px', fontWeight: 'bold' }}>Ingreso Seguro Obligatorio</h3>
               <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                {rolPendientePassword ? 'Ingrese contraseña para acceso Demo' : 'Ingrese sus credenciales personales'}
+                {rolPendientePassword ? 'Ingrese contraseña para acceso Demo' : 'Ingrese sus credenciales de acceso para continuar'}
               </p>
             </div>
 
@@ -433,7 +432,7 @@ export default function App() {
                   type="text"
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
-                  placeholder="Ej: admin, elkin, evaluador"
+                  placeholder="Ej: admin, elkin, independiente"
                   style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#f8fafc', fontSize: '13px', boxSizing: 'border-box' }}
                   required
                 />
@@ -718,7 +717,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
   );
 }
 
-function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, activeRole }) {
+function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, activeRole, tenantPrincipal }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState('efectivo');
@@ -804,14 +803,14 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     setCitas([nueva, ...citas]);
   };
 
-  const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
+  ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', gap: '8px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Barbero - {barberoActual?.nombre}</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Especialidad: {barberoActual?.especialidad}</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Sede: {tenantPrincipal?.nombreBarberia} | Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantPrincipal?.diasRestantes || 30} días</strong></p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }}>
@@ -978,14 +977,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
     }
   };
 
-  const handleEliminarCuentaIndependiente = () => {
-    if (window.confirm('¿Está seguro de eliminar por completo su perfil independiente y todos sus registros? Esta acción no se puede deshacer.')) {
-      setPerfilIndependiente(null);
-      onCerrarSesion();
-      alert('Perfil independiente eliminado con éxito.');
-    }
-  };
-
   const handleTogglePausarAgendaIndep = () => {
     const nuevoEstado = !perfilIndependiente.agendaPausada;
     setPerfilIndependiente({
@@ -1055,7 +1046,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', gap: '8px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>⭐ {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Tu propia barbería autónoma con control total de tus citas, cortes y ganancias</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Conteo regresivo del mes (Licencia): <strong style={{ color: '#38bdf8' }}>{perfilIndependiente.diasRestantes || 30} días</strong> | Clave de acceso: <strong style={{ color: '#fbbf24' }}>{perfilIndependiente.clave}</strong></p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {activeRole !== 'evaluador' && activeRole !== 'sucursal_demo' && (
@@ -1190,14 +1181,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
         </form>
       </div>
 
-      <div style={{ backgroundColor: '#450a0a', border: '1px solid #f43f5e', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h4 style={{ margin: 0, color: '#f87171', fontSize: '13px' }}>Zona de Peligro: Eliminar Perfil Independiente</h4>
-          <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#fca5a5' }}>Borra definitivamente este perfil autónomo del sistema.</p>
-        </div>
-        <button onClick={handleEliminarCuentaIndependiente} style={{ backgroundColor: '#991b1b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Eliminar Mi Perfil Solista</button>
-      </div>
-
       {citaACancelarIndep && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', maxWidth: '400px', width: '100%', padding: '20px' }}>
@@ -1248,7 +1231,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const [precioProd, setPrecioProd] = useState('');
   const [stockProd, setStockProd] = useState('');
 
-  // Estados para creación/edición de incentivos dinámicos
   const [nuevoIncTitulo, setNuevoIncTitulo] = useState('');
   const [nuevoIncTipo, setNuevoIncTipo] = useState('cumpleanos');
   const [nuevoIncDesc, setNuevoIncDesc] = useState('');
@@ -1393,7 +1375,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     }
   };
 
-  // Funciones para gestionar incentivos dinámicos
   const handleCrearIncentivo = (e) => {
     e.preventDefault();
     if (!nuevoIncTitulo.trim()) return;
@@ -1431,43 +1412,43 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', gap: '8px' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({usuario?.nombre})</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de ingresos, temporizadores, cobros por silla y barberos</p>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({tenantPrincipal?.nombreBarberia})</h2>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantPrincipal?.diasRestantes || 30} días</strong> | Control de ingresos y stock de productos</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <MessageCircle style={{ width: '14px', height: '14px' }} /> WhatsApp Soporte / Renovar
           </a>
-
-          <div style={{ backgroundColor: '#0f172a', padding: '2px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '2px', overflowX: 'auto' }}>
-            <button onClick={() => setTab('resumen')} style={{ padding: '6px 10px', background: tab === 'resumen' ? '#f59e0b' : 'none', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Resumen & Ingresos</button>
-            <button onClick={() => setTab('incentivos')} style={{ padding: '6px 10px', background: tab === 'incentivos' ? '#f59e0b' : 'none', color: tab === 'incentivos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>🎁 Incentivos</button>
-            <button onClick={() => setTab('barberos')} style={{ padding: '6px 10px', background: tab === 'barberos' ? '#f59e0b' : 'none', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Barberos & Sillas</button>
-            <button onClick={() => setTab('servicios')} style={{ padding: '6px 10px', background: tab === 'servicios' ? '#f59e0b' : 'none', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Servicios & Precios</button>
-            <button onClick={() => setTab('productos')} style={{ padding: '6px 10px', background: tab === 'productos' ? '#f59e0b' : 'none', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Inventario</button>
-            <button onClick={() => setTab('config_admin')} style={{ padding: '6px 10px', background: tab === 'config_admin' ? '#f59e0b' : 'none', color: tab === 'config_admin' ? '#020617' : '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Ajustes & Tiempos</button>
-          </div>
         </div>
+      </div>
+
+      {/* Menú de pestañas adaptado y visible perfectamente en celulares con desplazamiento horizontal */}
+      <div style={{ backgroundColor: '#0f172a', padding: '6px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '6px', overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
+        <button onClick={() => setTab('resumen')} style={{ padding: '8px 12px', background: tab === 'resumen' ? '#f59e0b' : 'transparent', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Resumen & Ingresos</button>
+        <button onClick={() => setTab('incentivos')} style={{ padding: '8px 12px', background: tab === 'incentivos' ? '#f59e0b' : 'transparent', color: tab === 'incentivos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🎁 Incentivos</button>
+        <button onClick={() => setTab('barberos')} style={{ padding: '8px 12px', background: tab === 'barberos' ? '#f59e0b' : 'transparent', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Barberos & Sillas</button>
+        <button onClick={() => setTab('servicios')} style={{ padding: '8px 12px', background: tab === 'servicios' ? '#f59e0b' : 'transparent', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Servicios & Precios</button>
+        <button onClick={() => setTab('productos')} style={{ padding: '8px 12px', background: tab === 'productos' ? '#f59e0b' : 'transparent', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Inventario</button>
+        <button onClick={() => setTab('config_admin')} style={{ padding: '8px 12px', background: tab === 'config_admin' ? '#f59e0b' : 'transparent', color: tab === 'config_admin' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Ajustes & Tiempos</button>
       </div>
 
       {tab === 'resumen' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
             <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Total Dinero Ingresado Mes (Sede)</span>
+              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Total Dinero Ingresado Mes (Sede + Productos)</span>
               <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '6px 0 0 0', color: '#34d399' }}>${ingresosTotalesDia.toLocaleString()}</p>
             </div>
           </div>
 
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>📊 Liquidación Automática por Barbero (Evitando Lápiz y Papel)</h4>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Cálculo neto de lo generado menos el cobro de silla configurado ({chairFeeConfig.tipo === 'fijo' ? `$${chairFeeConfig.valor.toLocaleString()} fijo` : `${chairFeeConfig.valor}%`}):</p>
+            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>📊 Liquidación Automática por Barbero</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
               {barberos.map(b => {
                 const ingresosBarbero = citas
                   .filter(c => c.barbero.toLowerCase() === b.nombre.toLowerCase() && c.estado === 'completada')
                   .reduce((sum, c) => sum + (c.precio || 0), 0);
-                
+                 
                 const descuentoSilla = chairFeeConfig.tipo === 'fijo' ? chairFeeConfig.valor : (ingresosBarbero * chairFeeConfig.valor) / 100;
                 const netoLiquidar = Math.max(0, ingresosBarbero - descuentoSilla);
                  
@@ -1725,21 +1706,26 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                 <tr style={{ color: '#fbbf24', borderBottom: '1px solid #334155' }}>
                   <th style={{ padding: '6px' }}>Producto</th>
                   <th style={{ padding: '6px' }}>Precio</th>
-                  <th style={{ padding: '6px' }}>Stock</th>
+                  <th style={{ padding: '6px' }}>Stock / Alerta</th>
                   <th style={{ padding: '6px', textAlign: 'right' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
-                {productos.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid #1e293b' }}>
-                    <td style={{ padding: '6px', fontWeight: 'bold', color: '#fff' }}>{p.nombre}</td>
-                    <td style={{ padding: '6px', color: '#34d399' }}>${p.precio.toLocaleString()}</td>
-                    <td style={{ padding: '6px' }}>{p.stock} u.</td>
-                    <td style={{ padding: '6px', textAlign: 'right' }}>
-                      <button onClick={() => handleEliminarProductoAdmin(p.id, p.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
-                    </td>
-                  </tr>
-                ))}
+                {productos.map(p => {
+                  const stockBajo = p.stock <= 5;
+                  return (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                      <td style={{ padding: '6px', fontWeight: 'bold', color: '#fff' }}>{p.nombre}</td>
+                      <td style={{ padding: '6px', color: '#34d399' }}>${p.precio.toLocaleString()}</td>
+                      <td style={{ padding: '6px' }}>
+                        {p.stock} u. {stockBajo && <span style={{ color: '#f87171', fontWeight: 'bold', marginLeft: '4px' }}>⚠️ ¡Stock bajo, reabastecer!</span>}
+                      </td>
+                      <td style={{ padding: '6px', textAlign: 'right' }}>
+                        <button onClick={() => handleEliminarProductoAdmin(p.id, p.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1850,7 +1836,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilIndependiente, setPerfilIndependiente, setActiveRole, incentivos, setIncentivos }) {
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilIndependiente, setPerfilIndependiente, setActiveRole, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
 
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
@@ -1860,10 +1846,20 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   const [editNombreNegocio, setEditNombreNegocio] = useState(perfilIndependiente?.nombreBarberia || '');
   const [editPropietario, setEditPropietario] = useState(perfilIndependiente?.propietario || '');
   const [editWpIndep, setEditWpIndep] = useState(perfilIndependiente?.whatsappContacto || '573001234567');
+  const [editUserIndep, setEditUserIndep] = useState(perfilIndependiente?.username || 'independiente');
+  const [editClaveIndep, setEditClaveIndep] = useState(perfilIndependiente?.clave || 'solo2026');
+
+  // Estados para modificar credenciales de administradores y barberos desde Dev
+  const [editAdminUser, setEditAdminUser] = useState(credencialesAdmin.username);
+  const [editAdminPass, setEditAdminPass] = useState(credencialesAdmin.password);
+  const [barberoEditandoClave, setBarberoEditandoClave] = useState(null);
+  const [nuevaClaveBarberoDev, setNuevaClaveBarberoDev] = useState('');
 
   const [nuevoIndepNombre, setNuevoIndepNombre] = useState('');
   const [nuevoIndepPropietario, setNuevoIndepPropietario] = useState('');
   const [nuevoIndepWp, setNuevoIndepWp] = useState('573001234567');
+  const [nuevoIndepUser, setNuevoIndepUser] = useState('');
+  const [nuevoIndepPass, setNuevoIndepPass] = useState('');
 
   const handleWhatsappSave = (e) => {
     e.preventDefault();
@@ -1901,9 +1897,11 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       nombreAnterior: nombreAntiguo,
       nombreBarberia: editNombreNegocio.trim(),
       propietario: editPropietario.trim(),
-      whatsappContacto: editWpIndep.trim()
+      whatsappContacto: editWpIndep.trim(),
+      username: editUserIndep.trim().toLowerCase(),
+      clave: editClaveIndep.trim()
     });
-    alert('¡Perfil Independiente actualizado con éxito!');
+    alert('¡Perfil Independiente y sus claves actualizados con éxito!');
   };
 
   const handleCrearPerfilIndependienteNuevo = (e) => {
@@ -1914,8 +1912,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       id: 'indep_' + Date.now(),
       nombreBarberia: nuevoIndepNombre.trim(),
       nombreAnterior: 'Perfil Creado por Dev',
-      username: 'independiente',
-      clave: 'solo2026',
+      username: nuevoIndepUser.trim().toLowerCase() || 'independiente',
+      clave: nuevoIndepPass.trim() || 'solo2026',
       propietario: nuevoIndepPropietario.trim(),
       estadoLicencia: 'Activa',
       diasRestantes: 30,
@@ -1932,10 +1930,22 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setEditNombreNegocio(nuevoIndep.nombreBarberia);
     setEditPropietario(nuevoIndep.propietario);
     setEditWpIndep(nuevoIndep.whatsappContacto);
+    setEditUserIndep(nuevoIndep.username);
+    setEditClaveIndep(nuevoIndep.clave);
     setNuevoIndepNombre('');
     setNuevoIndepPropietario('');
-    setNuevoIndepWp('573001234567');
-    alert('¡Perfil independiente creado exitosamente!');
+    setNuevoIndepUser('');
+    setNuevoIndepPass('');
+    alert('¡Perfil independiente creado exitosamente y visible para los clientes!');
+  };
+
+  const handleModificarClaveBarberoDev = (e, barberoId) => {
+    e.preventDefault();
+    if (!nuevaClaveBarberoDev.trim()) return;
+    setBarberos(barberos.map(b => b.id === barberoId ? { ...b, claveAcceso: nuevaClaveBarberoDev.trim() } : b));
+    setBarberoEditandoClave(null);
+    setNuevaClaveBarberoDev('');
+    alert('¡Contraseña del barbero modificada con éxito!');
   };
 
   const eliminarBarberoSuperAdmin = (id, nombre) => {
@@ -1997,14 +2007,38 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (elkin-dev26)
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control absoluto de creación de sedes, perfil independiente, incentivos globales y licencias</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración de claves de administrador, barberos independientes, temporizadores y licencias de 30 días</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
 
+      {/* Panel para modificar credenciales del Administrador General */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Nueva Barbería (SaaS Tenant)
+          <Key style={{ width: '16px', height: '16px' }} /> Administrar Claves de Acceso del Administrador General
+        </h3>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          setCredencialesAdmin({ ...credencialesAdmin, username: editAdminUser.trim().toLowerCase(), password: editAdminPass.trim() });
+          alert('¡Credenciales del Administrador General modificadas con éxito!');
+        }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Usuario Admin</label>
+            <input type="text" value={editAdminUser} onChange={(e) => setEditAdminUser(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Contraseña Admin</label>
+            <input type="text" value={editAdminPass} onChange={(e) => setEditAdminPass(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button type="submit" style={{ width: '100%', backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Actualizar Clave Admin</button>
+          </div>
+        </form>
+      </div>
+
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Nueva Barbería (SaaS Tenant con Temporizador 30 Días)
         </h3>
         <form onSubmit={handleCrearTenant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
           <input type="text" placeholder="Nombre de la barbería..." value={nuevoNombreBarberia} onChange={(e) => setNuevoNombreBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
@@ -2014,72 +2048,49 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         </form>
       </div>
 
-      {/* Control Root de Incentivos Globales */}
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Gift style={{ width: '16px', height: '16px' }} /> Control Global de Incentivos y Bonos (SuperAdmin)
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
-          {incentivos.map(i => (
-            <div key={i.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{i.titulo}</span>
-                <span style={{ fontSize: '10px', color: i.activo ? '#34d399' : '#f87171' }}>{i.activo ? 'Activo' : 'Pausado'}</span>
-              </div>
-              <p style={{ fontSize: '10px', color: '#94a3b8', margin: 0 }}>Destino: {i.destinatario || 'General'}</p>
-              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                <button onClick={() => setIncentivos(incentivos.map(item => item.id === i.id ? { ...item, activo: !item.activo } : item))} style={{ backgroundColor: i.activo ? '#78350f' : '#065f46', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  {i.activo ? 'Pausar' : 'Reanudar'}
-                </button>
-                <button onClick={() => setIncentivos(incentivos.filter(item => item.id !== i.id))} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {perfilIndependiente ? (
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
           <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Edit3 style={{ width: '16px', height: '16px' }} /> Control Desarrollador: Perfil Barbero Independiente / Solista
+            <Edit3 style={{ width: '16px', height: '16px' }} /> Administrar Perfil Independiente / Solista (Claves y Temporizador)
           </h3>
-          <form onSubmit={handleGuardarCambiosIndependienteDev} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+          <form onSubmit={handleGuardarCambiosIndependienteDev} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px', marginBottom: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Nombre Barbería Independiente</label>
+              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Nombre Barbería</label>
               <input type="text" value={editNombreNegocio} onChange={(e) => setEditNombreNegocio(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Propietario / Barbero</label>
+              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Propietario</label>
               <input type="text" value={editPropietario} onChange={(e) => setEditPropietario(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>WhatsApp de Soporte</label>
+              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Usuario Login</label>
+              <input type="text" value={editUserIndep} onChange={(e) => setEditUserIndep(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Contraseña</label>
+              <input type="text" value={editClaveIndep} onChange={(e) => setEditClaveIndep(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>WhatsApp Soporte</label>
               <input type="text" value={editWpIndep} onChange={(e) => setEditWpIndep(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gridColumn: '1 / -1' }}>
-              <button type="submit" style={{ width: '100%', backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Actualizar Datos del Independiente</button>
+              <button type="submit" style={{ width: '100%', backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Actualizar Datos y Claves del Solista</button>
             </div>
           </form>
 
           <div style={{ backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <div>
               <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{perfilIndependiente.nombreBarberia}</span>
-              {perfilIndependiente.nombreAnterior && (
-                <p style={{ fontSize: '10px', color: '#f59e0b', margin: '2px 0 0 0', fontStyle: 'italic' }}>
-                  🏷️ Nombre anterior: <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{perfilIndependiente.nombreAnterior}</span>
-                </p>
-              )}
+              <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador Licencia: <strong>{perfilIndependiente.diasRestantes} días restantes</strong></p>
             </div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button onClick={accederIndependienteTiempoReal} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <ExternalLink style={{ width: '12px', height: '12px' }} /> Ver en Tiempo Real
               </button>
               <button onClick={togglePausarIndependiente} style={{ backgroundColor: perfilIndependiente.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: perfilIndependiente.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                {perfilIndependiente.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}
+                {perfilIndependiente.estadoLicencia === 'Activa' ? '⏸️ Pausar / Bloquear 30 días' : '▶️ Activar Licencia'}
               </button>
-              <a href={urlSoporteIndepDev} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#047857', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center' }}>Soporte</a>
               <button onClick={eliminarPerfilIndependiente} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Trash2 style={{ width: '12px', height: '12px' }} /> Eliminar Cuenta
               </button>
@@ -2088,56 +2099,62 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         </div>
       ) : (
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
-          <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px' }}>Crear Nuevo Perfil Independiente / Solista</h3>
-          <form onSubmit={handleCrearPerfilIndependienteNuevo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+          <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px' }}>Crear Nuevo Perfil Independiente / Solista (Visible para Clientes)</h3>
+          <form onSubmit={handleCrearPerfilIndependienteNuevo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
             <input type="text" placeholder="Nombre de barbería..." value={nuevoIndepNombre} onChange={(e) => setNuevoIndepNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
             <input type="text" placeholder="Nombre propietario..." value={nuevoIndepPropietario} onChange={(e) => setNuevoIndepPropietario(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+            <input type="text" placeholder="Usuario login" value={nuevoIndepUser} onChange={(e) => setNuevoIndepUser(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+            <input type="text" placeholder="Contraseña" value={nuevoIndepPass} onChange={(e) => setNuevoIndepPass(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
             <input type="text" placeholder="WhatsApp" value={nuevoIndepWp} onChange={(e) => setNuevoIndepWp(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Crear Perfil Independiente</button>
+            <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Crear Perfil Independiente</button>
           </form>
         </div>
       )}
 
+      {/* Control de Claves y Temporizadores de Barberos Independientes y de Sede */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control SaaS: Sedes Registradas</h3>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control Desarrollador: Claves y Contraseñas de Todos los Barberos</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+          {barberos.map(b => (
+            <div key={b.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
+                  <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>User: <strong>{b.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{b.claveAcceso}</strong></p>
+                </div>
+                <button onClick={() => setBarberoEditandoClave(barberoEditandoClave === b.id ? null : b.id)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                  {barberoEditandoClave === b.id ? 'Cancelar' : 'Modificar Clave'}
+                </button>
+              </div>
+
+              {barberoEditandoClave === b.id && (
+                <form onSubmit={(e) => handleModificarClaveBarberoDev(e, b.id)} style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                  <input type="text" placeholder="Nueva contraseña..." value={nuevaClaveBarberoDev} onChange={(e) => setNuevaClaveBarberoDev(e.target.value)} style={{ flex: 1, backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Guardar</button>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control SaaS: Sedes Registradas & Temporizadores de 30 Días</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
           {tenants.map(t => (
             <div key={t.id} style={{ backgroundColor: '#020617', padding: '14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
                 <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia}</span>
-                {t.nombreAnterior && <p style={{ fontSize: '10px', color: '#f59e0b', margin: '2px 0 0 0', fontStyle: 'italic' }}>🏷️ Anterior: {t.nombreAnterior}</p>}
+                <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes || 30} días restantes</strong> ({t.estadoLicencia})</p>
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid #1e293b' }}>
                 <button onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver en Tiempo Real</button>
-                <button onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}</button>
+                <button onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar / Bloquear' : 'Activar Licencia'}</button>
                 <button onClick={() => eliminarTenant(t.id, t.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
               </div>
             </div>
           ))}
         </div>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control Desarrollador: Claves de Barberos</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
-          {barberos.map(b => (
-            <div key={b.id} style={{ backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
-                <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>User: <strong>{b.username}</strong> | Clave: <strong>{b.claveAcceso}</strong></p>
-              </div>
-              <button onClick={() => eliminarBarberoSuperAdmin(b.id, b.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px', maxWidth: '400px' }}>
-        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '13px' }}>WhatsApp Global de Soporte</h3>
-        <form onSubmit={handleWhatsappSave} style={{ display: 'flex', gap: '6px' }}>
-          <input type="text" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '11px' }} />
-          <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Guardar</button>
-        </form>
       </div>
     </div>
   );
