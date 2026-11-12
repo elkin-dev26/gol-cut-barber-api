@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
- const [activeRole, setActiveRole] = useState('cliente');
+  const [activeRole, setActiveRole] = useState('cliente');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
 
@@ -14,9 +14,12 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [rolPendientePassword, setRolPendientePassword] = useState(null);
 
-  const [slotDuration, setSlotDuration] = useState(30); // 30 o 60 minutos
+  const [slotDuration, setSlotDuration] = useState(30); 
   const [globalTimer, setGlobalTimer] = useState({ Mañana: false, Tarde: false, Noche: false });
-  const [chairFeeConfig, setChairFeeConfig] = useState({ amount: 50, percentage: 20 });
+  const [chairFeeConfig, setChairFeeConfig] = useState(() => {
+    const guardado = localStorage.getItem('chairFeeConfig');
+    return guardado ? JSON.parse(guardado) : { tipo: 'fijo', valor: 50000 };
+  });
 
   const [credencialesAdmin, setCredencialesAdmin] = useState({
     username: 'admin',
@@ -62,24 +65,36 @@ export default function App() {
     { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycle: 'mensual', isLocked: false }
   ]);
 
-  const [perfilIndependiente, setPerfilIndependiente] = useState({
-    id: 'indep_tenant',
-    nombreBarberia: 'Barbería Independiente (Solista)',
-    nombreAnterior: 'Barbería Solista Inicial',
-    username: 'independiente',
-    clave: 'solo2026',
-    propietario: 'Juan Solista',
-    estadoLicencia: 'Activa',
-    diasRestantes: 30,
-    whatsappContacto: '573001234567',
-    agendaPausada: false,
-    mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
-    ingresosMesAnterior: 1450000,
-    serviciosPropios: [
-      { id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' },
-      { id: 'si2', nombre: 'Arreglo de Barba Pro', precio: 20000, duracion: '20 min' }
-    ]
+  const [perfilIndependiente, setPerfilIndependiente] = useState(() => {
+    const guardado = localStorage.getItem('perfilIndependiente');
+    if (guardado) return JSON.parse(guardado);
+    return {
+      id: 'indep_tenant',
+      nombreBarberia: 'Barbería Independiente (Solista)',
+      nombreAnterior: 'Barbería Solista Inicial',
+      username: 'independiente',
+      clave: 'solo2026',
+      propietario: 'Juan Solista',
+      estadoLicencia: 'Activa',
+      diasRestantes: 30,
+      whatsappContacto: '573001234567',
+      agendaPausada: false,
+      mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
+      ingresosMesAnterior: 1450000,
+      serviciosPropios: [
+        { id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' },
+        { id: 'si2', nombre: 'Arreglo de Barba Pro', precio: 20000, duracion: '20 min' }
+      ]
+    };
   });
+
+  useEffect(() => {
+    if (perfilIndependiente) {
+      localStorage.setItem('perfilIndependiente', JSON.stringify(perfilIndependiente));
+    } else {
+      localStorage.removeItem('perfilIndependiente');
+    }
+  }, [perfilIndependiente]);
 
   const [productos, setProductos] = useState([
     { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 15 },
@@ -312,6 +327,7 @@ export default function App() {
             devConfig={devConfig}
             licenciaVencida={licenciaVencida}
             incentivos={incentivos}
+            activeRole={activeRole}
           />
         )}
 
@@ -323,6 +339,7 @@ export default function App() {
             setCitas={setCitas}
             onCerrarSesion={handleCerrarSesion}
             devConfig={devConfig}
+            activeRole={activeRole}
           />
         )}
 
@@ -340,6 +357,7 @@ export default function App() {
             devConfig={devConfig}
             licenciaVencida={licenciaVencida}
             incentivos={incentivos}
+            setIncentivos={setIncentivos}
             credencialesAdmin={credencialesAdmin}
             setCredencialesAdmin={setCredencialesAdmin}
             tenantPrincipal={tenantPrincipal}
@@ -494,7 +512,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
     setNombre('');
   };
 
-  if (agendaPausadaSede || globalTimer.Mañana && globalTimer.Tarde) {
+  if (agendaPausadaSede || (globalTimer.Mañana && globalTimer.Tarde)) {
     return (
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f43f5e', borderRadius: '16px', padding: '24px', textAlign: 'center', maxWidth: '500px', margin: '40px auto' }}>
         <AlertTriangle style={{ width: '48px', height: '48px', color: '#f43f5e', margin: '0 auto 12px auto' }} />
@@ -688,7 +706,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
   );
 }
 
-function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
+function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, activeRole }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState('efectivo');
@@ -705,9 +723,11 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
         <AlertTriangle style={{ width: '48px', height: '48px', color: '#f43f5e', margin: '0 auto 12px auto' }} />
         <h3 style={{ color: '#f43f5e', margin: '0 0 8px 0', fontSize: '18px' }}>Suscripción de Barbería Pausada</h3>
         <p style={{ color: '#cbd5e1', fontSize: '12px', margin: '0 0 16px 0' }}>La membresía mensual ha caducado. Contacte al desarrollador.</p>
-        <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <MessageCircle style={{ width: '16px', height: '16px' }} /> Contactar al Desarrollador
-        </a>
+        {activeRole !== 'evaluador' && activeRole !== 'sucursal_demo' && (
+          <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <MessageCircle style={{ width: '16px', height: '16px' }} /> Contactar al Desarrollador
+          </a>
+        )}
       </div>
     );
   }
@@ -862,9 +882,9 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                 >
                   Eliminar
                 </button>
-              </div>
             </div>
-          ))
+          </div>
+        ))
         ) : (
           <div style={{ gridColumn: '1 / -1', padding: '24px', backgroundColor: '#0f172a', borderRadius: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
             No hay citas asignadas.
@@ -897,7 +917,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente, citas, setCitas, onCerrarSesion, devConfig }) {
+function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente, citas, setCitas, onCerrarSesion, devConfig, activeRole }) {
   const [servicioNombre, setServicioNombre] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
   const [servicioDuracion, setServicioDuracion] = useState('30 min');
@@ -1025,9 +1045,11 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Tu propia barbería autónoma con control total de tus citas, cortes y ganancias</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <a href={urlWhatsappIndep} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MessageCircle style={{ width: '14px', height: '14px' }} /> WhatsApp Soporte / Renovar
-          </a>
+          {activeRole !== 'evaluador' && activeRole !== 'sucursal_demo' && (
+            <a href={urlWhatsappIndep} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MessageCircle style={{ width: '14px', height: '14px' }} /> WhatsApp Soporte / Renovar
+            </a>
+          )}
           <button onClick={onCerrarSesion} style={{ padding: '8px 12px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
         </div>
       </div>
@@ -1188,7 +1210,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
   );
 }
 
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausaGeneral, setMensajePausaGeneral, globalTimer, setGlobalTimer, chairFeeConfig, setChairFeeConfig }) {
+function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausaGeneral, setMensajePausaGeneral, globalTimer, setGlobalTimer, chairFeeConfig, setChairFeeConfig }) {
   const [tab, setTab] = useState('resumen');
    
   const [nuevoUserAdmin, setNuevoUserAdmin] = useState(credencialesAdmin.username);
@@ -1384,20 +1406,49 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
           </div>
 
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>📊 Cuánto Dinero Hace Cada Barbero Individualmente</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>📊 Liquidación Automática por Barbero (Evitando Lápiz y Papel)</h4>
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Cálculo neto de lo generado menos el cobro de silla configurado ({chairFeeConfig.tipo === 'fijo' ? `$${chairFeeConfig.valor.toLocaleString()} fijo` : `${chairFeeConfig.valor}%`}):</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
               {barberos.map(b => {
                 const ingresosBarbero = citas
                   .filter(c => c.barbero.toLowerCase() === b.nombre.toLowerCase() && c.estado === 'completada')
                   .reduce((sum, c) => sum + (c.precio || 0), 0);
+                
+                const descuentoSilla = chairFeeConfig.tipo === 'fijo' ? chairFeeConfig.valor : (ingresosBarbero * chairFeeConfig.valor) / 100;
+                const netoLiquidar = Math.max(0, ingresosBarbero - descuentoSilla);
                  
                 return (
-                  <div key={b.id} style={{ backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155' }}>
+                  <div key={b.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155' }}>
                     <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
-                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#34d399', margin: '4px 0 0 0' }}>${ingresosBarbero.toLocaleString()}</p>
+                    <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px' }}>
+                      <div>Bruto: <strong style={{ color: '#34d399' }}>${ingresosBarbero.toLocaleString()}</strong></div>
+                      <div>Silla: <strong style={{ color: '#f87171' }}>-${descuentoSilla.toLocaleString()}</strong></div>
+                    </div>
+                    <div style={{ borderTop: '1px solid #1e293b', marginTop: '6px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '10px', color: '#fbbf24' }}>Neto a liquidar:</span>
+                      <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#34d399' }}>${netoLiquidar.toLocaleString()}</span>
+                    </div>
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
+            <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>🎁 Módulo de Incentivos y Bonos (Clientes y Barberos)</h4>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => alert('¡Incentivo aplicado al cliente exitosamente!')}
+                style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+              >
+                Dar Incentivo a Cliente
+              </button>
+              <button 
+                onClick={() => alert('¡Bono aplicado al barbero exitosamente!')}
+                style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+              >
+                Dar Bono a Barbero
+              </button>
             </div>
           </div>
 
@@ -1444,29 +1495,38 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '16px', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <DollarSign style={{ width: '16px', height: '16px' }} /> Configuración de Cobro por Silla (Monto y Porcentaje)
+              <DollarSign style={{ width: '16px', height: '16px' }} /> Configuración Flexible de Cobro por Silla (Monto Fijo o Porcentaje)
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Valor a Cobrar (Monto):</label>
-                <input 
-                  type="number" 
-                  value={chairFeeConfig.amount} 
-                  onChange={(e) => setChairFeeConfig({...chairFeeConfig, amount: Number(e.target.value)})}
-                  style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }}
-                />
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Modalidad de Cobro:</label>
+                <select 
+                  value={chairFeeConfig.tipo} 
+                  onChange={(e) => {
+                    const nuevo = { ...chairFeeConfig, tipo: e.target.value };
+                    setChairFeeConfig(nuevo);
+                    localStorage.setItem('chairFeeConfig', JSON.stringify(nuevo));
+                  }}
+                  style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px' }}
+                >
+                  <option value="fijo">Valor Fijo en Dinero ($)</option>
+                  <option value="porcentaje">Porcentaje de Comisión (%)</option>
+                </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Equivalente en Porcentaje (%):</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '0 8px' }}>
-                  <input 
-                    type="number" 
-                    value={chairFeeConfig.percentage} 
-                    onChange={(e) => setChairFeeConfig({...chairFeeConfig, percentage: Number(e.target.value)})}
-                    style={{ width: '100%', backgroundColor: 'transparent', color: '#fff', border: 'none', padding: '8px 0', fontSize: '12px', outline: 'none' }}
-                  />
-                  <Percent style={{ width: '14px', height: '14px', color: '#94a3b8' }} />
-                </div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>
+                  {chairFeeConfig.tipo === 'fijo' ? 'Valor a Cobrar por Silla ($):' : 'Porcentaje de Silla (%):'}
+                </label>
+                <input 
+                  type="number" 
+                  value={chairFeeConfig.valor} 
+                  onChange={(e) => {
+                    const nuevo = { ...chairFeeConfig, valor: Number(e.target.value) };
+                    setChairFeeConfig(nuevo);
+                    localStorage.setItem('chairFeeConfig', JSON.stringify(nuevo));
+                  }}
+                  style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }}
+                />
               </div>
             </div>
           </div>
@@ -1792,11 +1852,12 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   };
 
   const eliminarPerfilIndependiente = () => {
-  if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
-    setPerfilIndependiente(null);
-    alert('Perfil independiente eliminado del sistema correctamente.');
-  }
-};
+    if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
+      setPerfilIndependiente(null);
+      alert('Perfil independiente eliminado del sistema correctamente.');
+    }
+  };
+
   const eliminarTenant = (id, nombre) => {
     if (window.confirm(`¿Está seguro de eliminar definitivamente la barbería "${nombre}"?`)) {
       setTenants(tenants.filter(t => t.id !== id));
@@ -1879,7 +1940,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
               <button onClick={togglePausarIndependiente} style={{ backgroundColor: perfilIndependiente.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: perfilIndependiente.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                 {perfilIndependiente.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}
               </button>
-              <a href={urlSoporteIndepDev} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#047857', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>Soporte</a>
+              <a href={urlSoporteIndepDev} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#047857', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center' }}>Soporte</a>
               <button onClick={eliminarPerfilIndependiente} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Trash2 style={{ width: '12px', height: '12px' }} /> Eliminar Cuenta
               </button>
