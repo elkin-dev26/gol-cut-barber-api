@@ -310,7 +310,7 @@ export default function App() {
       <main style={{ maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '16px', flex: 1, boxSizing: 'border-box' }}>
         {activeRole === 'cliente' && (
           <VistaCliente 
-            barberos={barberos.filter(b => b.estado === 'Activo')} 
+            barberos={barberos} 
             perfilIndependiente={perfilIndependiente}
             servicios={servicios} 
             citas={citas} 
@@ -469,7 +469,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
    
   const listaCompletaBarberos = [
     ...barberos.filter(b => !b.pausado && !b.isLocked),
-    ...(perfilIndependiente && !perfilIndependiente.agendaPausada && perfilIndependiente.estadoLicencia === 'Activa' ? [{ id: 'indep_gen', nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }] : [])
+    ...(perfilIndependiente && !perfilIndependiente.agendaPausada && perfilIndependiente.estadoLicencia === 'Activa' ? [{ id: perfilIndependiente.id || 'indep_gen', nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }] : [])
   ];
 
   const [barbero, setBarbero] = useState(listaCompletaBarberos[0]?.nombre || '');
@@ -503,10 +503,12 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
       precioFinal = precioFinal - desc;
     }
 
+    const barberoAsignado = barbero || listaCompletaBarberos[0]?.nombre || 'Barbero Sede';
+
     const nueva = {
       id: 'c' + Date.now(),
-      cliente: nombre,
-      barbero: barbero || listaCompletaBarberos[0]?.nombre,
+      cliente: nombre.trim(),
+      barbero: barberoAsignado,
       servicio,
       fecha: modo === 'qr_walkin' ? hoyStr : fecha,
       hora: modo === 'qr_walkin' ? 'Atención Inmediata (QR)' : hora,
@@ -618,7 +620,7 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
                 style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '10px', color: '#f8fafc', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold' }}
               >
                 {listaCompletaBarberos.map(b => (
-                  <option key={b.id} value={b.nombre}>{b.nombre} ({b.especialidad})</option>
+                  <option key={b.id || b.nombre} value={b.nombre}>{b.nombre} ({b.especialidad})</option>
                 ))}
               </select>
             </div>
@@ -743,8 +745,15 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     );
   }
 
-  const incBarbero = incentivos.find(i => (i.tipo === 'barbero' || i.tipo === 'bono_barbero') && i.activo && (i.destinatario === 'Todos los Barberos' || i.destinatario?.toLowerCase() === barberoActual?.nombre?.toLowerCase()));
-  const citasBarbero = citas.filter(c => c.barbero.toLowerCase() === (barberoActual?.nombre || '').toLowerCase());
+  const nombreBarberoActualLimpio = (barberoActual?.nombre || '').trim().toLowerCase();
+  const incBarbero = incentivos.find(i => (i.tipo === 'barbero' || i.tipo === 'bono_barbero') && i.activo && (i.destinatario === 'Todos los Barberos' || i.destinatario?.toLowerCase() === nombreBarberoActualLimpio));
+  
+  // CORRECCIÓN: Filtro robusto que tolera espacios o diferencias de mayúsculas/minúsculas para que las citas del cliente se reflejen instantáneamente
+  const citasBarbero = citas.filter(c => {
+    const barberoCitaLimpio = (c.barbero || '').trim().toLowerCase();
+    return barberoCitaLimpio.includes(nombreBarberoActualLimpio) || nombreBarberoActualLimpio.includes(barberoCitaLimpio);
+  });
+
   const atencionesBarbero = citasBarbero.filter(c => c.estado === 'completada').length;
    
   const transferenciasNoRegistradas = citasBarbero.filter(c => c.estado === 'completada' && c.metodoPago === 'transferencia' && !c.registradoEnApp).length;
@@ -944,7 +953,15 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const urlWhatsappIndep = `https://wa.me/${perfilIndependiente.whatsappContacto || devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(`Hola, soy ${perfilIndependiente.propietario} de la barbería independiente "${perfilIndependiente.nombreBarberia}" y deseo gestionar mi renovación o soporte.`)}`;
 
-  const misCitasIndependiente = citas.filter(c => c.barbero.toLowerCase().includes(perfilIndependiente.propietario.toLowerCase()));
+  // CORRECCIÓN: Filtro robusto para que el barbero independiente vea inmediatamente las citas agendadas por el cliente
+  const nombrePropLimpio = (perfilIndependiente.propietario || '').trim().toLowerCase();
+  const nombreBarberiaIndepLimpio = (perfilIndependiente.nombreBarberia || '').trim().toLowerCase();
+
+  const misCitasIndependiente = citas.filter(c => {
+    const barberoCitaLimpio = (c.barbero || '').trim().toLowerCase();
+    return barberoCitaLimpio.includes(nombrePropLimpio) || barberoCitaLimpio.includes(nombreBarberiaIndepLimpio);
+  });
+
   const ingresosTotales = misCitasIndependiente.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   const handleCrearServicioPropio = (e) => {
