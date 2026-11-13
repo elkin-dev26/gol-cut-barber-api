@@ -786,10 +786,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     e.preventDefault();
     const valorFinal = Number(precioRapido);
 
-   const handleCorteDirecto = (e) => {
-    e.preventDefault();
-    const valorFinal = Number(precioRapido);
-
     const nueva = {
       id: 'c' + Date.now(),
       cliente: metodoPagoSeleccionado === 'transferencia' ? 'Cliente (Pago por Transferencia)' : 'Cliente Presencial (Efectivo)',
@@ -807,7 +803,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     setCitas([nueva, ...citas]);
   };
 
-  // 💡 AQUÍ ESTÁ LA CORRECCIÓN: Declaramos 'ingresosHoy' con const
   const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
   return (
@@ -1427,7 +1422,6 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
         </div>
       </div>
 
-      {/* Menú de pestañas adaptado y visible perfectamente en celulares con desplazamiento horizontal */}
       <div style={{ backgroundColor: '#0f172a', padding: '6px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '6px', overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
         <button onClick={() => setTab('resumen')} style={{ padding: '8px 12px', background: tab === 'resumen' ? '#f59e0b' : 'transparent', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Resumen & Ingresos</button>
         <button onClick={() => setTab('incentivos')} style={{ padding: '8px 12px', background: tab === 'incentivos' ? '#f59e0b' : 'transparent', color: tab === 'incentivos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🎁 Incentivos</button>
@@ -1854,7 +1848,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   const [editUserIndep, setEditUserIndep] = useState(perfilIndependiente?.username || 'independiente');
   const [editClaveIndep, setEditClaveIndep] = useState(perfilIndependiente?.clave || 'solo2026');
 
-  // Estados para modificar credenciales de administradores y barberos desde Dev
   const [editAdminUser, setEditAdminUser] = useState(credencialesAdmin.username);
   const [editAdminPass, setEditAdminPass] = useState(credencialesAdmin.password);
   const [barberoEditandoClave, setBarberoEditandoClave] = useState(null);
@@ -2017,7 +2010,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
 
-      {/* Panel para modificar credenciales del Administrador General */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Key style={{ width: '16px', height: '16px' }} /> Administrar Claves de Acceso del Administrador General
@@ -2116,7 +2108,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         </div>
       )}
 
-      {/* Control de Claves y Temporizadores de Barberos Independientes y de Sede */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
         <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control Desarrollador: Claves y Contraseñas de Todos los Barberos</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
@@ -2150,7 +2141,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
             <div key={t.id} style={{ backgroundColor: '#020617', padding: '14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
                 <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia}</span>
-                <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes || 30} días restantes</strong> ({t.estadoLicencia})</p>
+                <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes || 30} days restantes</strong> ({t.estadoLicencia})</p>
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid #1e293b' }}>
                 <button onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver en Tiempo Real</button>
