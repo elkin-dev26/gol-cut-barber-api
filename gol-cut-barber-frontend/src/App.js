@@ -70,10 +70,18 @@ export default function App() {
     { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
   ]);
 
-  const [barberos, setBarberos] = useState([
-    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.', billingCycle: 'mensual', isLocked: false },
-    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycle: 'mensual', isLocked: false }
-  ]);
+  const [barberos, setBarberos] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_barberos_sede');
+    if (guardado) return JSON.parse(guardado);
+    return [
+      { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.', billingCycle: 'mensual', diasRestantesBarber: 30, isLocked: false },
+      { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycle: 'mensual', diasRestantesBarber: 30, isLocked: false }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_barberos_sede', JSON.stringify(barberos));
+  }, [barberos]);
 
   const [perfilIndependiente, setPerfilIndependiente] = useState(() => {
     const guardado = localStorage.getItem('perfilIndependiente');
@@ -158,6 +166,10 @@ export default function App() {
     }
 
     if (perfilIndependiente && u === perfilIndependiente.username.toLowerCase() && p === perfilIndependiente.clave) {
+      if (perfilIndependiente.estadoLicencia === 'Pausada (Vencida)' || perfilIndependiente.diasRestantes <= 0) {
+        setLoginError('Su membresía independiente ha vencido. Contacte soporte.');
+        return;
+      }
       exitoLogin({ username: perfilIndependiente.username, nombre: perfilIndependiente.propietario, role: 'barbero_independiente' });
       return;
     }
@@ -179,6 +191,10 @@ export default function App() {
     if (barberoEncontrado) {
       if (barberoEncontrado.estado === 'Inactivo') {
         setLoginError('Su usuario se encuentra inactivo.');
+        return;
+      }
+      if (barberoEncontrado.isLocked || (barberoEncontrado.diasRestantesBarber !== undefined && barberoEncontrado.diasRestantesBarber <= 0)) {
+        setLoginError('Su cuenta se encuentra bloqueada por cumplimiento de ciclo de pago. Acérquese con el administrador.');
         return;
       }
       exitoLogin({ 
@@ -257,7 +273,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '650px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '680px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '4px 8px' }}>
               <Clock style={{ width: '14px', height: '14px', color: '#fbbf24' }} />
               <select 
@@ -276,9 +292,9 @@ export default function App() {
               style={{ flex: 1, backgroundColor: '#020617', border: '1px solid #f59e0b', color: '#f8fafc', fontSize: '11px', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
             >
               <option value="cliente">📱 Vista: Cliente (Reservas / Móvil)</option>
-              <option value="barbero">✂️ Vista: Barbero (Empleado)</option>
-              {perfilIndependiente && (
-                <option value="barbero_independiente">⭐ Vista: {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</option>
+              <option value="barbero">✂️ Vista: Barbero (Sede)</option>
+              {perfilIndependiente && perfilIndependiente.estadoLicencia === 'Activa' && (
+                <option value="barbero_independiente">⭐ Vista Independiente: {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</option>
               )}
               <option value="admin">🛠️ Vista: Administrador General ({tenantPrincipal.nombreBarberia})</option>
               <option value="evaluacion_evaluador">🎓 Perfil Demo: Perfil Evaluador (Seguro)</option>
@@ -468,8 +484,8 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
   const [fechaNac, setFechaNac] = useState('');
    
   const listaCompletaBarberos = [
-    ...barberos.filter(b => !b.pausado && !b.isLocked),
-    ...(perfilIndependiente && !perfilIndependiente.agendaPausada && perfilIndependiente.estadoLicencia === 'Activa' ? [{ id: perfilIndependiente.id || 'indep_gen', nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }] : [])
+    ...barberos.filter(b => !b.pausado && !b.isLocked && (b.diasRestantesBarber === undefined || b.diasRestantesBarber > 0)),
+    ...(perfilIndependiente && !perfilIndependiente.agendaPausada && perfilIndependiente.estadoLicencia === 'Activa' && perfilIndependiente.diasRestantes > 0 ? [{ id: perfilIndependiente.id || 'indep_gen', nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }] : [])
   ];
 
   const [barbero, setBarbero] = useState(listaCompletaBarberos[0]?.nombre || '');
@@ -538,8 +554,8 @@ function VistaCliente({ barberos, perfilIndependiente, servicios, citas, setCita
   const barberoSeleccionadoObj = barberos.find(b => b.nombre === barbero);
   const esIndependienteSeleccionado = barbero.includes(perfilIndependiente?.propietario || '');
 
-  if ((barberoSeleccionadoObj && (barberoSeleccionadoObj.pausado || barberoSeleccionadoObj.isLocked)) || (esIndependienteSeleccionado && (perfilIndependiente?.agendaPausada || perfilIndependiente?.estadoLicencia !== 'Activa'))) {
-    const mensajeBarberoPausado = barberoSeleccionadoObj?.isLocked ? 'El barbero tiene sus permisos bloqueados temporalmente por ciclo de pago.' : barberoSeleccionadoObj?.pausado ? barberoSeleccionadoObj.mensajePausa : perfilIndependiente?.mensajePausa;
+  if ((barberoSeleccionadoObj && (barberoSeleccionadoObj.pausado || barberoSeleccionadoObj.isLocked || barberoSeleccionadoObj.diasRestantesBarber <= 0)) || (esIndependienteSeleccionado && (perfilIndependiente?.agendaPausada || perfilIndependiente?.estadoLicencia !== 'Activa' || perfilIndependiente?.diasRestantes <= 0))) {
+    const mensajeBarberoPausado = barberoSeleccionadoObj?.isLocked || barberoSeleccionadoObj?.diasRestantesBarber <= 0 ? 'El barbero tiene sus permisos bloqueados por cumplimiento de su ciclo de pago. Debe acudir al administrador.' : barberoSeleccionadoObj?.pausado ? barberoSeleccionadoObj.mensajePausa : perfilIndependiente?.mensajePausa;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
@@ -748,7 +764,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   const nombreBarberoActualLimpio = (barberoActual?.nombre || '').trim().toLowerCase();
   const incBarbero = incentivos.find(i => (i.tipo === 'barbero' || i.tipo === 'bono_barbero') && i.activo && (i.destinatario === 'Todos los Barberos' || i.destinatario?.toLowerCase() === nombreBarberoActualLimpio));
   
-  // CORRECCIÓN: Filtro robusto que tolera espacios o diferencias de mayúsculas/minúsculas para que las citas del cliente se reflejen instantáneamente
   const citasBarbero = citas.filter(c => {
     const barberoCitaLimpio = (c.barbero || '').trim().toLowerCase();
     return barberoCitaLimpio.includes(nombreBarberoActualLimpio) || nombreBarberoActualLimpio.includes(barberoCitaLimpio);
@@ -819,7 +834,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', gap: '8px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Barbero - {barberoActual?.nombre}</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Sede: {tenantPrincipal?.nombreBarberia} | Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantPrincipal?.diasRestantes || 30} días</strong></p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Sede: {tenantPrincipal?.nombreBarberia} | Conteo regresivo del ciclo: <strong style={{ color: '#38bdf8' }}>{barberoActual?.diasRestantesBarber !== undefined ? barberoActual.diasRestantesBarber : 30} días</strong></p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }}>
@@ -828,6 +843,13 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           <button onClick={onCerrarSesion} style={{ padding: '6px 10px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salida</button>
         </div>
       </div>
+
+      {barberoActual?.diasRestantesBarber !== undefined && barberoActual.diasRestantesBarber <= 5 && (
+        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', padding: '10px 14px', borderRadius: '8px', color: '#fca5a5', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle style={{ width: '18px', height: '18px', color: '#ef4444' }} />
+          <span><strong>¡Aviso de ciclo de pago!</strong> Su período está próximo a vencer ({barberoActual.diasRestantesBarber} días restantes). Acuda al administrador para la validación y evitar bloqueo de agenda.</span>
+        </div>
+      )}
 
       {incBarbero && (
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
@@ -953,7 +975,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const urlWhatsappIndep = `https://wa.me/${perfilIndependiente.whatsappContacto || devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(`Hola, soy ${perfilIndependiente.propietario} de la barbería independiente "${perfilIndependiente.nombreBarberia}" y deseo gestionar mi renovación o soporte.`)}`;
 
-  // CORRECCIÓN: Filtro robusto para que el barbero independiente vea inmediatamente las citas agendadas por el cliente
   const nombrePropLimpio = (perfilIndependiente.propietario || '').trim().toLowerCase();
   const nombreBarberiaIndepLimpio = (perfilIndependiente.nombreBarberia || '').trim().toLowerCase();
 
@@ -1295,15 +1316,20 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   };
 
   const handleBillingCycleChange = (barberId, cycle) => {
-    setBarberos(barberos.map(b => b.id === barberId ? { ...b, billingCycle: cycle } : b));
+    let diasNuevos = 30;
+    if (cycle === 'semanal') diasNuevos = 7;
+    if (cycle === 'quincenal') diasNuevos = 15;
+
+    setBarberos(barberos.map(b => b.id === barberId ? { ...b, billingCycle: cycle, diasRestantesBarber: diasNuevos, isLocked: false } : b));
   };
 
   const toggleBarberLock = (barberId, nombreBarbero) => {
     setBarberos(barberos.map(b => {
       if (b.id === barberId) {
         const nuevoEstado = !b.isLocked;
-        alert(nuevoEstado ? `Permisos bloqueados para ${nombreBarbero} por ciclo de pago.` : `Permisos activados (Pago recibido) para ${nombreBarbero}.`);
-        return { ...b, isLocked: nuevoEstado };
+        const diasReset = nuevoEstado ? 0 : (b.billingCycle === 'semanal' ? 7 : b.billingCycle === 'quincenal' ? 15 : 30);
+        alert(nuevoEstado ? `Permisos bloqueados para ${nombreBarbero} por fin de ciclo.` : `Permisos activados (Pago recibido) para ${nombreBarbero}. Se han restablecido ${diasReset} días.`);
+        return { ...b, isLocked: nuevoEstado, diasRestantesBarber: diasReset };
       }
       return b;
     }));
@@ -1369,6 +1395,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       pausado: false,
       mensajePausa: 'Barbero no disponible hoy.',
       billingCycle: 'mensual',
+      diasRestantesBarber: 30,
       isLocked: false
     }]);
     setNuevoNombreBarbero('');
@@ -1655,7 +1682,9 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                 <div>
                   <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{b.nombre}</h4>
                   <p style={{ margin: '2px 0', fontSize: '10px', color: '#fbbf24' }}>User: {b.username} | Clave: {b.claveAcceso}</p>
-                  <p style={{ margin: '2px 0', fontSize: '10px', color: b.isLocked ? '#f43f5e' : '#34d399' }}>Estado Cuenta: {b.isLocked ? 'Bloqueado (Debe Cupo)' : 'Activo'}</p>
+                  <p style={{ margin: '2px 0', fontSize: '10px', color: b.isLocked || b.diasRestantesBarber <= 0 ? '#f43f5e' : '#34d399' }}>
+                    ⏳ Conteo Ciclo: <strong>{b.diasRestantesBarber !== undefined ? b.diasRestantesBarber : 30} días</strong> ({b.isLocked || b.diasRestantesBarber <= 0 ? 'Bloqueado por Pago' : 'Activo'})
+                  </p>
                 </div>
                  
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1664,17 +1693,17 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
                     onChange={(e) => handleBillingCycleChange(b.id, e.target.value)}
                     style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '10px' }}
                   >
-                    <option value="semanal">Cobro Semanal</option>
-                    <option value="quincenal">Cobro Quincenal</option>
-                    <option value="mensual">Cobro Mensual</option>
+                    <option value="semanal">Ciclo Semanal (7d)</option>
+                    <option value="quincenal">Ciclo Quincenal (15d)</option>
+                    <option value="mensual">Ciclo Mensual (30d)</option>
                   </select>
 
-                  <button onClick={() => toggleBarberLock(b.id, b.nombre)} style={{ backgroundColor: b.isLocked ? '#065f46' : '#92400e', color: b.isLocked ? '#34d399' : '#fef3c7', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    {b.isLocked ? 'Activar (Pagó)' : 'Bloquear Cupo'}
+                  <button onClick={() => toggleBarberLock(b.id, b.nombre)} style={{ backgroundColor: b.isLocked || b.diasRestantesBarber <= 0 ? '#065f46' : '#92400e', color: b.isLocked || b.diasRestantesBarber <= 0 ? '#34d399' : '#fef3c7', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    {b.isLocked || b.diasRestantesBarber <= 0 ? 'Activar (Pagó)' : 'Bloquear Cupo'}
                   </button>
 
                   <button onClick={() => handleEliminarBarberoDefinitivo(b.id, b.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: 'auto' }}>
-                    🗑️ Eliminar Perfil
+                    🗑️ Eliminar
                   </button>
                 </div>
               </div>
@@ -1951,7 +1980,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setNuevoIndepPropietario('');
     setNuevoIndepUser('');
     setNuevoIndepPass('');
-    alert('¡Perfil independiente creado exitosamente y visible para los clientes!');
+    alert('¡Perfil independiente creado exitosamente y visible en el panel del cliente y desplegable!');
   };
 
   const handleModificarClaveBarberoDev = (e, barberoId) => {
@@ -1961,12 +1990,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setBarberoEditandoClave(null);
     setNuevaClaveBarberoDev('');
     alert('¡Contraseña del barbero modificada con éxito!');
-  };
-
-  const eliminarBarberoSuperAdmin = (id, nombre) => {
-    if (window.confirm(`¿Seguro que desea eliminar el usuario de barbero "${nombre}" del sistema?`)) {
-      setBarberos(barberos.filter(b => b.id !== id));
-    }
   };
 
   const togglePausarTenant = (id) => {
@@ -2012,8 +2035,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     alert(`Accediendo en tiempo real a la barbería independiente de ${perfilIndependiente.propietario}.`);
     setActiveRole('barbero_independiente');
   };
-
-  const urlSoporteIndepDev = perfilIndependiente ? `https://wa.me/${perfilIndependiente.whatsappContacto || '573001234567'}?text=${encodeURIComponent(`Hola ${perfilIndependiente.propietario}, te contactamos desde Soporte Gol Cut Barber respecto a tu perfil independiente "${perfilIndependiente.nombreBarberia}".`)}` : '#';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
