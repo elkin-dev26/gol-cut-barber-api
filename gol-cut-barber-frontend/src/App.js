@@ -65,12 +65,33 @@ export default function App() {
     localStorage.setItem('gol_cut_incentivos', JSON.stringify(incentivos));
   }, [incentivos]);
 
+  // TENANTS / BARBERÍAS MÚLTIPLES CON SUS PROPIAS CREDENCIALES DE ADMIN
   const [tenants, setTenants] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_tenants');
     if (guardado) return JSON.parse(guardado);
     return [
-      { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: 'Gol Cut Barber Inicial', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, whatsappContacto: '573001234567' },
-      { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
+      { 
+        id: 't1', 
+        nombreBarberia: 'Gol Cut Barber - Sede Principal', 
+        nombreAnterior: 'Gol Cut Barber Inicial', 
+        dueno: 'Elkin Ramírez', 
+        estadoLicencia: 'Activa', 
+        diasRestantes: 28, 
+        whatsappContacto: '573001234567',
+        usernameAdmin: 'admin',
+        passwordAdmin: 'admin123'
+      },
+      { 
+        id: 't2', 
+        nombreBarberia: 'Barbería Perfil Evaluador', 
+        nombreAnterior: 'Barbería SENA', 
+        dueno: 'Comité Evaluador', 
+        estadoLicencia: 'Activa', 
+        diasRestantes: 30, 
+        whatsappContacto: '573009876543',
+        usernameAdmin: 'evaluador',
+        passwordAdmin: 'evalua2026'
+      }
     ];
   });
 
@@ -91,7 +112,7 @@ export default function App() {
     localStorage.setItem('gol_cut_barberos', JSON.stringify(barberos));
   }, [barberos]);
 
-  // Soporte para múltiples perfiles independientes o lista de solistas
+  // Perfiles independientes / solistas
   const [perfilesIndependientes, setPerfilesIndependientes] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_perfiles_independientes');
     if (guardado) return JSON.parse(guardado);
@@ -169,8 +190,11 @@ export default function App() {
       return;
     }
 
-    if (u === credencialesAdmin.username.toLowerCase() && p === credencialesAdmin.password) {
-      exitoLogin({ username: credencialesAdmin.username, nombre: credencialesAdmin.nombre, role: 'admin' });
+    // Verificar si coincide con el admin principal o con alguno de los administradores de los tenants creados
+    const tenantEncontrado = tenants.find(t => (t.usernameAdmin || 'admin').toLowerCase() === u && (t.passwordAdmin || 'admin123') === p);
+    if (tenantEncontrado || (u === credencialesAdmin.username.toLowerCase() && p === credencialesAdmin.password)) {
+      const tObj = tenantEncontrado || tenantPrincipal;
+      exitoLogin({ username: tObj.usernameAdmin || credencialesAdmin.username, nombre: `Administrador (${tObj.nombreBarberia})`, role: 'admin', tenantObj: tObj });
       return;
     }
 
@@ -178,18 +202,6 @@ export default function App() {
     const indepEncontrado = perfilesIndependientes.find(pi => pi.username.toLowerCase() === u && pi.clave === p);
     if (indepEncontrado) {
       exitoLogin({ username: indepEncontrado.username, nombre: indepEncontrado.propietario, role: 'barbero_independiente', perfilIndepObj: indepEncontrado });
-      return;
-    }
-
-    if (rolPendientePassword === 'evaluacion_evaluador' && u === 'evaluador' && p === 'evalua2026') {
-      exitoLogin({ username: 'evaluador', nombre: 'Perfil Evaluador Técnico', role: 'admin' });
-      setRolPendientePassword(null);
-      return;
-    }
-
-    if (rolPendientePassword === 'sucursal_demo' && u === 'sucursal' && p === 'sucursal2026') {
-      exitoLogin({ username: 'sucursal', nombre: 'Demostración Sucursal', role: 'admin' });
-      setRolPendientePassword(null);
       return;
     }
 
@@ -234,20 +246,16 @@ export default function App() {
       return;
     }
 
-    if (val === 'evaluacion_evaluador') {
-      setRolPendientePassword('evaluacion_evaluador');
-      setUsernameInput('evaluador');
-      setPasswordInput('');
-      setIsLoginOpen(true);
-      return;
-    }
-
-    if (val === 'sucursal_demo') {
-      setRolPendientePassword('sucursal_demo');
-      setUsernameInput('sucursal');
-      setPasswordInput('');
-      setIsLoginOpen(true);
-      return;
+    if (val.startsWith('tenant_')) {
+      const tenantId = val.replace('tenant_', '');
+      const obj = tenants.find(t => t.id === tenantId);
+      if (obj) {
+        setRolPendientePassword(null);
+        setIsLoginOpen(true);
+        setUsernameInput(obj.usernameAdmin || 'admin');
+        setPasswordInput('');
+        return;
+      }
     }
 
     if (val.startsWith('indep_')) {
@@ -260,14 +268,6 @@ export default function App() {
         setPasswordInput('');
         return;
       }
-    }
-
-    if (val === 'admin') {
-      setRolPendientePassword(null);
-      setIsLoginOpen(true);
-      setUsernameInput(credencialesAdmin.username);
-      setPasswordInput('');
-      return;
     }
 
     if (val === 'barbero') {
@@ -303,7 +303,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '680px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '720px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '4px 8px' }}>
               <Clock style={{ width: '14px', height: '14px', color: '#fbbf24' }} />
               <select 
@@ -320,6 +320,8 @@ export default function App() {
               value={
                 usuarioAutenticado?.role === 'barbero_independiente' 
                   ? `indep_${usuarioAutenticado.perfilIndepObj?.id}` 
+                  : usuarioAutenticado?.role === 'admin'
+                  ? `tenant_${usuarioAutenticado.tenantObj?.id || tenantPrincipal.id}`
                   : activeRole
               }
               onChange={handleCambioSeleccion}
@@ -328,14 +330,16 @@ export default function App() {
               <option value="cliente">📱 Vista: Cliente (Reservas / Móvil)</option>
               <option value="barbero">✂️ Vista: Barbero (Empleado Sede)</option>
               
-              {/* Listado desplegable de todos los perfiles independientes registrados */}
-              {perfilesIndependientes.map(pi => (
-                <option key={pi.id} value={`indep_${pi.id}`}>⭐ Vista: {pi.nombreBarberia} ({pi.propietario})</option>
+              {/* Listado desplegable de todas las barberías / sedes registradas */}
+              {tenants.map(t => (
+                <option key={t.id} value={`tenant_${t.id}`}>🛠️ Vista Admin: {t.nombreBarberia} ({t.dueno})</option>
               ))}
 
-              <option value="admin">🛠️ Vista: Administrador General ({tenantPrincipal.nombreBarberia})</option>
-              <option value="evaluacion_evaluador">🎓 Perfil Demo: Perfil Evaluador (Seguro)</option>
-              <option value="sucursal_demo">🏢 Perfil Demo: Sucursal Externa (Seguro)</option>
+              {/* Listado desplegable de todos los perfiles independientes registrados */}
+              {perfilesIndependientes.map(pi => (
+                <option key={pi.id} value={`indep_${pi.id}`}>⭐ Vista Solista: {pi.nombreBarberia} ({pi.propietario})</option>
+              ))}
+
               {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
                 <option value="superadmin">🔒 Consola Desarrollador Root</option>
               )}
@@ -408,6 +412,7 @@ export default function App() {
         {(activeRole === 'admin' || usuarioAutenticado?.role === 'admin') && (
           <VistaAdmin 
             usuario={usuarioAutenticado || { nombre: 'Administrador' }} 
+            tenantActualParaAdmin={usuarioAutenticado?.tenantObj || tenantPrincipal}
             citas={citas} 
             setCitas={setCitas} 
             barberos={barberos} 
@@ -470,7 +475,7 @@ export default function App() {
               </div>
               <h3 style={{ margin: 0, color: '#fbbf24', fontSize: '18px', fontWeight: 'bold' }}>Ingreso Seguro Obligatorio</h3>
               <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                {rolPendientePassword ? 'Ingrese contraseña para acceso Demo' : 'Ingrese sus credenciales de acceso para continuar'}
+                Ingrese sus credenciales de acceso para continuar
               </p>
             </div>
 
@@ -532,7 +537,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
 
   const [establecimientoSeleccionado, setEstablecimientoSeleccionado] = useState(opcionesEstablecimiento[0]?.id || 't1');
 
-  // Filtrar barberos y servicios según el establecimiento seleccionado por el cliente
   const estActual = opcionesEstablecimiento.find(e => e.id === establecimientoSeleccionado);
   const esIndependienteEst = estActual?.tipo === 'independiente';
 
@@ -547,7 +551,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   const [barbero, setBarbero] = useState(barberosFiltrados[0]?.nombre || '');
   const [servicio, setServicio] = useState(serviciosFiltrados[0]?.nombre || '');
 
-  // Actualizar barbero y servicio por defecto al cambiar de establecimiento en el desplegable
   const handleCambioEstablecimiento = (e) => {
     const idEst = e.target.value;
     setEstablecimientoSeleccionado(idEst);
@@ -652,7 +655,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
         <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>Seleccione sede o barbero independiente para ver su agenda y QR exclusivo</p>
       </div>
 
-      {/* Selector Desplegable de Establecimiento / Sede / Perfil Independiente */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '12px', borderRadius: '10px' }}>
         <label style={{ display: 'block', fontSize: '11px', color: '#fbbf24', marginBottom: '6px', fontWeight: 'bold' }}>🏢 Seleccione Barbería o Barbero Independiente:</label>
         <select
@@ -1331,14 +1333,16 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   );
 }
 
-function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausaGeneral, setMensajePausaGeneral, globalTimer, setGlobalTimer, chairFeeConfig, setChairFeeConfig }) {
+function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausaGeneral, setMensajePausaGeneral, globalTimer, setGlobalTimer, chairFeeConfig, setChairFeeConfig }) {
   const [tab, setTab] = useState('resumen');
    
-  const [nuevoUserAdmin, setNuevoUserAdmin] = useState(credencialesAdmin.username);
-  const [nuevoPassAdmin, setNuevoPassAdmin] = useState(credencialesAdmin.password);
-  const [nuevoNombreAdmin, setNuevoNombreAdmin] = useState(credencialesAdmin.nombre);
+  const tenantActivo = tenantActualParaAdmin || tenantPrincipal;
 
-  const [nombreNegocioInput, setNombreNegocioInput] = useState(tenantPrincipal.nombreBarberia);
+  const [nuevoUserAdmin, setNuevoUserAdmin] = useState(tenantActivo.usernameAdmin || credencialesAdmin.username);
+  const [nuevoPassAdmin, setNuevoPassAdmin] = useState(tenantActivo.passwordAdmin || credencialesAdmin.password);
+  const [nuevoNombreAdmin, setNuevoNombreAdmin] = useState(tenantActivo.dueno || credencialesAdmin.nombre);
+
+  const [nombreNegocioInput, setNombreNegocioInput] = useState(tenantActivo.nombreBarberia);
 
   const [citaAReasignar, setCitaAReasignar] = useState(null);
   const [nuevoBarberoDestino, setNuevoBarberoDestino] = useState(barberos[0]?.nombre || '');
@@ -1382,8 +1386,8 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     e.preventDefault();
     if (!nombreNegocioInput.trim()) return;
 
-    const nombreAnteriorActual = tenantPrincipal.nombreBarberia;
-    const actualizado = tenants.map(t => t.id === tenantPrincipal.id ? {
+    const nombreAnteriorActual = tenantActivo.nombreBarberia;
+    const actualizado = tenants.map(t => t.id === tenantActivo.id ? {
       ...t,
       nombreAnterior: nombreAnteriorActual,
       nombreBarberia: nombreNegocioInput.trim()
@@ -1433,6 +1437,16 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   const handleActualizarCredencialesAdmin = (e) => {
     e.preventDefault();
     if (!nuevoUserAdmin.trim() || !nuevoPassAdmin.trim()) return;
+
+    // Actualizar credenciales en el tenant actual
+    const actualizados = tenants.map(t => t.id === tenantActivo.id ? {
+      ...t,
+      usernameAdmin: nuevoUserAdmin.trim().toLowerCase(),
+      passwordAdmin: nuevoPassAdmin.trim(),
+      dueno: nuevoNombreAdmin.trim() || t.dueno
+    } : t);
+    setTenants(actualizados);
+
     setCredencialesAdmin({
       username: nuevoUserAdmin.trim().toLowerCase(),
       password: nuevoPassAdmin.trim(),
@@ -1477,7 +1491,8 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
       pausado: false,
       mensajePausa: 'Barbero no disponible hoy.',
       billingCycle: 'mensual',
-      isLocked: false
+      isLocked: false,
+      sedeId: tenantActivo.id
     }]);
     setNuevoNombreBarbero('');
     setNuevoUsernameBarbero('');
@@ -1537,8 +1552,8 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', gap: '8px' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({tenantPrincipal?.nombreBarberia})</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantPrincipal?.diasRestantes || 30} días</strong> | Control de ingresos y stock de productos</p>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({tenantActivo?.nombreBarberia})</h2>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantActivo?.diasRestantes || 30} días</strong> | Control de ingresos y stock de productos</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1917,7 +1932,7 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
           </div>
 
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '15px' }}>Credenciales de Administrador</h3>
+            <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '15px' }}>Credenciales de Administrador ({tenantActivo?.nombreBarberia})</h3>
             <form onSubmit={handleActualizarCredencialesAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre Visible</label>
@@ -1966,10 +1981,16 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
   const [nuevoDuenoBarberia, setNuevoDuenoBarberia] = useState('');
   const [nuevoWpBarberia, setNuevoWpBarberia] = useState('');
+  const [nuevoUserTenant, setNuevoUserTenant] = useState('');
+  const [nuevoPassTenant, setNuevoPassTenant] = useState('');
 
-  const [editAdminUser, setEditAdminUser] = useState(credencialesAdmin.username);
-  const [editAdminPass, setEditAdminPass] = useState(credencialesAdmin.password);
-  
+  const [tenantEditandoId, setTenantEditandoId] = useState(null);
+  const [editTenantNombre, setEditTenantNombre] = useState('');
+  const [editTenantDueno, setEditTenantDueno] = useState('');
+  const [editTenantUser, setEditTenantUser] = useState('');
+  const [editTenantPass, setEditTenantPass] = useState('');
+  const [editTenantWp, setEditTenantWp] = useState('');
+
   const [barberoEditandoClave, setBarberoEditandoClave] = useState(null);
   const [nuevaClaveBarberoDev, setNuevaClaveBarberoDev] = useState('');
 
@@ -1994,7 +2015,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
 
   const handleCrearTenant = (e) => {
     e.preventDefault();
-    if (!nuevoNombreBarberia.trim() || !nuevoDuenoBarberia.trim()) return;
+    if (!nuevoNombreBarberia.trim() || !nuevoDuenoBarberia.trim() || !nuevoUserTenant.trim() || !nuevoPassTenant.trim()) return;
 
     const nuevaSede = {
       id: 't' + Date.now(),
@@ -2003,14 +2024,48 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       dueno: nuevoDuenoBarberia.trim(),
       estadoLicencia: 'Activa',
       diasRestantes: 30,
-      whatsappContacto: nuevoWpBarberia.trim() || '573001234567'
+      whatsappContacto: nuevoWpBarberia.trim() || '573001234567',
+      usernameAdmin: nuevoUserTenant.trim().toLowerCase(),
+      passwordAdmin: nuevoPassTenant.trim()
     };
 
     setTenants([...tenants, nuevaSede]);
     setNuevoNombreBarberia('');
     setNuevoDuenoBarberia('');
     setNuevoWpBarberia('');
-    alert(`¡Barbería "${nuevaSede.nombreBarberia}" creada con éxito!`);
+    setNuevoUserTenant('');
+    setNuevoPassTenant('');
+    alert(`¡Barbería "${nuevaSede.nombreBarberia}" creada con éxito y añadida al selector de administradores!`);
+  };
+
+  const iniciarEdicionTenant = (t) => {
+    setTenantEditandoId(t.id);
+    setEditTenantNombre(t.nombreBarberia);
+    setEditTenantDueno(t.dueno);
+    setEditTenantUser(t.usernameAdmin || 'admin');
+    setEditTenantPass(t.passwordAdmin || 'admin123');
+    setEditTenantWp(t.whatsappContacto);
+  };
+
+  const handleGuardarTenantDev = (e, id) => {
+    e.preventDefault();
+    const actualizados = tenants.map(t => {
+      if (t.id === id) {
+        return {
+          ...t,
+          nombreAnterior: t.nombreBarberia,
+          nombreBarberia: editTenantNombre.trim(),
+          dueno: editTenantDueno.trim(),
+          usernameAdmin: editTenantUser.trim().toLowerCase(),
+          passwordAdmin: editTenantPass.trim(),
+          whatsappContacto: editTenantWp.trim()
+        };
+      }
+      return t;
+    });
+    setTenants(actualizados);
+    setTenantEditandoId(null);
+    alert('¡Barbería y credenciales de administrador actualizadas con éxito!');
   };
 
   const iniciarEdicionIndependiente = (pi) => {
@@ -2133,44 +2188,62 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (elkin-dev26)
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración de claves de administrador, perfiles independientes, temporizadores y licencias de 30 días</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración de claves de administrador, perfiles de barberías, independientes, temporizadores y licencias</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
 
+      {/* CREAR NUEVA BARBERÍA / SEDE SAAS */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Key style={{ width: '16px', height: '16px' }} /> Administrar Claves de Acceso del Administrador General
-        </h3>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          setCredencialesAdmin({ ...credencialesAdmin, username: editAdminUser.trim().toLowerCase(), password: editAdminPass.trim() });
-          alert('¡Credenciales del Administrador General modificadas con éxito!');
-        }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Usuario Admin</label>
-            <input type="text" value={editAdminUser} onChange={(e) => setEditAdminUser(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Contraseña Admin</label>
-            <input type="text" value={editAdminPass} onChange={(e) => setEditAdminPass(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button type="submit" style={{ width: '100%', backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Actualizar Clave Admin</button>
-          </div>
-        </form>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Nueva Barbería (SaaS Tenant con Temporizador 30 Días)
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Nueva Barbería / Sede SaaS (Con Credenciales de Administrador Propias)
         </h3>
         <form onSubmit={handleCrearTenant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
           <input type="text" placeholder="Nombre de la barbería..." value={nuevoNombreBarberia} onChange={(e) => setNuevoNombreBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-          <input type="text" placeholder="Nombre del propietario..." value={nuevoDuenoBarberia} onChange={(e) => setNuevoDuenoBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-          <input type="text" placeholder="WhatsApp de contacto" value={nuevoWpBarberia} onChange={(e) => setNuevoWpBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Registrar Barbería SaaS</button>
+          <input type="text" placeholder="Propietario / Admin..." value={nuevoDuenoBarberia} onChange={(e) => setNuevoDuenoBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="Usuario login admin" value={nuevoUserTenant} onChange={(e) => setNuevoUserTenant(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="Contraseña admin" value={nuevoPassTenant} onChange={(e) => setNuevoPassTenant(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="WhatsApp contacto" value={nuevoWpBarberia} onChange={(e) => setNuevoWpBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Registrar Barbería SaaS</button>
         </form>
+      </div>
+
+      {/* CONTROL SAAS: SEDES REGISTRADAS & TEMPORIZADORES DE 30 DÍAS Y MODIFICACIÓN DE CLAVES */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>Control SaaS: Sedes Registradas, Temporizadores & Modificación de Contraseñas de Administrador</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {tenants.map(t => (
+            <div key={t.id} style={{ backgroundColor: '#020617', padding: '14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia} ({t.dueno})</span>
+                  <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>Usuario Admin: <strong>{t.usernameAdmin || 'admin'}</strong> | Clave: <strong style={{ color: '#34d399' }}>{t.passwordAdmin || 'admin123'}</strong></p>
+                  <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes || 30} days restantes</strong> ({t.estadoLicencia})</p>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
+                  <button onClick={() => iniciarEdicionTenant(t)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Editar Clave Admin</button>
+                  <button onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}</button>
+                  <button onClick={() => eliminarTenant(t.id, t.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                </div>
+              </div>
+
+              {tenantEditandoId === t.id && (
+                <form onSubmit={(e) => handleGuardarTenantDev(e, t.id)} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '10px', borderTop: '1px solid #1e293b', paddingTop: '10px' }}>
+                  <input type="text" placeholder="Nombre barbería" value={editTenantNombre} onChange={(e) => setEditTenantNombre(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="Propietario / Admin" value={editTenantDueno} onChange={(e) => setEditTenantDueno(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="Usuario admin" value={editTenantUser} onChange={(e) => setEditTenantUser(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="Contraseña admin" value={editTenantPass} onChange={(e) => setEditTenantPass(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="WhatsApp" value={editTenantWp} onChange={(e) => setEditTenantWp(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button type="submit" style={{ flex: 1, backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Guardar</button>
+                    <button type="button" onClick={() => setTenantEditandoId(null)} style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>Cancelar</button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* SECCIÓN PERFILES INDEPENDIENTES / SOLISTAS */}
@@ -2214,7 +2287,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           ))}
         </div>
 
-        {/* CREAR NUEVO PERFIL INDEPENDIENTE */}
         <h4 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '12px' }}>Crear Nuevo Perfil Independiente / Solista</h4>
         <form onSubmit={handleCrearPerfilIndependienteNuevo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
           <input type="text" placeholder="Nombre de barbería..." value={nuevoIndepNombre} onChange={(e) => setNuevoIndepNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
@@ -2247,25 +2319,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Guardar</button>
                 </form>
               )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control SaaS: Sedes Registradas & Temporizadores de 30 Días</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
-          {tenants.map(t => (
-            <div key={t.id} style={{ backgroundColor: '#020617', padding: '14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>
-                <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia}</span>
-                <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes || 30} days restantes</strong> ({t.estadoLicencia})</p>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid #1e293b' }}>
-                <button onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver en Tiempo Real</button>
-                <button onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar / Bloquear' : 'Activar Licencia'}</button>
-                <button onClick={() => eliminarTenant(t.id, t.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
-              </div>
             </div>
           ))}
         </div>
