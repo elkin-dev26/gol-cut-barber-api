@@ -27,13 +27,30 @@ export default function App() {
     nombre: 'Administrador Local'
   });
 
+  // CREDENCIALES DEL SUPERADMIN / DESARROLLADOR EDITABLES
+  const [superAdminCreds, setSuperAdminCreds] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_superadmin_creds');
+    return guardado ? JSON.parse(guardado) : { username: 'elkin-dev26', password: 'elkin2026', nombre: 'SuperAdmin / Desarrollador' };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_superadmin_creds', JSON.stringify(superAdminCreds));
+  }, [superAdminCreds]);
+
   const [agendaPausadaSede, setAgendaPausadaSede] = useState(false);
   const [mensajePausaGeneral, setMensajePausaGeneral] = useState('Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.');
 
-  const [devConfig, setDevConfig] = useState({
-    whatsappSoporte: '573001234567',
-    mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
+  const [devConfig, setDevConfig] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_dev_config');
+    return guardado ? JSON.parse(guardado) : {
+      whatsappSoporte: '573001234567',
+      mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_dev_config', JSON.stringify(devConfig));
+  }, [devConfig]);
 
   const [incentivos, setIncentivos] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_incentivos');
@@ -187,8 +204,9 @@ export default function App() {
     const u = usernameInput.trim().toLowerCase();
     const p = passwordInput.trim();
 
-    if (u === 'elkin-dev26' && p === 'elkin2026') {
-      exitoLogin({ username: 'elkin-dev26', nombre: 'SuperAdmin / Desarrollador', role: 'superadmin' });
+    // Verificación de SuperAdmin con credenciales dinámicas
+    if (u === superAdminCreds.username.toLowerCase() && p === superAdminCreds.password) {
+      exitoLogin({ username: superAdminCreds.username, nombre: superAdminCreds.nombre, role: 'superadmin' });
       return;
     }
 
@@ -246,43 +264,11 @@ export default function App() {
       return;
     }
 
-    if (val.startsWith('tenant_')) {
-      const tenantId = val.replace('tenant_', '');
-      const obj = tenants.find(t => t.id === tenantId);
-      if (obj) {
-        setRolPendientePassword(null);
-        setIsLoginOpen(true);
-        setUsernameInput(obj.usernameAdmin || 'admin');
-        setPasswordInput('');
-        return;
-      }
-    }
-
-    if (val.startsWith('indep_')) {
-      const indepId = val.replace('indep_', '');
-      const obj = perfilesIndependientes.find(pi => pi.id === indepId);
-      if (obj) {
-        setRolPendientePassword(null);
-        setIsLoginOpen(true);
-        setUsernameInput(obj.username);
-        setPasswordInput('');
-        return;
-      }
-    }
-
-    if (val === 'barbero') {
-      setRolPendientePassword(null);
-      setIsLoginOpen(true);
-      setUsernameInput(barberos[0]?.username || 'elkin');
+    if (val === 'login_general') {
+      setUsernameInput('');
       setPasswordInput('');
-      return;
-    }
-
-    if (val === 'superadmin') {
-      setRolPendientePassword(null);
+      setLoginError('');
       setIsLoginOpen(true);
-      setUsernameInput('elkin-dev26');
-      setPasswordInput('');
       return;
     }
   };
@@ -316,31 +302,14 @@ export default function App() {
               </select>
             </div>
 
+            {/* SELECTOR LIMPIO E INDEPENDIENTE SIN EXPONER OTRAS SEDES */}
             <select
-              value={
-                usuarioAutenticado?.role === 'barbero_independiente' 
-                  ? `indep_${usuarioAutenticado.perfilIndepObj?.id}` 
-                  : usuarioAutenticado?.role === 'admin'
-                  ? `tenant_${usuarioAutenticado.tenantObj?.id || tenantPrincipal.id}`
-                  : activeRole
-              }
+              value={activeRole === 'cliente' ? 'cliente' : 'login_general'}
               onChange={handleCambioSeleccion}
               style={{ flex: 1, backgroundColor: '#020617', border: '1px solid #f59e0b', color: '#f8fafc', fontSize: '11px', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
             >
               <option value="cliente">📱 Vista: Cliente (Reservas / Móvil)</option>
-              <option value="barbero">✂️ Vista: Barbero (Empleado Sede)</option>
-              
-              {tenants.map(t => (
-                <option key={t.id} value={`tenant_${t.id}`}>🛠️ Vista Admin: {t.nombreBarberia} ({t.dueno})</option>
-              ))}
-
-              {perfilesIndependientes.map(pi => (
-                <option key={pi.id} value={`indep_${pi.id}`}>⭐ Vista Solista: {pi.nombreBarberia} ({pi.propietario})</option>
-              ))}
-
-              {usuarioAutenticado && usuarioAutenticado.role === 'superadmin' && (
-                <option value="superadmin">🔒 Consola Desarrollador Root</option>
-              )}
+              <option value="login_general">🔐 Ingreso Administrativo / Profesional (Login)</option>
             </select>
 
             {usuarioAutenticado ? (
@@ -455,6 +424,8 @@ export default function App() {
             setIncentivos={setIncentivos}
             credencialesAdmin={credencialesAdmin}
             setCredencialesAdmin={setCredencialesAdmin}
+            superAdminCreds={superAdminCreds}
+            setSuperAdminCreds={setSuperAdminCreds}
           />
         )}
       </main>
@@ -936,7 +907,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }}>
             Consolidado Ganancias: <span style={{ color: '#34d399', fontWeight: 'bold' }}>${ingresosHoy.toLocaleString()}</span>
           </div>
-          <button onClick={onCerrarSesion} style={{ padding: '6px 10px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salida</button>
+          <button onClick={onCerrarSesion} style={{ padding: '6px 10px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
         </div>
       </div>
 
@@ -1986,8 +1957,13 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin }) {
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
+  
+  // Estados para cambiar las propias credenciales del SuperAdmin
+  const [nuevoSuperUser, setNuevoSuperUser] = useState(superAdminCreds.username);
+  const [nuevoSuperPass, setNuevoSuperPass] = useState(superAdminCreds.password);
+  const [nuevoSuperNombre, setNuevoSuperNombre] = useState(superAdminCreds.nombre);
 
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
   const [nuevoDuenoBarberia, setNuevoDuenoBarberia] = useState('');
@@ -2024,6 +2000,17 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     alert('¡WhatsApp de soporte actualizado!');
   };
 
+  const handleGuardarCredencialesSuperAdmin = (e) => {
+    e.preventDefault();
+    if (!nuevoSuperUser.trim() || !nuevoSuperPass.trim()) return;
+    setSuperAdminCreds({
+      username: nuevoSuperUser.trim().toLowerCase(),
+      password: nuevoSuperPass.trim(),
+      nombre: nuevoSuperNombre.trim() || 'SuperAdmin / Desarrollador'
+    });
+    alert('¡Tus credenciales de Desarrollador Root han sido actualizadas con éxito!');
+  };
+
   const handleCrearTenant = (e) => {
     e.preventDefault();
     if (!nuevoNombreBarberia.trim() || !nuevoDuenoBarberia.trim() || !nuevoUserTenant.trim() || !nuevoPassTenant.trim()) return;
@@ -2046,7 +2033,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setNuevoWpBarberia('');
     setNuevoUserTenant('');
     setNuevoPassTenant('');
-    alert(`¡Barbería "${nuevaSede.nombreBarberia}" creada con éxito y añadida al selector de administradores!`);
+    alert(`¡Barbería "${nuevaSede.nombreBarberia}" creada con éxito!`);
   };
 
   const iniciarEdicionTenant = (t) => {
@@ -2136,7 +2123,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setNuevoIndepPropietario('');
     setNuevoIndepUser('');
     setNuevoIndepPass('');
-    alert('¡Perfil independiente creado exitosamente y disponible en el selector de clientes!');
+    alert('¡Perfil independiente creado exitosamente!');
   };
 
   const handleModificarClaveBarberoDev = (e, barberoId) => {
@@ -2197,11 +2184,55 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (elkin-dev26)
+            <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root ({superAdminCreds.username})
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración de claves de administrador, perfiles de barberías, independientes, temporizadores y licencias</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración global, WhatsApp de renovación, credenciales root y control de licencias</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
+      </div>
+
+      {/* CONFIGURACIÓN DEL WHATSAPP DE SOPORTE Y RENOVACIÓN */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#34d399', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <MessageCircle style={{ width: '16px', height: '16px' }} /> Configurar WhatsApp de Soporte / Renovación
+        </h3>
+        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Establece el número al que se comunicarán las barberías cuando requieran soporte o renovar su membresía.</p>
+        <form onSubmit={handleWhatsappSave} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <input 
+            type="text" 
+            value={whatsapp} 
+            onChange={(e) => setWhatsapp(e.target.value)} 
+            placeholder="Ej: 573001234567" 
+            style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', minWidth: '200px' }} 
+            required 
+          />
+          <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Guardar WhatsApp</button>
+        </form>
+      </div>
+
+      {/* CAMBIAR PROPIAS CREDENCIALES DEL SUPERADMIN */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Key style={{ width: '16px', height: '16px' }} /> Cambiar mis Credenciales de Desarrollador (SuperAdmin)
+        </h3>
+        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Modifica tu usuario y contraseña de acceso root de forma segura.</p>
+        <form onSubmit={handleGuardarCredencialesSuperAdmin} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre / Título:</label>
+            <input type="text" value={nuevoSuperNombre} onChange={(e) => setNuevoSuperNombre(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nuevo Usuario Root:</label>
+            <input type="text" value={nuevoSuperUser} onChange={(e) => setNuevoSuperUser(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nueva Contraseña Root:</label>
+            <input type="password" value={nuevoSuperPass} onChange={(e) => setNuevoSuperPass(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
+          </div>
+          <div style={{ gridColumn: '1 / -1', marginTop: '4px' }}>
+            <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Actualizar Mis Credenciales Root</button>
+          </div>
+        </form>
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
