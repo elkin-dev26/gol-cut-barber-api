@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {  
   Scissors, Lock, Smartphone, CheckCircle,  
-  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Clock, Search, Edit3, Tool, DollarSign, Package, UserCheck, Trash2
+  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Clock, Search, Edit3, Wrench, DollarSign, Package, UserCheck, Trash2
 } from 'lucide-react';
 
 export default function App() {
@@ -39,7 +39,6 @@ export default function App() {
     localStorage.setItem('gol_cut_superadmin_creds', JSON.stringify(superAdminCreds));
   }, [superAdminCreds]);
 
-  // CONFIGURACIÓN GLOBAL DEL SAAS (MODIFICABLE POR EL DESARROLLADOR)
   const [devConfig, setDevConfig] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_dev_config');
     return guardado ? JSON.parse(guardado) : {
@@ -226,7 +225,6 @@ export default function App() {
 
   return (
     <div style={{ backgroundColor: '#020617', color: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
-      {/* ENCABEZADO GLOBAL CONFIGURABLE */}
       <header style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #f59e0b', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 40, width: '100%', boxSizing: 'border-box' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -435,9 +433,6 @@ export default function App() {
   );
 }
 
-/* ==========================================================
-   VISTA CLIENTE (BÚSQUEDA POR CÓDIGO / QR)
-========================================================== */
 function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, citas, setCitas, incentivos, slotDuration }) {
   const [codigoInput, setCodigoInput] = useState('');
   const [establecimientoEncontrado, setEstablecimientoEncontrado] = useState(null);
@@ -593,7 +588,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   if (estData.enMantenimiento) {
     return (
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', padding: '32px', textAlign: 'center', maxWidth: '500px', margin: '40px auto' }}>
-        <Tool style={{ width: '48px', height: '48px', color: '#fbbf24', margin: '0 auto 12px auto' }} />
+        <Wrench style={{ width: '48px', height: '48px', color: '#fbbf24', margin: '0 auto 12px auto' }} />
         <h3 style={{ color: '#fbbf24', margin: '0 0 8px 0', fontSize: '18px' }}>¡Estamos en Mantenimiento!</h3>
         <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>
           La barbería <strong>{estData.nombreBarberia}</strong> se encuentra temporalmente en actualización o mantenimiento interno. Estaremos de regreso muy pronto.
@@ -771,9 +766,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   );
 }
 
-/* ==========================================================
-   VISTA BARBERO COMPLETA
-========================================================== */
 function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
   const [tab, setTab] = useState('citas');
   const misCitas = citas.filter(c => c.barbero.toLowerCase().includes(barberoActual.nombre.toLowerCase()));
@@ -867,9 +859,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-/* ==========================================================
-   VISTA BARBERO INDEPENDIENTE COMPLETA
-========================================================== */
 function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, setCitas, onCerrarSesion }) {
   const misCitasIndep = citas.filter(c => c.establecimiento === perfilIndependiente.nombreBarberia);
 
@@ -920,9 +909,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   );
 }
 
-/* ==========================================================
-   VISTA ADMIN COMPLETA (INVENTARIO, CAJA, CONFIGURACIÓN)
-========================================================== */
 function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenants, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, chairFeeConfig, setChairFeeConfig }) {
   const tenantActivo = tenantActualParaAdmin || tenantPrincipal;
   const [tabAdmin, setTabAdmin] = useState('config');
@@ -1019,9 +1005,6 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
   );
 }
 
-/* ==========================================================
-   VISTA SUPERADMIN COMPLETA (DESARROLLADOR ROOT)
-========================================================== */
 function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAdminCreds }) {
   const [nombreGlobalInput, setNombreGlobalInput] = useState(devConfig.nombreGlobalPlataforma);
 
