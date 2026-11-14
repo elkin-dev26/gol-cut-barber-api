@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {  
   Scissors, Lock, Smartphone, CheckCircle,  
-  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Clock, Search, Edit3, Wrench, DollarSign, Package, UserCheck, Trash2
+  Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Clock, Search, Edit3, Mail, Tool
 } from 'lucide-react';
 
 export default function App() {
@@ -15,7 +15,6 @@ export default function App() {
 
   const [slotDuration, setSlotDuration] = useState(30); 
   const [globalTimer, setGlobalTimer] = useState({ Mañana: false, Tarde: false, Noche: false });
-  
   const [chairFeeConfig, setChairFeeConfig] = useState(() => {
     const guardado = localStorage.getItem('chairFeeConfig');
     return guardado ? JSON.parse(guardado) : { tipo: 'fijo', valor: 50000 };
@@ -44,6 +43,7 @@ export default function App() {
     return guardado ? JSON.parse(guardado) : {
       whatsappSoporte: '573001234567',
       mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
+      nombreGlobalPlataforma: 'GOL CUT BARBER (SaaS Global)'
     };
   });
 
@@ -63,16 +63,6 @@ export default function App() {
         activo: true,
         porcentaje: 10,
         destinatario: 'Todos los Clientes'
-      },
-      {
-        id: 'inc2',
-        tipo: 'barbero',
-        titulo: 'Premio Alquiler Silla Barbero',
-        descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
-        activo: true,
-        metaCitas: 15,
-        porcentaje: 5,
-        destinatario: 'Todos los Barberos'
       }
     ];
   });
@@ -147,14 +137,11 @@ export default function App() {
   }, [perfilesIndependientes]);
 
   const [productos, setProductos] = useState([
-    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 },
-    { id: 'p2', nombre: 'Champú Anticaída Barba & Cabello', precio: 45000, stock: 10 }
+    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 }
   ]);
 
   const [servicios, setServicios] = useState([
-    { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' },
-    { id: 's2', nombre: 'Barba Tradicional con Toalla Caliente', precio: 15000, duracion: '20 min' },
-    { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
+    { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' }
   ]);
 
   const [citas, setCitas] = useState(() => {
@@ -245,7 +232,7 @@ export default function App() {
             </div>
             <div>
               <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#fbbf24', letterSpacing: '0.03em' }}>
-                {devConfig.nombreGlobalPlataforma || tenantPrincipal.nombreBarberia.toUpperCase()}
+                {devConfig.nombreGlobalPlataforma.toUpperCase()}
               </h1>
               <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8' }}>Plataforma Multi-Barberías y Autogestión</p>
             </div>
@@ -304,7 +291,10 @@ export default function App() {
             citas={citas} 
             setCitas={setCitas} 
             incentivos={incentivos}
+            agendaPausadaSede={agendaPausadaSede}
+            mensajePausaGeneral={mensajePausaGeneral}
             slotDuration={slotDuration}
+            globalTimer={globalTimer}
           />
         )}
 
@@ -358,6 +348,12 @@ export default function App() {
             tenantPrincipal={tenantPrincipal}
             setTenants={setTenants}
             tenants={tenants}
+            agendaPausadaSede={agendaPausadaSede}
+            setAgendaPausadaSede={setAgendaPausadaSede}
+            mensajePausaGeneral={mensajePausaGeneral}
+            setMensajePausaGeneral={setMensajePausaGeneral}
+            globalTimer={globalTimer}
+            setGlobalTimer={setGlobalTimer}
             chairFeeConfig={chairFeeConfig}
             setChairFeeConfig={setChairFeeConfig}
           />
@@ -445,6 +441,9 @@ export default function App() {
   );
 }
 
+/* ==========================================================
+   VISTA CLIENTE (VERIFICA MANTENIMIENTO INDEPENDIENTE)
+========================================================== */
 function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, citas, setCitas, incentivos, slotDuration }) {
   const [codigoInput, setCodigoInput] = useState('');
   const [establecimientoEncontrado, setEstablecimientoEncontrado] = useState(null);
@@ -565,7 +564,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
           </div>
           <h2 style={{ color: '#fbbf24', fontSize: '18px', fontWeight: 'bold', margin: '0 0 8px 0' }}>Encuentra tu Barbería o Barbero</h2>
           <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 16px 0', lineHeight: '1.4' }}>
-            Ingresa el **Código Único** que te proporcionó tu barbero (ej. <strong>GC-01</strong>) para agendar de forma directa.
+            Ingresa el **Código Único** que te proporcionó tu barbero o sede para agendar tu cita de forma directa.
           </p>
 
           <form onSubmit={handleBuscarSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -600,7 +599,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   if (estData.enMantenimiento) {
     return (
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', padding: '32px', textAlign: 'center', maxWidth: '500px', margin: '40px auto' }}>
-        <Wrench style={{ width: '48px', height: '48px', color: '#fbbf24', margin: '0 auto 12px auto' }} />
+        <Tool style={{ width: '48px', height: '48px', color: '#fbbf24', margin: '0 auto 12px auto' }} />
         <h3 style={{ color: '#fbbf24', margin: '0 0 8px 0', fontSize: '18px' }}>¡Estamos en Mantenimiento!</h3>
         <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>
           La barbería <strong>{estData.nombreBarberia}</strong> se encuentra temporalmente en actualización o mantenimiento interno. Estaremos de regreso muy pronto.
@@ -778,188 +777,15 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   );
 }
 
-function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, tenantPrincipal, tenants }) {
-  const [tab, setTab] = useState('citas');
-  const misCitas = citas.filter(c => c.barbero.toLowerCase().includes(barberoActual.nombre.toLowerCase()));
-
-  const [clienteCobro, setClienteCobro] = useState('');
-  const [servicioCobro, setServicioCobro] = useState(servicios[0]?.nombre || 'Corte Clásico');
-  const [metodoPago, setMetodoPago] = useState('efectivo');
-
-  const registrarCobroDirecto = (e) => {
-    e.preventDefault();
-    if (!clienteCobro.trim()) return;
-    const servObj = servicios.find(s => s.nombre === servicioCobro);
-    const nuevoPago = {
-      id: 'c' + Date.now(),
-      cliente: clienteCobro.trim(),
-      barbero: barberoActual.nombre,
-      servicio: servicioCobro,
-      fecha: new Date().toISOString().split('T')[0],
-      hora: 'Instantáneo',
-      precio: servObj ? servObj.precio : 25000,
-      estado: 'completada',
-      metodoPago: metodoPago,
-      registradoEnApp: true
-    };
-    setCitas([nuevoPago, ...citas]);
-    setClienteCobro('');
-    alert('¡Cobro registrado con éxito en la caja!');
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel de Barbero: {barberoActual.nombre}</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Especialidad: {barberoActual.especialidad}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {devConfig.whatsappSoporte && (
-            <a 
-              href={`https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(`Hola Elkin, soy el barbero ${barberoActual.nombre} y necesito soporte técnico en la plataforma.`)}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <MessageCircle style={{ width: '14px', height: '14px' }} /> Soporte
-            </a>
-          )}
-          <button onClick={onCerrarSesion} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-            Cerrar Sesión
-          </button>
-        </div>
-      </div>
-
-      {licenciaVencida && (
-        <div style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', border: '1px solid #dc2626', padding: '12px', borderRadius: '8px', color: '#fca5a5', fontSize: '12px' }}>
-          ⚠️ Licencia de sede suspendida o vencida. Comuníquese con soporte técnico.
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
-        <button onClick={() => setTab('citas')} style={{ backgroundColor: tab === 'citas' ? '#f59e0b' : '#0f172a', color: tab === 'citas' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Mis Citas</button>
-        <button onClick={() => setTab('cobro')} style={{ backgroundColor: tab === 'cobro' ? '#f59e0b' : '#0f172a', color: tab === 'cobro' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Cobro Rápido (Caja)</button>
-      </div>
-
-      {tab === 'citas' && (
-        <div style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-          <h3 style={{ color: '#fbbf24', fontSize: '14px', margin: '0 0 8px 0' }}>Citas Asignadas</h3>
-          {misCitas.length === 0 ? (
-            <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>No tienes citas registradas.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {misCitas.map(c => (
-                <div key={c.id} style={{ backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>{c.cliente}</span>
-                    <p style={{ color: '#94a3b8', fontSize: '10px', margin: '2px 0 0 0' }}>{c.servicio} | {c.fecha} - {c.hora} | ${c.precio?.toLocaleString()}</p>
-                  </div>
-                  <span style={{ backgroundColor: 'rgba(5, 150, 105, 0.2)', color: '#34d399', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>{c.estado.toUpperCase()}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'cobro' && (
-        <div style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', maxWidth: '450px' }}>
-          <h3 style={{ color: '#fbbf24', fontSize: '14px', margin: '0 0 10px 0' }}>Registrar Cobro de Silla / Servicio</h3>
-          <form onSubmit={registrarCobroDirecto} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <input type="text" placeholder="Nombre del cliente..." value={clienteCobro} onChange={(e) => setClienteCobro(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <select value={servicioCobro} onChange={(e) => setServicioCobro(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }}>
-              {servicios.map(s => <option key={s.id} value={s.nombre}>{s.nombre} (${s.precio?.toLocaleString()})</option>)}
-            </select>
-            <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }}>
-              <option value="efectivo">Efectivo</option>
-              <option value="transferencia">Transferencia Personal</option>
-            </select>
-            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Registrar Venta</button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, setCitas, onCerrarSesion, devConfig }) {
-  const misCitasIndep = citas.filter(c => c.establecimiento === perfilIndependiente.nombreBarberia);
-
-  const togglePausaIndep = () => {
-    const actualizado = perfilesIndependientes.map(pi => pi.id === perfilIndependiente.id ? { ...pi, agendaPausada: !pi.agendaPausada } : pi);
-    setPerfilesIndependientes(actualizado);
-    alert('Estado de agenda independiente actualizado.');
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Independiente: {perfilIndependiente.nombreBarberia}</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Propietario: {perfilIndependiente.propietario} | Código Único: <strong style={{ color: '#38bdf8' }}>{perfilIndependiente.codigoUnico}</strong></p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {devConfig.whatsappSoporte && (
-            <a 
-              href={`https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(`Hola Elkin, soy el barbero independiente ${perfilIndependiente.propietario} y necesito soporte técnico en la plataforma.`)}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <MessageCircle style={{ width: '14px', height: '14px' }} /> Soporte
-            </a>
-          )}
-          <button onClick={onCerrarSesion} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-            Cerrar Sesión
-          </button>
-        </div>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h4 style={{ color: '#fbbf24', margin: '0 0 4px 0', fontSize: '13px' }}>Estado de Disponibilidad</h4>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: 0 }}>Pausa o habilita tu agenda personal.</p>
-        </div>
-        <button onClick={togglePausaIndep} style={{ backgroundColor: perfilIndependiente.agendaPausada ? '#dc2626' : '#059669', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>
-          {perfilIndependiente.agendaPausada ? 'Agenda Pausada' : 'Agenda Activa'}
-        </button>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-        <h3 style={{ color: '#fbbf24', fontSize: '14px', margin: '0 0 8px 0' }}>Citas de mi Estudio</h3>
-        {misCitasIndep.length === 0 ? (
-          <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>No hay citas agendadas.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {misCitasIndep.map(c => (
-              <div key={c.id} style={{ backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155' }}>
-                <span style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>{c.cliente} - {c.servicio}</span>
-                <p style={{ color: '#94a3b8', fontSize: '10px', margin: '2px 0 0 0' }}>{c.fecha} - {c.hora} | ${c.precio?.toLocaleString()}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenants, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, chairFeeConfig, setChairFeeConfig, devConfig }) {
+/* ==========================================================
+   VISTA ADMIN (SOLO CONFIGURACIÓN Y CONTACTO, SIN MANTENIMIENTO)
+========================================================== */
+function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenants }) {
   const tenantActivo = tenantActualParaAdmin || tenantPrincipal;
-  const [tabAdmin, setTabAdmin] = useState('config');
 
   const [nombreNegocioInput, setNombreNegocioInput] = useState(tenantActivo.nombreBarberia);
   const [whatsappInput, setWhatsappInput] = useState(tenantActivo.whatsappContacto || '');
   const [emailInput, setEmailInput] = useState(tenantActivo.emailContacto || '');
-
-  const [nuevoBarberoNombre, setNuevoBarberoNombre] = useState('');
-  const [nuevoBarberoClave, setNuevoBarberoClave] = useState('');
-  const [nuevoBarberoEsp, setNuevoBarberoEsp] = useState('');
-
-  const [nuevoProdNombre, setNuevoProdNombre] = useState('');
-  const [nuevoProdPrecio, setNuevoProdPrecio] = useState('');
-  const [nuevoProdStock, setNuevoProdStock] = useState('');
 
   const handleGuardarCambiosAdmin = (e) => {
     e.preventDefault();
@@ -969,139 +795,70 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
       whatsappContacto: whatsappInput.trim(),
       emailContacto: emailInput.trim()
     } : t);
+
     setTenants(actualizado);
-    alert('¡Ajustes de la barbería guardados correctamente!');
-  };
-
-  const agregarBarbero = (e) => {
-    e.preventDefault();
-    if (!nuevoBarberoNombre.trim() || !nuevoBarberoClave.trim()) return;
-    const nuevoB = {
-      id: 'b' + Date.now(),
-      username: nuevoBarberoNombre.toLowerCase().replace(/\s+/g, ''),
-      nombre: nuevoBarberoNombre.trim(),
-      especialidad: nuevoBarberoEsp.trim() || 'Estilista General',
-      estado: 'Activo',
-      claveAcceso: nuevoBarberoClave.trim(),
-      pausado: false,
-      sedeId: tenantActivo.id
-    };
-    setBarberos([...barberos, nuevoB]);
-    setNuevoBarberoNombre('');
-    setNuevoBarberoClave('');
-    setNuevoBarberoEsp('');
-    alert('¡Barbero agregado con éxito a la sede!');
-  };
-
-  const agregarProducto = (e) => {
-    e.preventDefault();
-    if (!nuevoProdNombre.trim() || !nuevoProdPrecio) return;
-    const prod = {
-      id: 'p' + Date.now(),
-      nombre: nuevoProdNombre.trim(),
-      precio: Number(nuevoProdPrecio),
-      stock: Number(nuevoProdStock) || 0
-    };
-    setProductos([...productos, prod]);
-    setNuevoProdNombre('');
-    setNuevoProdPrecio('');
-    setNuevoProdStock('');
-    alert('¡Producto agregado al inventario!');
+    alert('¡Ajustes y datos de notificación guardados correctamente!');
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo ({tenantActivo?.nombreBarberia})</h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Código único: <strong style={{ color: '#38bdf8' }}>{tenantActivo.codigoUnico}</strong></p>
-        </div>
-        {devConfig.whatsappSoporte && (
-          <a 
-            href={`https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(`Hola Elkin, soy el administrador de ${tenantActivo.nombreBarberia} y deseo renovar mi membresía.`)}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
-          >
-            <MessageCircle style={{ width: '14px', height: '14px' }} /> Renovar Membresía
-          </a>
-        )}
+      <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo ({tenantActivo?.nombreBarberia})</h2>
+        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Código único: <strong style={{ color: '#38bdf8' }}>{tenantActivo.codigoUnico}</strong></p>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #334155', paddingBottom: '8px', flexWrap: 'wrap' }}>
-        <button onClick={() => setTabAdmin('config')} style={{ backgroundColor: tabAdmin === 'config' ? '#f59e0b' : '#0f172a', color: tabAdmin === 'config' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Configuración y Contacto</button>
-        <button onClick={() => setTabAdmin('barberos')} style={{ backgroundColor: tabAdmin === 'barberos' ? '#f59e0b' : '#0f172a', color: tabAdmin === 'barberos' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Personal / Barberos</button>
-        <button onClick={() => setTabAdmin('inventario')} style={{ backgroundColor: tabAdmin === 'inventario' ? '#f59e0b' : '#0f172a', color: tabAdmin === 'inventario' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Inventario de Productos</button>
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px', maxWidth: '520px' }}>
+        <h3 style={{ margin: '0 0 12px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Edit3 style={{ width: '16px', height: '16px' }} /> Configuración del Negocio y Notificaciones
+        </h3>
+        
+        <form onSubmit={handleGuardarCambiosAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre Comercial de la Barbería</label>
+            <input 
+              type="text" 
+              value={nombreNegocioInput} 
+              onChange={(e) => setNombreNegocioInput(e.target.value)} 
+              style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} 
+              required 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>📱 WhatsApp para Recibir Notificaciones de Citas</label>
+            <input 
+              type="text" 
+              value={whatsappInput} 
+              onChange={(e) => setWhatsappInput(e.target.value)} 
+              placeholder="Ej: 573001234567" 
+              style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>✉️ Correo Electrónico para Avisos</label>
+            <input 
+              type="email" 
+              value={emailInput} 
+              onChange={(e) => setEmailInput(e.target.value)} 
+              placeholder="correo@barberia.com" 
+              style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} 
+            />
+          </div>
+
+          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer', marginTop: '6px' }}>
+            Guardar Cambios
+          </button>
+        </form>
       </div>
-
-      {tabAdmin === 'config' && (
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px', maxWidth: '520px' }}>
-          <h3 style={{ margin: '0 0 12px 0', color: '#fbbf24', fontSize: '14px' }}>Ajustes y Notificaciones de Citas</h3>
-          <form onSubmit={handleGuardarCambiosAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre Comercial</label>
-              <input type="text" value={nombreNegocioInput} onChange={(e) => setNombreNegocioInput(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} required />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>📱 WhatsApp para Notificaciones</label>
-              <input type="text" value={whatsappInput} onChange={(e) => setWhatsappInput(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>✉️ Correo Electrónico</label>
-              <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
-            </div>
-            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Guardar Cambios</button>
-          </form>
-        </div>
-      )}
-
-      {tabAdmin === 'barberos' && (
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px', maxWidth: '600px' }}>
-          <h3 style={{ margin: '0 0 12px 0', color: '#fbbf24', fontSize: '14px' }}>Gestión de Barberos en la Sede</h3>
-          <form onSubmit={agregarBarbero} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '8px', marginBottom: '16px' }}>
-            <input type="text" placeholder="Nombre barbero..." value={nuevoBarberoNombre} onChange={(e) => setNuevoBarberoNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="text" placeholder="Contraseña login" value={nuevoBarberoClave} onChange={(e) => setNuevoBarberoClave(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="text" placeholder="Especialidad" value={nuevoBarberoEsp} onChange={(e) => setNuevoBarberoEsp(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Agregar</button>
-          </form>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {barberos.filter(b => b.sedeId === tenantActivo.id).map(b => (
-              <div key={b.id} style={{ backgroundColor: '#020617', padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: '#fff' }}>{b.nombre} - <strong style={{ color: '#38bdf8' }}>{b.especialidad}</strong></span>
-                <span style={{ fontSize: '11px', color: '#34d399' }}>Clave: {b.claveAcceso}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {tabAdmin === 'inventario' && (
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px', maxWidth: '600px' }}>
-          <h3 style={{ margin: '0 0 12px 0', color: '#fbbf24', fontSize: '14px' }}>Gestión de Inventario y Productos</h3>
-          <form onSubmit={agregarProducto} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px auto', gap: '8px', marginBottom: '16px' }}>
-            <input type="text" placeholder="Nombre producto..." value={nuevoProdNombre} onChange={(e) => setNuevoProdNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="number" placeholder="Precio" value={nuevoProdPrecio} onChange={(e) => setNuevoProdPrecio(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="number" placeholder="Stock" value={nuevoProdStock} onChange={(e) => setNuevoProdStock(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Agregar</button>
-          </form>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {productos.map(p => (
-              <div key={p.id} style={{ backgroundColor: '#020617', padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: '#fff' }}>{p.nombre} - ${p.precio?.toLocaleString()}</span>
-                <span style={{ fontSize: '11px', color: '#38bdf8' }}>Stock: {p.stock}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, superAdminCreds }) {
-  const [nombreGlobalInput, setNombreGlobalInput] = useState(devConfig.nombreGlobalPlataforma || 'SaaS Global');
-  const [whatsappSoporteInput, setWhatsappSoporteInput] = useState(devConfig.whatsappSoporte || '');
-
+/* ==========================================================
+   VISTA SUPERADMIN (DESARROLLADOR: BOTÓN EXCLUSIVO DE MANTENIMIENTO)
+========================================================== */
+function VistaSuperAdmin({ tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, superAdminCreds }) {
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
   const [nuevoDuenoBarberia, setNuevoDuenoBarberia] = useState('');
   const [nuevoWpBarberia, setNuevoWpBarberia] = useState('');
@@ -1111,22 +868,12 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfile
 
   const generarCodigoSede = () => 'GC-' + Math.floor(10 + Math.random() * 90);
 
-  const handleGuardarConfigGlobal = (e) => {
-    e.preventDefault();
-    const actualizado = { 
-      ...devConfig, 
-      nombreGlobalPlataforma: nombreGlobalInput.trim(),
-      whatsappSoporte: whatsappSoporteInput.trim()
-    };
-    setDevConfig(actualizado);
-    alert('¡Configuración global y WhatsApp del desarrollador actualizados exitosamente!');
-  };
-
   const handleCrearTenant = (e) => {
     e.preventDefault();
     if (!nuevoNombreBarberia.trim() || !nuevoDuenoBarberia.trim() || !nuevoUserTenant.trim() || !nuevoPassTenant.trim()) return;
 
     const codigoGenerado = generarCodigoSede();
+
     const nuevaSede = {
       id: 't' + Date.now(),
       codigoUnico: codigoGenerado,
@@ -1148,7 +895,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfile
     setNuevoEmailBarberia('');
     setNuevoUserTenant('');
     setNuevoPassTenant('');
-    alert(`¡Barbería creada con éxito!\nCódigo asignado: ${codigoGenerado}`);
+    alert(`¡Barbería creada con éxito!\nCódigo: ${codigoGenerado}`);
   };
 
   const toggleMantenimientoTenant = (id) => {
@@ -1161,26 +908,11 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfile
         <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>
           <Server style={{ width: '20px', height: '20px', display: 'inline', marginRight: '6px' }} /> Consola Desarrollador Root ({superAdminCreds.username})
         </h2>
-        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control global de la marca del software, soporte técnico por WhatsApp, creación de cuentas y mantenimiento.</p>
+        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control global exclusivo: activación de mantenimiento por sede y creación de cuentas.</p>
       </div>
 
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px', maxWidth: '550px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>🏢 Ajustes Globales de la Plataforma (SaaS)</h3>
-        <form onSubmit={handleGuardarConfigGlobal} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre Global del SaaS</label>
-            <input type="text" value={nombreGlobalInput} onChange={(e) => setNombreGlobalInput(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} required />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>📱 WhatsApp del Desarrollador (Soporte)</label>
-            <input type="text" value={whatsappSoporteInput} onChange={(e) => setWhatsappSoporteInput(e.target.value)} placeholder="Ej: 573001234567" style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
-          </div>
-          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Guardar Cambios Globales</button>
-        </form>
-      </div>
-
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <PlusSquare style={{ width: '16px', height: '16px' }} /> Crear Nueva Barbería / Sede (Código Automático)
         </h3>
         <form onSubmit={handleCrearTenant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
@@ -1190,12 +922,12 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfile
           <input type="email" placeholder="Correo notificaciones" value={nuevoEmailBarberia} onChange={(e) => setNuevoEmailBarberia(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
           <input type="text" placeholder="Usuario login admin" value={nuevoUserTenant} onChange={(e) => setNuevoUserTenant(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
           <input type="text" placeholder="Contraseña admin" value={nuevoPassTenant} onChange={(e) => setNuevoPassTenant(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-          <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Registrar y Generar Código Sede</button>
+          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Registrar Barbería SaaS</button>
         </form>
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>🛠️ Control de Mantenimiento por Sede</h3>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>🛠️ Consola Root: Control de Mantenimiento por Sede</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {tenants.map(t => (
             <div key={t.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -1203,8 +935,21 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfile
                 <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia} (Código: {t.codigoUnico})</span>
                 <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0' }}>Wp: {t.whatsappContacto || 'No registrado'} | Email: {t.emailContacto || 'No registrado'}</p>
               </div>
-              <button type="button" onClick={() => toggleMantenimientoTenant(t.id)} style={{ backgroundColor: t.enMantenimiento ? '#dc2626' : '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
-                {t.enMantenimiento ? '🛠️ En Mantenimiento' : '✅ Operativo'}
+              <button 
+                type="button" 
+                onClick={() => toggleMantenimientoTenant(t.id)} 
+                style={{ 
+                  backgroundColor: t.enMantenimiento ? '#dc2626' : '#059669', 
+                  color: '#fff', 
+                  border: 'none', 
+                  padding: '6px 12px', 
+                  borderRadius: '6px', 
+                  cursor: 'pointer', 
+                  fontSize: '11px', 
+                  fontWeight: 'bold' 
+                }}
+              >
+                {t.enMantenimiento ? '🛠️ En Mantenimiento (Activo)' : '✅ Operativo (Normal)'}
               </button>
             </div>
           ))}
@@ -1213,3 +958,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfile
     </div>
   );
 }
+
+function VistaBarbero() { return <div>Vista Barbero Activa</div>; }
+function VistaBarberoIndependiente() { return <div>Vista Independiente Activa</div>; }
