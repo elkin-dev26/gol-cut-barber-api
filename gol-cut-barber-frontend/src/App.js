@@ -14,7 +14,6 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
 
   const [slotDuration, setSlotDuration] = useState(30); 
-  const [globalTimer, setGlobalTimer] = useState({ Mañana: false, Tarde: false, Noche: false });
   
   const [chairFeeConfig, setChairFeeConfig] = useState(() => {
     const guardado = localStorage.getItem('chairFeeConfig');
