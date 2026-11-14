@@ -765,7 +765,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   );
 }
 
-function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos }) {
+function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, tenantPrincipal, tenants }) {
   const [tab, setTab] = useState('citas');
   const misCitas = citas.filter(c => c.barbero.toLowerCase().includes(barberoActual.nombre.toLowerCase()));
 
@@ -801,9 +801,21 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel de Barbero: {barberoActual.nombre}</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Especialidad: {barberoActual.especialidad}</p>
         </div>
-        <button onClick={onCerrarSesion} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-          Cerrar Sesión
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {devConfig.whatsappSoporte && (
+            <a 
+              href={`https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(`Hola Elkin, soy el barbero ${barberoActual.nombre} y necesito soporte técnico en la plataforma.`)}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <MessageCircle style={{ width: '14px', height: '14px' }} /> Soporte
+            </a>
+          )}
+          <button onClick={onCerrarSesion} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
 
       {licenciaVencida && (
@@ -858,7 +870,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, setCitas, onCerrarSesion }) {
+function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, setCitas, onCerrarSesion, devConfig }) {
   const misCitasIndep = citas.filter(c => c.establecimiento === perfilIndependiente.nombreBarberia);
 
   const togglePausaIndep = () => {
@@ -874,9 +886,21 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Independiente: {perfilIndependiente.nombreBarberia}</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Propietario: {perfilIndependiente.propietario} | Código Único: <strong style={{ color: '#38bdf8' }}>{perfilIndependiente.codigoUnico}</strong></p>
         </div>
-        <button onClick={onCerrarSesion} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-          Cerrar Sesión
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {devConfig.whatsappSoporte && (
+            <a 
+              href={`https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(`Hola Elkin, soy el barbero independiente ${perfilIndependiente.propietario} y necesito soporte técnico en la plataforma.`)}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <MessageCircle style={{ width: '14px', height: '14px' }} /> Soporte
+            </a>
+          )}
+          <button onClick={onCerrarSesion} style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
 
       <div style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -908,13 +932,17 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   );
 }
 
-function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenants, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, chairFeeConfig, setChairFeeConfig }) {
+function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenants, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, chairFeeConfig, setChairFeeConfig, devConfig }) {
   const tenantActivo = tenantActualParaAdmin || tenantPrincipal;
   const [tabAdmin, setTabAdmin] = useState('config');
 
   const [nombreNegocioInput, setNombreNegocioInput] = useState(tenantActivo.nombreBarberia);
   const [whatsappInput, setWhatsappInput] = useState(tenantActivo.whatsappContacto || '');
   const [emailInput, setEmailInput] = useState(tenantActivo.emailContacto || '');
+
+  const [nuevoBarberoNombre, setNuevoBarberoNombre] = useState('');
+  const [nuevoBarberoClave, setNuevoBarberoClave] = useState('');
+  const [nuevoBarberoEsp, setNuevoBarberoEsp] = useState('');
 
   const [nuevoProdNombre, setNuevoProdNombre] = useState('');
   const [nuevoProdPrecio, setNuevoProdPrecio] = useState('');
@@ -930,6 +958,26 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
     } : t);
     setTenants(actualizado);
     alert('¡Ajustes de la barbería guardados correctamente!');
+  };
+
+  const agregarBarbero = (e) => {
+    e.preventDefault();
+    if (!nuevoBarberoNombre.trim() || !nuevoBarberoClave.trim()) return;
+    const nuevoB = {
+      id: 'b' + Date.now(),
+      username: nuevoBarberoNombre.toLowerCase().replace(/\s+/g, ''),
+      nombre: nuevoBarberoNombre.trim(),
+      especialidad: nuevoBarberoEsp.trim() || 'Estilista General',
+      estado: 'Activo',
+      claveAcceso: nuevoBarberoClave.trim(),
+      pausado: false,
+      sedeId: tenantActivo.id
+    };
+    setBarberos([...barberos, nuevoB]);
+    setNuevoBarberoNombre('');
+    setNuevoBarberoClave('');
+    setNuevoBarberoEsp('');
+    alert('¡Barbero agregado con éxito a la sede!');
   };
 
   const agregarProducto = (e) => {
@@ -950,13 +998,26 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo ({tenantActivo?.nombreBarberia})</h2>
-        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Código único: <strong style={{ color: '#38bdf8' }}>{tenantActivo.codigoUnico}</strong></p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo ({tenantActivo?.nombreBarberia})</h2>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Código único: <strong style={{ color: '#38bdf8' }}>{tenantActivo.codigoUnico}</strong></p>
+        </div>
+        {devConfig.whatsappSoporte && (
+          <a 
+            href={`https://wa.me/${devConfig.whatsappSoporte}?text=${encodeURIComponent(`Hola Elkin, soy el administrador de ${tenantActivo.nombreBarberia} y deseo renovar mi membresía.`)}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <MessageCircle style={{ width: '14px', height: '14px' }} /> Renovar Membresía
+          </a>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #334155', paddingBottom: '8px', flexWrap: 'wrap' }}>
         <button onClick={() => setTabAdmin('config')} style={{ backgroundColor: tabAdmin === 'config' ? '#f59e0b' : '#0f172a', color: tabAdmin === 'config' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Configuración y Contacto</button>
+        <button onClick={() => setTabAdmin('barberos')} style={{ backgroundColor: tabAdmin === 'barberos' ? '#f59e0b' : '#0f172a', color: tabAdmin === 'barberos' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Personal / Barberos</button>
         <button onClick={() => setTabAdmin('inventario')} style={{ backgroundColor: tabAdmin === 'inventario' ? '#f59e0b' : '#0f172a', color: tabAdmin === 'inventario' ? '#020617' : '#cbd5e1', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Inventario de Productos</button>
       </div>
 
@@ -978,6 +1039,26 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
             </div>
             <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Guardar Cambios</button>
           </form>
+        </div>
+      )}
+
+      {tabAdmin === 'barberos' && (
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px', maxWidth: '600px' }}>
+          <h3 style={{ margin: '0 0 12px 0', color: '#fbbf24', fontSize: '14px' }}>Gestión de Barberos en la Sede</h3>
+          <form onSubmit={agregarBarbero} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '8px', marginBottom: '16px' }}>
+            <input type="text" placeholder="Nombre barbero..." value={nuevoBarberoNombre} onChange={(e) => setNuevoBarberoNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+            <input type="text" placeholder="Contraseña login" value={nuevoBarberoClave} onChange={(e) => setNuevoBarberoClave(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+            <input type="text" placeholder="Especialidad" value={nuevoBarberoEsp} onChange={(e) => setNuevoBarberoEsp(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+            <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Agregar</button>
+          </form>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {barberos.filter(b => b.sedeId === tenantActivo.id).map(b => (
+              <div key={b.id} style={{ backgroundColor: '#020617', padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#fff' }}>{b.nombre} - <strong style={{ color: '#38bdf8' }}>{b.especialidad}</strong></span>
+                <span style={{ fontSize: '11px', color: '#34d399' }}>Clave: {b.claveAcceso}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1004,7 +1085,7 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAdminCreds }) {
+function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, superAdminCreds }) {
   const [nombreGlobalInput, setNombreGlobalInput] = useState(devConfig.nombreGlobalPlataforma);
   const [whatsappSoporteInput, setWhatsappSoporteInput] = useState(devConfig.whatsappSoporte || '');
 
@@ -1109,7 +1190,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAd
                 <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia} (Código: {t.codigoUnico})</span>
                 <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0' }}>Wp: {t.whatsappContacto || 'No registrado'} | Email: {t.emailContacto || 'No registrado'}</p>
               </div>
-              <button type="button" onClick={() => toggleMantenimientoTenant(t.id)} style={{ backgroundColor: t.enMantenimiento ? '#dc2626' : '#059669', color: '#fff', border: '1px solid #334155', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+              <button type="button" onClick={() => toggleMantenimientoTenant(t.id)} style={{ backgroundColor: t.enMantenimiento ? '#dc2626' : '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
                 {t.enMantenimiento ? '🛠️ En Mantenimiento' : '✅ Operativo'}
               </button>
             </div>
