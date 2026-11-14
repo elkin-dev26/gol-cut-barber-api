@@ -65,46 +65,63 @@ export default function App() {
     localStorage.setItem('gol_cut_incentivos', JSON.stringify(incentivos));
   }, [incentivos]);
 
-  const [tenants, setTenants] = useState([
-    { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: 'Gol Cut Barber Inicial', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, whatsappContacto: '573001234567' },
-    { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
-  ]);
-
-  const [barberos, setBarberos] = useState([
-    { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.', billingCycle: 'mensual', isLocked: false, sedeId: 't1' },
-    { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycle: 'mensual', isLocked: false, sedeId: 't1' }
-  ]);
-
-  const [perfilIndependiente, setPerfilIndependiente] = useState(() => {
-    const guardado = localStorage.getItem('perfilIndependiente');
+  const [tenants, setTenants] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_tenants');
     if (guardado) return JSON.parse(guardado);
-    return {
-      id: 'indep_tenant',
-      nombreBarberia: 'Barbería Independiente (Solista)',
-      nombreAnterior: 'Barbería Solista Inicial',
-      username: 'independiente',
-      clave: 'solo2026',
-      propietario: 'Juan Solista',
-      estadoLicencia: 'Activa',
-      diasRestantes: 30,
-      whatsappContacto: '573001234567',
-      agendaPausada: false,
-      mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
-      ingresosMesAnterior: 1450000,
-      serviciosPropios: [
-        { id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' },
-        { id: 'si2', nombre: 'Arreglo de Barba Pro', precio: 20000, duracion: '20 min' }
-      ]
-    };
+    return [
+      { id: 't1', nombreBarberia: 'Gol Cut Barber - Sede Principal', nombreAnterior: 'Gol Cut Barber Inicial', dueno: 'Elkin Ramírez', estadoLicencia: 'Activa', diasRestantes: 28, whatsappContacto: '573001234567' },
+      { id: 't2', nombreBarberia: 'Barbería Perfil Evaluador', nombreAnterior: 'Barbería SENA', dueno: 'Comité Evaluador', estadoLicencia: 'Activa', diasRestantes: 30, whatsappContacto: '573009876543' }
+    ];
   });
 
   useEffect(() => {
-    if (perfilIndependiente) {
-      localStorage.setItem('perfilIndependiente', JSON.stringify(perfilIndependiente));
-    } else {
-      localStorage.removeItem('perfilIndependiente');
-    }
-  }, [perfilIndependiente]);
+    localStorage.setItem('gol_cut_tenants', JSON.stringify(tenants));
+  }, [tenants]);
+
+  const [barberos, setBarberos] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_barberos');
+    if (guardado) return JSON.parse(guardado);
+    return [
+      { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.', billingCycle: 'mensual', isLocked: false, sedeId: 't1' },
+      { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycle: 'mensual', isLocked: false, sedeId: 't1' }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_barberos', JSON.stringify(barberos));
+  }, [barberos]);
+
+  // Soporte para múltiples perfiles independientes o lista de solistas
+  const [perfilesIndependientes, setPerfilesIndependientes] = useState(() => {
+    const guardado = localStorage.getItem('gol_cut_perfiles_independientes');
+    if (guardado) return JSON.parse(guardado);
+    const antiguo = localStorage.getItem('perfilIndependiente');
+    if (antiguo) return [JSON.parse(antiguo)];
+    return [
+      {
+        id: 'indep_tenant',
+        nombreBarberia: 'Barbería Independiente (Solista)',
+        nombreAnterior: 'Barbería Solista Inicial',
+        username: 'independiente',
+        clave: 'solo2026',
+        propietario: 'Juan Solista',
+        estadoLicencia: 'Activa',
+        diasRestantes: 30,
+        whatsappContacto: '573001234567',
+        agendaPausada: false,
+        mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
+        ingresosMesAnterior: 1450000,
+        serviciosPropios: [
+          { id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' },
+          { id: 'si2', nombre: 'Arreglo de Barba Pro', precio: 20000, duracion: '20 min' }
+        ]
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gol_cut_perfiles_independientes', JSON.stringify(perfilesIndependientes));
+  }, [perfilesIndependientes]);
 
   const [productos, setProductos] = useState([
     { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 },
@@ -157,8 +174,10 @@ export default function App() {
       return;
     }
 
-    if (perfilIndependiente && u === perfilIndependiente.username.toLowerCase() && p === perfilIndependiente.clave) {
-      exitoLogin({ username: perfilIndependiente.username, nombre: perfilIndependiente.propietario, role: 'barbero_independiente' });
+    // Verificar si coincide con alguno de los perfiles independientes
+    const indepEncontrado = perfilesIndependientes.find(pi => pi.username.toLowerCase() === u && pi.clave === p);
+    if (indepEncontrado) {
+      exitoLogin({ username: indepEncontrado.username, nombre: indepEncontrado.propietario, role: 'barbero_independiente', perfilIndepObj: indepEncontrado });
       return;
     }
 
@@ -208,14 +227,14 @@ export default function App() {
   };
 
   const handleCambioSeleccion = (e) => {
-    const targetRole = e.target.value;
+    const val = e.target.value;
      
-    if (targetRole === 'cliente') {
+    if (val === 'cliente') {
       setActiveRole('cliente');
       return;
     }
 
-    if (targetRole === 'evaluacion_evaluador') {
+    if (val === 'evaluacion_evaluador') {
       setRolPendientePassword('evaluacion_evaluador');
       setUsernameInput('evaluador');
       setPasswordInput('');
@@ -223,7 +242,7 @@ export default function App() {
       return;
     }
 
-    if (targetRole === 'sucursal_demo') {
+    if (val === 'sucursal_demo') {
       setRolPendientePassword('sucursal_demo');
       setUsernameInput('sucursal');
       setPasswordInput('');
@@ -231,14 +250,41 @@ export default function App() {
       return;
     }
 
-    if (targetRole === 'barbero_independiente' && !perfilIndependiente) {
-      alert('No hay ningún perfil independiente registrado actualmente.');
+    if (val.startsWith('indep_')) {
+      const indepId = val.replace('indep_', '');
+      const obj = perfilesIndependientes.find(pi => pi.id === indepId);
+      if (obj) {
+        setRolPendientePassword(null);
+        setIsLoginOpen(true);
+        setUsernameInput(obj.username);
+        setPasswordInput('');
+        return;
+      }
+    }
+
+    if (val === 'admin') {
+      setRolPendientePassword(null);
+      setIsLoginOpen(true);
+      setUsernameInput(credencialesAdmin.username);
+      setPasswordInput('');
       return;
     }
 
-    setRolPendientePassword(null);
-    setIsLoginOpen(true);
-    setUsernameInput(targetRole === 'admin' ? credencialesAdmin.username : targetRole === 'barbero_independiente' ? (perfilIndependiente?.username || 'independiente') : targetRole === 'barbero' ? 'elkin' : '');
+    if (val === 'barbero') {
+      setRolPendientePassword(null);
+      setIsLoginOpen(true);
+      setUsernameInput(barberos[0]?.username || 'elkin');
+      setPasswordInput('');
+      return;
+    }
+
+    if (val === 'superadmin') {
+      setRolPendientePassword(null);
+      setIsLoginOpen(true);
+      setUsernameInput('elkin-dev26');
+      setPasswordInput('');
+      return;
+    }
   };
 
   return (
@@ -257,7 +303,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '650px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between', maxWidth: '680px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '4px 8px' }}>
               <Clock style={{ width: '14px', height: '14px', color: '#fbbf24' }} />
               <select 
@@ -271,15 +317,22 @@ export default function App() {
             </div>
 
             <select
-              value={activeRole}
+              value={
+                usuarioAutenticado?.role === 'barbero_independiente' 
+                  ? `indep_${usuarioAutenticado.perfilIndepObj?.id}` 
+                  : activeRole
+              }
               onChange={handleCambioSeleccion}
               style={{ flex: 1, backgroundColor: '#020617', border: '1px solid #f59e0b', color: '#f8fafc', fontSize: '11px', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
             >
               <option value="cliente">📱 Vista: Cliente (Reservas / Móvil)</option>
-              <option value="barbero">✂️ Vista: Barbero (Empleado)</option>
-              {perfilIndependiente && (
-                <option value="barbero_independiente">⭐ Vista: {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</option>
-              )}
+              <option value="barbero">✂️ Vista: Barbero (Empleado Sede)</option>
+              
+              {/* Listado desplegable de todos los perfiles independientes registrados */}
+              {perfilesIndependientes.map(pi => (
+                <option key={pi.id} value={`indep_${pi.id}`}>⭐ Vista: {pi.nombreBarberia} ({pi.propietario})</option>
+              ))}
+
               <option value="admin">🛠️ Vista: Administrador General ({tenantPrincipal.nombreBarberia})</option>
               <option value="evaluacion_evaluador">🎓 Perfil Demo: Perfil Evaluador (Seguro)</option>
               <option value="sucursal_demo">🏢 Perfil Demo: Sucursal Externa (Seguro)</option>
@@ -312,7 +365,7 @@ export default function App() {
           <VistaCliente 
             barberos={barberos} 
             tenants={tenants}
-            perfilIndependiente={perfilIndependiente}
+            perfilesIndependientes={perfilesIndependientes}
             servicios={servicios} 
             citas={citas} 
             setCitas={setCitas} 
@@ -339,10 +392,11 @@ export default function App() {
           />
         )}
 
-        {activeRole === 'barbero_independiente' && perfilIndependiente && (
+        {activeRole === 'barbero_independiente' && (
           <VistaBarberoIndependiente 
-            perfilIndependiente={perfilIndependiente}
-            setPerfilIndependiente={setPerfilIndependiente}
+            perfilIndependiente={usuarioAutenticado?.perfilIndepObj || perfilesIndependientes[0]}
+            setPerfilesIndependientes={setPerfilesIndependientes}
+            perfilesIndependientes={perfilesIndependientes}
             citas={citas}
             setCitas={setCitas}
             onCerrarSesion={handleCerrarSesion}
@@ -390,8 +444,8 @@ export default function App() {
             setBarberos={setBarberos}
             tenants={tenants}
             setTenants={setTenants}
-            perfilIndependiente={perfilIndependiente}
-            setPerfilIndependiente={setPerfilIndependiente}
+            perfilesIndependientes={perfilesIndependientes}
+            setPerfilesIndependientes={setPerfilesIndependientes}
             setActiveRole={setActiveRole}
             incentivos={incentivos}
             setIncentivos={setIncentivos}
@@ -463,7 +517,7 @@ export default function App() {
   );
 }
 
-function VistaCliente({ barberos, tenants, perfilIndependiente, servicios, citas, setCitas, incentivos, agendaPausadaSede, mensajePausaGeneral, slotDuration, globalTimer }) {
+function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, citas, setCitas, incentivos, agendaPausadaSede, mensajePausaGeneral, slotDuration, globalTimer }) {
   const [modo, setModo] = useState('programada');
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
@@ -471,7 +525,9 @@ function VistaCliente({ barberos, tenants, perfilIndependiente, servicios, citas
   // SELECTOR DINÁMICO DE SEDES Y PERFILES INDEPENDIENTES
   const opcionesEstablecimiento = [
     ...tenants.map(t => ({ id: t.id, tipo: 'sede', nombre: t.nombreBarberia, desc: `Sede Principal / Multi-tenant (${t.dueno})` })),
-    ...(perfilIndependiente && perfilIndependiente.estadoLicencia === 'Activa' ? [{ id: perfilIndependiente.id || 'indep_gen', tipo: 'independiente', nombre: `${perfilIndependiente.nombreBarberia} - ${perfilIndependiente.propietario}`, desc: 'Barbero Solista Independiente' }] : [])
+    ...perfilesIndependientes
+      .filter(pi => pi.estadoLicencia === 'Activa')
+      .map(pi => ({ id: pi.id, tipo: 'independiente', nombre: `${pi.nombreBarberia} - ${pi.propietario}`, desc: 'Barbero Solista Independiente', perfilObj: pi }))
   ];
 
   const [establecimientoSeleccionado, setEstablecimientoSeleccionado] = useState(opcionesEstablecimiento[0]?.id || 't1');
@@ -481,11 +537,11 @@ function VistaCliente({ barberos, tenants, perfilIndependiente, servicios, citas
   const esIndependienteEst = estActual?.tipo === 'independiente';
 
   const barberosFiltrados = esIndependienteEst
-    ? [{ id: perfilIndependiente.id, nombre: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }]
+    ? [{ id: estActual.perfilObj.id, nombre: `${estActual.perfilObj.propietario} (${estActual.perfilObj.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }]
     : barberos.filter(b => !b.pausado && !b.isLocked);
 
-  const serviciosFiltrados = esIndependienteEst && perfilIndependiente.serviciosPropios
-    ? perfilIndependiente.serviciosPropios
+  const serviciosFiltrados = esIndependienteEst && estActual?.perfilObj?.serviciosPropios
+    ? estActual.perfilObj.serviciosPropios
     : servicios;
 
   const [barbero, setBarbero] = useState(barberosFiltrados[0]?.nombre || '');
@@ -497,8 +553,8 @@ function VistaCliente({ barberos, tenants, perfilIndependiente, servicios, citas
     setEstablecimientoSeleccionado(idEst);
     const encontrado = opcionesEstablecimiento.find(item => item.id === idEst);
     if (encontrado?.tipo === 'independiente') {
-      setBarbero(`${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`);
-      setServicio(perfilIndependiente.serviciosPropios[0]?.nombre || 'Corte Ejecutivo Solo');
+      setBarbero(`${encontrado.perfilObj.propietario} (${encontrado.perfilObj.nombreBarberia})`);
+      setServicio(encontrado.perfilObj.serviciosPropios[0]?.nombre || 'Corte Ejecutivo Solo');
     } else {
       const bSede = barberos.filter(b => !b.pausado && !b.isLocked)[0];
       setBarbero(bSede ? bSede.nombre : '');
@@ -567,10 +623,10 @@ function VistaCliente({ barberos, tenants, perfilIndependiente, servicios, citas
   }
 
   const barberoSeleccionadoObj = barberos.find(b => b.nombre === barbero);
-  const esIndependienteSeleccionado = barbero.includes(perfilIndependiente?.propietario || '');
+  const perfilIndepSeleccionadoObj = perfilesIndependientes.find(pi => barbero.includes(pi.propietario) || barbero.includes(pi.nombreBarberia));
 
-  if ((barberoSeleccionadoObj && (barberoSeleccionadoObj.pausado || barberoSeleccionadoObj.isLocked)) || (esIndependienteSeleccionado && (perfilIndependiente?.agendaPausada || perfilIndependiente?.estadoLicencia !== 'Activa'))) {
-    const mensajeBarberoPausado = barberoSeleccionadoObj?.isLocked ? 'El barbero tiene sus permisos bloqueados temporalmente por ciclo de pago.' : barberoSeleccionadoObj?.pausado ? barberoSeleccionadoObj.mensajePausa : perfilIndependiente?.mensajePausa;
+  if ((barberoSeleccionadoObj && (barberoSeleccionadoObj.pausado || barberoSeleccionadoObj.isLocked)) || (perfilIndepSeleccionadoObj && (perfilIndepSeleccionadoObj.agendaPausada || perfilIndepSeleccionadoObj.estadoLicencia !== 'Activa'))) {
+    const mensajeBarberoPausado = barberoSeleccionadoObj?.isLocked ? 'El barbero tiene sus permisos bloqueados temporalmente por ciclo de pago.' : barberoSeleccionadoObj?.pausado ? barberoSeleccionadoObj.mensajePausa : perfilIndepSeleccionadoObj?.mensajePausa;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
@@ -983,7 +1039,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente, citas, setCitas, onCerrarSesion, devConfig, activeRole }) {
+function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, setCitas, onCerrarSesion, devConfig, activeRole }) {
   const [servicioNombre, setServicioNombre] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
   const [servicioDuracion, setServicioDuracion] = useState('30 min');
@@ -1008,6 +1064,11 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const ingresosTotales = misCitasIndependiente.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
+  const actualizarPerfilActual = (nuevoPerfil) => {
+    const actualizados = perfilesIndependientes.map(pi => pi.id === nuevoPerfil.id ? nuevoPerfil : pi);
+    setPerfilesIndependientes(actualizados);
+  };
+
   const handleCrearServicioPropio = (e) => {
     e.preventDefault();
     if (!servicioNombre.trim()) return;
@@ -1019,10 +1080,11 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
       duracion: servicioDuracion
     };
 
-    setPerfilIndependiente({
+    const actualizado = {
       ...perfilIndependiente,
       serviciosPropios: [...perfilIndependiente.serviciosPropios, nuevoServ]
-    });
+    };
+    actualizarPerfilActual(actualizado);
 
     setServicioNombre('');
     setServicioPrecio('');
@@ -1031,19 +1093,21 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
 
   const handleEliminarServicioPropio = (id, nombre) => {
     if (window.confirm(`¿Desea eliminar el corte "${nombre}" de su catálogo?`)) {
-      setPerfilIndependiente({
+      const actualizado = {
         ...perfilIndependiente,
         serviciosPropios: perfilIndependiente.serviciosPropios.filter(s => s.id !== id)
-      });
+      };
+      actualizarPerfilActual(actualizado);
     }
   };
 
   const handleTogglePausarAgendaIndep = () => {
     const nuevoEstado = !perfilIndependiente.agendaPausada;
-    setPerfilIndependiente({
+    const actualizado = {
       ...perfilIndependiente,
       agendaPausada: nuevoEstado
-    });
+    };
+    actualizarPerfilActual(actualizado);
     alert(nuevoEstado ? 'Su agenda independiente ha sido PAUSADA. Los clientes verán aviso de disculpa.' : 'Su agenda independiente ha sido ACTIVADA.');
   };
 
@@ -1146,7 +1210,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilIndependiente
             </button>
           </div>
           <form onSubmit={handleGuardarMensajePausaIndep} style={{ display: 'flex', gap: '8px' }}>
-            <input type="text" value={perfilIndependiente.mensajePausa || ''} onChange={(e) => setPerfilIndependiente({ ...perfilIndependiente, mensajePausa: e.target.value })} placeholder="Mensaje de disculpa para los clientes..." style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+            <input type="text" value={perfilIndependiente.mensajePausa || ''} onChange={(e) => actualizarPerfilActual({ ...perfilIndependiente, mensajePausa: e.target.value })} placeholder="Mensaje de disculpa para los clientes..." style={{ flex: 1, backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
             <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Guardar Mensaje</button>
           </form>
         </div>
@@ -1896,23 +1960,25 @@ function VistaAdmin({ usuario, citas, setCitas, barberos, setBarberos, productos
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilIndependiente, setPerfilIndependiente, setActiveRole, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin }) {
+function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
 
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
   const [nuevoDuenoBarberia, setNuevoDuenoBarberia] = useState('');
   const [nuevoWpBarberia, setNuevoWpBarberia] = useState('');
 
-  const [editNombreNegocio, setEditNombreNegocio] = useState(perfilIndependiente?.nombreBarberia || '');
-  const [editPropietario, setEditPropietario] = useState(perfilIndependiente?.propietario || '');
-  const [editWpIndep, setEditWpIndep] = useState(perfilIndependiente?.whatsappContacto || '573001234567');
-  const [editUserIndep, setEditUserIndep] = useState(perfilIndependiente?.username || 'independiente');
-  const [editClaveIndep, setEditClaveIndep] = useState(perfilIndependiente?.clave || 'solo2026');
-
   const [editAdminUser, setEditAdminUser] = useState(credencialesAdmin.username);
   const [editAdminPass, setEditAdminPass] = useState(credencialesAdmin.password);
+  
   const [barberoEditandoClave, setBarberoEditandoClave] = useState(null);
   const [nuevaClaveBarberoDev, setNuevaClaveBarberoDev] = useState('');
+
+  const [perfilIndepEditandoId, setPerfilIndepEditandoId] = useState(null);
+  const [editIndepNombre, setEditIndepNombre] = useState('');
+  const [editIndepPropietario, setEditIndepPropietario] = useState('');
+  const [editIndepUser, setEditIndepUser] = useState('');
+  const [editIndepClave, setEditIndepClave] = useState('');
+  const [editIndepWp, setEditIndepWp] = useState('');
 
   const [nuevoIndepNombre, setNuevoIndepNombre] = useState('');
   const [nuevoIndepPropietario, setNuevoIndepPropietario] = useState('');
@@ -1947,32 +2013,46 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     alert(`¡Barbería "${nuevaSede.nombreBarberia}" creada con éxito!`);
   };
 
-  const handleGuardarCambiosIndependienteDev = (e) => {
+  const iniciarEdicionIndependiente = (pi) => {
+    setPerfilIndepEditandoId(pi.id);
+    setEditIndepNombre(pi.nombreBarberia);
+    setEditIndepPropietario(pi.propietario);
+    setEditIndepUser(pi.username);
+    setEditIndepClave(pi.clave);
+    setEditIndepWp(pi.whatsappContacto);
+  };
+
+  const handleGuardarIndependienteDev = (e, id) => {
     e.preventDefault();
-    if (!perfilIndependiente) return;
-    const nombreAntiguo = perfilIndependiente.nombreBarberia;
-    setPerfilIndependiente({
-      ...perfilIndependiente,
-      nombreAnterior: nombreAntiguo,
-      nombreBarberia: editNombreNegocio.trim(),
-      propietario: editPropietario.trim(),
-      whatsappContacto: editWpIndep.trim(),
-      username: editUserIndep.trim().toLowerCase(),
-      clave: editClaveIndep.trim()
+    const actualizados = perfilesIndependientes.map(pi => {
+      if (pi.id === id) {
+        return {
+          ...pi,
+          nombreAnterior: pi.nombreBarberia,
+          nombreBarberia: editIndepNombre.trim(),
+          propietario: editIndepPropietario.trim(),
+          username: editIndepUser.trim().toLowerCase(),
+          clave: editIndepClave.trim(),
+          whatsappContacto: editIndepWp.trim()
+        };
+      }
+      return pi;
     });
-    alert('¡Perfil Independiente y sus claves actualizados con éxito!');
+    setPerfilesIndependientes(actualizados);
+    setPerfilIndepEditandoId(null);
+    alert('¡Perfil independiente actualizado con éxito!');
   };
 
   const handleCrearPerfilIndependienteNuevo = (e) => {
     e.preventDefault();
-    if (!nuevoIndepNombre.trim() || !nuevoIndepPropietario.trim()) return;
+    if (!nuevoIndepNombre.trim() || !nuevoIndepPropietario.trim() || !nuevoIndepUser.trim() || !nuevoIndepPass.trim()) return;
 
     const nuevoIndep = {
       id: 'indep_' + Date.now(),
       nombreBarberia: nuevoIndepNombre.trim(),
       nombreAnterior: 'Perfil Creado por Dev',
-      username: nuevoIndepUser.trim().toLowerCase() || 'independiente',
-      clave: nuevoIndepPass.trim() || 'solo2026',
+      username: nuevoIndepUser.trim().toLowerCase(),
+      clave: nuevoIndepPass.trim(),
       propietario: nuevoIndepPropietario.trim(),
       estadoLicencia: 'Activa',
       diasRestantes: 30,
@@ -1985,17 +2065,12 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       ]
     };
 
-    setPerfilIndependiente(nuevoIndep);
-    setEditNombreNegocio(nuevoIndep.nombreBarberia);
-    setEditPropietario(nuevoIndep.propietario);
-    setEditWpIndep(nuevoIndep.whatsappContacto);
-    setEditUserIndep(nuevoIndep.username);
-    setEditClaveIndep(nuevoIndep.clave);
+    setPerfilesIndependientes([...perfilesIndependientes, nuevoIndep]);
     setNuevoIndepNombre('');
     setNuevoIndepPropietario('');
     setNuevoIndepUser('');
     setNuevoIndepPass('');
-    alert('¡Perfil independiente creado exitosamente y visible para los clientes!');
+    alert('¡Perfil independiente creado exitosamente y disponible en el selector de clientes!');
   };
 
   const handleModificarClaveBarberoDev = (e, barberoId) => {
@@ -2017,19 +2092,20 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     }));
   };
 
-  const togglePausarIndependiente = () => {
-    if (!perfilIndependiente) return;
-    const nuevoEstado = perfilIndependiente.estadoLicencia === 'Activa' ? 'Pausada (Vencida)' : 'Activa';
-    setPerfilIndependiente({
-      ...perfilIndependiente,
-      estadoLicencia: nuevoEstado,
-      diasRestantes: nuevoEstado === 'Activa' ? 30 : 0
+  const togglePausarIndependiente = (id) => {
+    const actualizados = perfilesIndependientes.map(pi => {
+      if (pi.id === id) {
+        const nuevoEstado = pi.estadoLicencia === 'Activa' ? 'Pausada (Vencida)' : 'Activa';
+        return { ...pi, estadoLicencia: nuevoEstado, diasRestantes: nuevoEstado === 'Activa' ? 30 : 0 };
+      }
+      return pi;
     });
+    setPerfilesIndependientes(actualizados);
   };
 
-  const eliminarPerfilIndependiente = () => {
-    if (window.confirm('¿Está seguro de eliminar definitivamente el perfil independiente?')) {
-      setPerfilIndependiente(null);
+  const eliminarPerfilIndependiente = (id, nombre) => {
+    if (window.confirm(`¿Está seguro de eliminar definitivamente el perfil independiente "${nombre}"?`)) {
+      setPerfilesIndependientes(perfilesIndependientes.filter(pi => pi.id !== id));
       alert('Perfil independiente eliminado del sistema correctamente.');
     }
   };
@@ -2045,9 +2121,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setActiveRole('admin');
   };
 
-  const accederIndependienteTiempoReal = () => {
-    if (!perfilIndependiente) return;
-    alert(`Accediendo en tiempo real a la barbería independiente de ${perfilIndependiente.propietario}.`);
+  const accederIndependienteTiempoReal = (piObj) => {
+    alert(`Accediendo en tiempo real a la barbería independiente de ${piObj.propietario}.`);
     setActiveRole('barbero_independiente');
   };
 
@@ -2058,7 +2133,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server style={{ width: '20px', height: '20px' }} /> Consola Desarrollador Root (elkin-dev26)
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración de claves de administrador, barberos independientes, temporizadores y licencias de 30 días</p>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Administración de claves de administrador, perfiles independientes, temporizadores y licencias de 30 días</p>
         </div>
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
@@ -2098,71 +2173,61 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         </form>
       </div>
 
-      {perfilIndependiente ? (
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
-          <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Edit3 style={{ width: '16px', height: '16px' }} /> Administrar Perfil Independiente / Solista (Claves y Temporizador)
-          </h3>
-          <form onSubmit={handleGuardarCambiosIndependienteDev} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Nombre Barbería</label>
-              <input type="text" value={editNombreNegocio} onChange={(e) => setEditNombreNegocio(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Propietario</label>
-              <input type="text" value={editPropietario} onChange={(e) => setEditPropietario(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Usuario Login</label>
-              <input type="text" value={editUserIndep} onChange={(e) => setEditUserIndep(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>Contraseña</label>
-              <input type="text" value={editClaveIndep} onChange={(e) => setEditClaveIndep(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '10px', color: '#cbd5e1', marginBottom: '3px' }}>WhatsApp Soporte</label>
-              <input type="text" value={editWpIndep} onChange={(e) => setEditWpIndep(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }} required />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gridColumn: '1 / -1' }}>
-              <button type="submit" style={{ width: '100%', backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px' }}>Actualizar Datos y Claves del Solista</button>
-            </div>
-          </form>
+      {/* SECCIÓN PERFILES INDEPENDIENTES / SOLISTAS */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Edit3 style={{ width: '16px', height: '16px' }} /> Administrar Perfiles Independientes / Solistas (Claves y Credenciales)
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+          {perfilesIndependientes.map(pi => (
+            <div key={pi.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>⭐ {pi.nombreBarberia} ({pi.propietario})</span>
+                  <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>Usuario: <strong>{pi.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{pi.clave}</strong> | Licencia: {pi.diasRestantes} días</p>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button onClick={() => accederIndependienteTiempoReal(pi)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
+                  <button onClick={() => iniciarEdicionIndependiente(pi)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Editar Claves</button>
+                  <button onClick={() => togglePausarIndependiente(pi.id)} style={{ backgroundColor: pi.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: pi.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                    {pi.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}
+                  </button>
+                  <button onClick={() => eliminarPerfilIndependiente(pi.id, pi.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                </div>
+              </div>
 
-          <div style={{ backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <div>
-              <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{perfilIndependiente.nombreBarberia}</span>
-              <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador Licencia: <strong>{perfilIndependiente.diasRestantes} días restantes</strong></p>
+              {perfilIndepEditandoId === pi.id && (
+                <form onSubmit={(e) => handleGuardarIndependienteDev(e, pi.id)} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '10px', borderTop: '1px solid #1e293b', paddingTop: '10px' }}>
+                  <input type="text" placeholder="Nombre barbería" value={editIndepNombre} onChange={(e) => setEditIndepNombre(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="Propietario" value={editIndepPropietario} onChange={(e) => setEditIndepPropietario(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="Usuario" value={editIndepUser} onChange={(e) => setEditIndepUser(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="Contraseña" value={editIndepClave} onChange={(e) => setEditIndepClave(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <input type="text" placeholder="WhatsApp" value={editIndepWp} onChange={(e) => setEditIndepWp(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button type="submit" style={{ flex: 1, backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Guardar</button>
+                    <button type="button" onClick={() => setPerfilIndepEditandoId(null)} style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>Cancelar</button>
+                  </div>
+                </form>
+              )}
             </div>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button onClick={accederIndependienteTiempoReal} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ExternalLink style={{ width: '12px', height: '12px' }} /> Ver en Tiempo Real
-              </button>
-              <button onClick={togglePausarIndependiente} style={{ backgroundColor: perfilIndependiente.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: perfilIndependiente.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                {perfilIndependiente.estadoLicencia === 'Activa' ? '⏸️ Pausar / Bloquear 30 días' : '▶️ Activar Licencia'}
-              </button>
-              <button onClick={eliminarPerfilIndependiente} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Trash2 style={{ width: '12px', height: '12px' }} /> Eliminar Cuenta
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      ) : (
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
-          <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px' }}>Crear Nuevo Perfil Independiente / Solista (Visible para Clientes)</h3>
-          <form onSubmit={handleCrearPerfilIndependienteNuevo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
-            <input type="text" placeholder="Nombre de barbería..." value={nuevoIndepNombre} onChange={(e) => setNuevoIndepNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="text" placeholder="Nombre propietario..." value={nuevoIndepPropietario} onChange={(e) => setNuevoIndepPropietario(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="text" placeholder="Usuario login" value={nuevoIndepUser} onChange={(e) => setNuevoIndepUser(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="text" placeholder="Contraseña" value={nuevoIndepPass} onChange={(e) => setNuevoIndepPass(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <input type="text" placeholder="WhatsApp" value={nuevoIndepWp} onChange={(e) => setNuevoIndepWp(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-            <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Crear Perfil Independiente</button>
-          </form>
-        </div>
-      )}
+
+        {/* CREAR NUEVO PERFIL INDEPENDIENTE */}
+        <h4 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '12px' }}>Crear Nuevo Perfil Independiente / Solista</h4>
+        <form onSubmit={handleCrearPerfilIndependienteNuevo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+          <input type="text" placeholder="Nombre de barbería..." value={nuevoIndepNombre} onChange={(e) => setNuevoIndepNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="Nombre propietario..." value={nuevoIndepPropietario} onChange={(e) => setNuevoIndepPropietario(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="Usuario login" value={nuevoIndepUser} onChange={(e) => setNuevoIndepUser(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="Contraseña" value={nuevoIndepPass} onChange={(e) => setNuevoIndepPass(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <input type="text" placeholder="WhatsApp" value={nuevoIndepWp} onChange={(e) => setNuevoIndepWp(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
+          <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Crear Perfil Independiente Nuevo</button>
+        </form>
+      </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control Desarrollador: Claves y Contraseñas de Todos los Barberos</h3>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>Control Desarrollador: Claves y Contraseñas de Todos los Barberos (Sede)</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
           {barberos.map(b => (
             <div key={b.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
