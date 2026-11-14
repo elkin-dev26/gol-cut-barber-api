@@ -1109,7 +1109,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAd
                 <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia} (Código: {t.codigoUnico})</span>
                 <p style={{ fontSize: '10px', color: '#94a3b8', margin: '2px 0 0 0' }}>Wp: {t.whatsappContacto || 'No registrado'} | Email: {t.emailContacto || 'No registrado'}</p>
               </div>
-              <button type="button" onClick={() => toggleMantenimientoTenant(t.id)} style={{ backgroundColor: t.enMantenimiento ? '#dc2626' : '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+              <button type="button" onClick={() => toggleMantenimientoTenant(t.id)} style={{ backgroundColor: t.enMantenimiento ? '#dc2626' : '#059669', color: '#fff', border: '1px solid #334155', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
                 {t.enMantenimiento ? '🛠️ En Mantenimiento' : '✅ Operativo'}
               </button>
             </div>
