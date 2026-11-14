@@ -497,31 +497,30 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
    
-  const opcionesEstablecimiento = [
-    ...tenants.map(t => ({ id: t.id, tipo: 'sede', nombre: t.nombreBarberia, desc: `Sede / Multi-tenant (${t.dueno})` })),
-    ...perfilesIndependientes
-      .filter(pi => pi.estadoLicencia === 'Activa')
-      .map(pi => ({ id: pi.id, tipo: 'independiente', nombre: `${pi.nombreBarberia} - ${pi.propietario}`, desc: 'Barbero Solista Independiente', perfilObj: pi }))
-  ];
+  // SELECTOR INTUITIVO Y LIMPIO PARA EL CLIENTE (CATEGORÍA Y ESTABLECIMIENTO ESPECÍFICO)
+  const [tipoSeleccionCliente, setTipoSeleccionCliente] = useState('sede'); // 'sede' o 'independiente'
+  const [sedeSeleccionadaId, setSedeSeleccionadaId] = useState(tenants[0]?.id || 't1');
+  const [indepSeleccionadoId, setIndepSeleccionadoId] = useState(perfilesIndependientes[0]?.id || 'indep_tenant');
 
-  const [establecimientoSeleccionado, setEstablecimientoSeleccionado] = useState(opcionesEstablecimiento[0]?.id || 't1');
+  const estActual = tipoSeleccionCliente === 'sede' 
+    ? tenants.find(t => t.id === sedeSeleccionadaId) || tenants[0]
+    : perfilesIndependientes.find(pi => pi.id === indepSeleccionadoId) || perfilesIndependientes[0];
 
-  const estActual = opcionesEstablecimiento.find(e => e.id === establecimientoSeleccionado);
-  const esIndependienteEst = estActual?.tipo === 'independiente';
+  const esIndependienteEst = tipoSeleccionCliente === 'independiente';
 
   // FILTRAR LOS BARBEROS SEGÚN LA SEDE SELECCIONADA
   const barberosFiltrados = esIndependienteEst
-    ? [{ id: estActual.perfilObj.id, nombre: `${estActual.perfilObj.propietario} (${estActual.perfilObj.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }]
+    ? [{ id: estActual.id, nombre: `${estActual.propietario} (${estActual.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }]
     : barberos.filter(b => (!b.sedeId || b.sedeId === estActual?.id) && !b.pausado && !b.isLocked);
 
-  const serviciosFiltrados = esIndependienteEst && estActual?.perfilObj?.serviciosPropios
-    ? estActual.perfilObj.serviciosPropios
+  const serviciosFiltrados = esIndependienteEst && estActual?.serviciosPropios
+    ? estActual.serviciosPropios
     : servicios;
 
   const [barbero, setBarbero] = useState('');
   const [servicio, setServicio] = useState('');
 
-  // Actualizar barbero y servicio por defecto al cambiar de sede
+  // Actualizar barbero y servicio por defecto al cambiar de establecimiento
   useEffect(() => {
     if (barberosFiltrados.length > 0) {
       setBarbero(barberosFiltrados[0].nombre);
@@ -533,12 +532,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
     } else {
       setServicio('');
     }
-  }, [establecimientoSeleccionado, tenants]);
-
-  const handleCambioEstablecimiento = (e) => {
-    const idEst = e.target.value;
-    setEstablecimientoSeleccionado(idEst);
-  };
+  }, [tipoSeleccionCliente, sedeSeleccionadaId, indepSeleccionadoId, tenants]);
    
   const hoyStr = new Date().toISOString().split('T')[0];
   const [fecha, setFecha] = useState(hoyStr);
@@ -567,6 +561,8 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
       const desc = (precioFinal * (incCumple.porcentaje || 10)) / 100;
       precioFinal = precioFinal - desc;
     }
+
+    const nombreEstablecimientoFinal = esIndependienteEst ? `${estActual.nombreBarberia} - ${estActual.propietario}` : estActual.nombreBarberia;
 
     const nueva = {
       id: 'c' + Date.now(),
@@ -618,6 +614,8 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
     );
   }
 
+  const nombreEstablecimientoActual = esIndependienteEst ? `${estActual.nombreBarberia} - ${estActual.propietario}` : estActual.nombreBarberia;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
@@ -625,20 +623,73 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
           <Smartphone style={{ width: '22px', height: '22px' }} />
           Módulo de Reservas Móvil ({slotDuration === 30 ? 'Citas c/ 30 min' : 'Citas c/ 1 hora'})
         </h2>
-        <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>Seleccione sede o barbero independiente para ver su agenda y QR exclusivo</p>
+        <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>Seleccione su lugar de preferencia para reservar de forma exclusiva</p>
       </div>
 
-      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '12px', borderRadius: '10px' }}>
-        <label style={{ display: 'block', fontSize: '11px', color: '#fbbf24', marginBottom: '6px', fontWeight: 'bold' }}>🏢 Seleccione Barbería o Barbero Independiente:</label>
-        <select
-          value={establecimientoSeleccionado}
-          onChange={handleCambioEstablecimiento}
-          style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #f59e0b', borderRadius: '6px', padding: '10px', color: '#f8fafc', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
-        >
-          {opcionesEstablecimiento.map(item => (
-            <option key={item.id} value={item.id}>{item.nombre} ({item.desc})</option>
-          ))}
-        </select>
+      {/* SELECTOR INTUITIVO Y EXCLUSIVO PARA EL CLIENTE (SIN MOSTRAR LISTAS CONFUSAS DE OTRAS SEDES) */}
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '14px', borderRadius: '12px', boxSizing: 'border-box' }}>
+        <label style={{ display: 'block', fontSize: '12px', color: '#fbbf24', marginBottom: '8px', fontWeight: 'bold' }}>🏢 ¿A dónde deseas asistir hoy?</label>
+        
+        {/* Pestañas de selección rápida */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          <button
+            type="button"
+            onClick={() => setTipoSeleccionCliente('sede')}
+            style={{
+              flex: 1,
+              padding: '8px',
+              backgroundColor: tipoSeleccionCliente === 'sede' ? '#f59e0b' : '#020617',
+              color: tipoSeleccionCliente === 'sede' ? '#020617' : '#cbd5e1',
+              border: '1px solid #f59e0b',
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              fontSize: '11px',
+              cursor: 'pointer'
+            }}
+          >
+            🏢 Sedes / Barberías Múltiples
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoSeleccionCliente('independiente')}
+            style={{
+              flex: 1,
+              padding: '8px',
+              backgroundColor: tipoSeleccionCliente === 'independiente' ? '#f59e0b' : '#020617',
+              color: tipoSeleccionCliente === 'independiente' ? '#020617' : '#cbd5e1',
+              border: '1px solid #f59e0b',
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              fontSize: '11px',
+              cursor: 'pointer'
+            }}
+          >
+            ⭐ Barberos Independientes (Solistas)
+          </button>
+        </div>
+
+        {/* Desplegable limpio según la opción escogida */}
+        {tipoSeleccionCliente === 'sede' ? (
+          <select
+            value={sedeSeleccionadaId}
+            onChange={(e) => setSedeSeleccionadaId(e.target.value)}
+            style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#f8fafc', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            {tenants.map(t => (
+              <option key={t.id} value={t.id}>📍 {t.nombreBarberia} (Propietario: {t.dueno})</option>
+            ))}
+          </select>
+        ) : (
+          <select
+            value={indepSeleccionadoId}
+            onChange={(e) => setIndepSeleccionadoId(e.target.value)}
+            style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#f8fafc', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            {perfilesIndependientes.filter(pi => pi.estadoLicencia === 'Activa').map(pi => (
+              <option key={pi.id} value={pi.id}>⭐ {pi.nombreBarberia} - Barbero: {pi.propietario}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '8px', backgroundColor: '#0f172a', padding: '6px', borderRadius: '10px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
@@ -689,7 +740,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Barbero Afiliado ({estActual?.nombre})</label>
+              <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Barbero Disponible ({nombreEstablecimientoActual})</label>
               <select
                 value={barbero}
                 onChange={(e) => setBarbero(e.target.value)}
@@ -701,7 +752,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
                     <option key={b.id || b.nombre} value={b.nombre}>{b.nombre} ({b.especialidad})</option>
                   ))
                 ) : (
-                  <option value="">No hay barberos registrados en esta sede</option>
+                  <option value="">No hay barberos registrados en este establecimiento</option>
                 )}
               </select>
             </div>
@@ -770,10 +821,10 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
         <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', boxSizing: 'border-box' }}>
           {modo === 'qr_walkin' && !citaCreada ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <h4 style={{ color: '#fbbf24', margin: 0, fontSize: '14px' }}>Cartel QR Exclusivo: {estActual?.nombre}</h4>
-              <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>Escanee para registrarse de forma inmediata en esta sede o perfil.</p>
+              <h4 style={{ color: '#fbbf24', margin: 0, fontSize: '14px' }}>Cartel QR Exclusivo: {nombreEstablecimientoActual}</h4>
+              <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>Escanee para registrarse de forma inmediata en este establecimiento.</p>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://gol-cut-barber-api.vercel.app?sede=${encodeURIComponent(estActual?.nombre)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://gol-cut-barber-api.vercel.app?sede=${encodeURIComponent(nombreEstablecimientoActual)}`}
                 alt="QR Recepción"
                 style={{ border: '3px solid #fbbf24', borderRadius: '12px', padding: '6px', backgroundColor: '#ffffff', width: '150px', height: '150px', marginTop: '8px' }}
               />
@@ -783,7 +834,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
               <CheckCircle style={{ width: '28px', height: '28px', color: '#34d399', margin: '0 auto 6px auto' }} />
               <h4 style={{ color: '#34d399', margin: '0 0 6px 0', fontSize: '14px' }}>¡Cita Registrada Correctamente!</h4>
               <div style={{ fontSize: '11px', color: '#cbd5e1', textAlign: 'left', backgroundColor: '#0f172a', padding: '8px', borderRadius: '6px' }}>
-                <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Establecimiento:</span> {estActual?.nombre}</p>
+                <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Establecimiento:</span> {nombreEstablecimientoActual}</p>
                 <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Cliente:</span> {citaCreada.cliente}</p>
                 <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Barbero:</span> {citaCreada.barbero}</p>
                 <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Fecha/Hora:</span> {citaCreada.fecha} - {citaCreada.hora}</p>
