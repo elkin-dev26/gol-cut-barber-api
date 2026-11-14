@@ -27,7 +27,6 @@ export default function App() {
     nombre: 'Administrador Local'
   });
 
-  // CREDENCIALES DEL SUPERADMIN / DESARROLLADOR EDITABLES
   const [superAdminCreds, setSuperAdminCreds] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_superadmin_creds');
     return guardado ? JSON.parse(guardado) : { username: 'elkin-dev26', password: 'elkin2026', nombre: 'SuperAdmin / Desarrollador' };
@@ -82,7 +81,6 @@ export default function App() {
     localStorage.setItem('gol_cut_incentivos', JSON.stringify(incentivos));
   }, [incentivos]);
 
-  // TENANTS / BARBERÍAS MÚLTIPLES CON SUS PROPIAS CREDENCIALES DE ADMIN
   const [tenants, setTenants] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_tenants');
     if (guardado) return JSON.parse(guardado);
@@ -116,7 +114,6 @@ export default function App() {
     localStorage.setItem('gol_cut_tenants', JSON.stringify(tenants));
   }, [tenants]);
 
-  // BARBEROS EMPLEADOS VINCULADOS A CADA TENANT (sedeId)
   const [barberos, setBarberos] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_barberos');
     if (guardado) return JSON.parse(guardado);
@@ -131,7 +128,6 @@ export default function App() {
     localStorage.setItem('gol_cut_barberos', JSON.stringify(barberos));
   }, [barberos]);
 
-  // Perfiles independientes / solistas
   const [perfilesIndependientes, setPerfilesIndependientes] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_perfiles_independientes');
     if (guardado) return JSON.parse(guardado);
@@ -312,6 +308,7 @@ export default function App() {
 
             {usuarioAutenticado ? (
               <button
+                type="button"
                 onClick={handleCerrarSesion}
                 style={{ backgroundColor: '#881337', color: '#fda4af', border: '1px solid #f43f5e', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
               >
@@ -319,6 +316,7 @@ export default function App() {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => setIsLoginOpen(true)}
                 style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
               >
@@ -629,7 +627,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
             onClick={() => setTipoSeleccionCliente('sede')}
             style={{
               flex: 1,
-              padding: '8px',
+              padding: '10px 8px',
               backgroundColor: tipoSeleccionCliente === 'sede' ? '#f59e0b' : '#020617',
               color: tipoSeleccionCliente === 'sede' ? '#020617' : '#cbd5e1',
               border: '1px solid #f59e0b',
@@ -646,7 +644,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
             onClick={() => setTipoSeleccionCliente('independiente')}
             style={{
               flex: 1,
-              padding: '8px',
+              padding: '10px 8px',
               backgroundColor: tipoSeleccionCliente === 'independiente' ? '#f59e0b' : '#020617',
               color: tipoSeleccionCliente === 'independiente' ? '#020617' : '#cbd5e1',
               border: '1px solid #f59e0b',
