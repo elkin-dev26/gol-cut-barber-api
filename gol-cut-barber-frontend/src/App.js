@@ -1006,6 +1006,7 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
 
 function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAdminCreds }) {
   const [nombreGlobalInput, setNombreGlobalInput] = useState(devConfig.nombreGlobalPlataforma);
+  const [whatsappSoporteInput, setWhatsappSoporteInput] = useState(devConfig.whatsappSoporte || '');
 
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
   const [nuevoDuenoBarberia, setNuevoDuenoBarberia] = useState('');
@@ -1016,11 +1017,15 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAd
 
   const generarCodigoSede = () => 'GC-' + Math.floor(10 + Math.random() * 90);
 
-  const handleGuardarNombreGlobal = (e) => {
+  const handleGuardarConfigGlobal = (e) => {
     e.preventDefault();
-    const actualizado = { ...devConfig, nombreGlobalPlataforma: nombreGlobalInput.trim() };
+    const actualizado = { 
+      ...devConfig, 
+      nombreGlobalPlataforma: nombreGlobalInput.trim(),
+      whatsappSoporte: whatsappSoporteInput.trim()
+    };
     setDevConfig(actualizado);
-    alert(`¡Nombre global del SaaS actualizado exitosamente a "${nombreGlobalInput.trim()}"!`);
+    alert('¡Configuración global y WhatsApp del desarrollador actualizados exitosamente!');
   };
 
   const handleCrearTenant = (e) => {
@@ -1062,14 +1067,21 @@ function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, superAd
         <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>
           <Server style={{ width: '20px', height: '20px', display: 'inline', marginRight: '6px' }} /> Consola Desarrollador Root ({superAdminCreds.username})
         </h2>
-        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control global de la marca del software, creación de cuentas y estado de mantenimiento.</p>
+        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Control global de la marca del software, soporte técnico por WhatsApp, creación de cuentas y mantenimiento.</p>
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px', maxWidth: '550px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>🏢 Modificar Nombre Global de la Plataforma (SaaS)</h3>
-        <form onSubmit={handleGuardarNombreGlobal} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <input type="text" value={nombreGlobalInput} onChange={(e) => setNombreGlobalInput(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} required />
-          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Actualizar Nombre Global</button>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>🏢 Ajustes Globales de la Plataforma (SaaS)</h3>
+        <form onSubmit={handleGuardarConfigGlobal} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>Nombre Global del SaaS</label>
+            <input type="text" value={nombreGlobalInput} onChange={(e) => setNombreGlobalInput(e.target.value)} style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} required />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px' }}>📱 WhatsApp del Desarrollador (Soporte)</label>
+            <input type="text" value={whatsappSoporteInput} onChange={(e) => setWhatsappSoporteInput(e.target.value)} placeholder="Ej: 573001234567" style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+          </div>
+          <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>Guardar Cambios Globales</button>
         </form>
       </div>
 
