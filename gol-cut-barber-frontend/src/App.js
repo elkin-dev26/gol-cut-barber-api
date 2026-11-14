@@ -204,7 +204,6 @@ export default function App() {
     const u = usernameInput.trim().toLowerCase();
     const p = passwordInput.trim();
 
-    // Verificación de SuperAdmin con credenciales dinámicas
     if (u === superAdminCreds.username.toLowerCase() && p === superAdminCreds.password) {
       exitoLogin({ username: superAdminCreds.username, nombre: superAdminCreds.nombre, role: 'superadmin' });
       return;
@@ -302,7 +301,6 @@ export default function App() {
               </select>
             </div>
 
-            {/* SELECTOR LIMPIO E INDEPENDIENTE SIN EXPONER OTRAS SEDES */}
             <select
               value={activeRole === 'cliente' ? 'cliente' : 'login_general'}
               onChange={handleCambioSeleccion}
@@ -434,6 +432,7 @@ export default function App() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', borderRadius: '16px', maxWidth: '380px', width: '100%', padding: '20px', position: 'relative', boxSizing: 'border-box' }}>
             <button 
+              type="button"
               onClick={() => { setIsLoginOpen(false); setRolPendientePassword(null); }} 
               style={{ position: 'absolute', top: '12px', right: '12px', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
             >
@@ -497,8 +496,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   const [nombre, setNombre] = useState('');
   const [fechaNac, setFechaNac] = useState('');
    
-  // SELECTOR INTUITIVO Y LIMPIO PARA EL CLIENTE (CATEGORÍA Y ESTABLECIMIENTO ESPECÍFICO)
-  const [tipoSeleccionCliente, setTipoSeleccionCliente] = useState('sede'); // 'sede' o 'independiente'
+  const [tipoSeleccionCliente, setTipoSeleccionCliente] = useState('sede'); 
   const [sedeSeleccionadaId, setSedeSeleccionadaId] = useState(tenants[0]?.id || 't1');
   const [indepSeleccionadoId, setIndepSeleccionadoId] = useState(perfilesIndependientes[0]?.id || 'indep_tenant');
 
@@ -508,7 +506,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
 
   const esIndependienteEst = tipoSeleccionCliente === 'independiente';
 
-  // FILTRAR LOS BARBEROS SEGÚN LA SEDE SELECCIONADA
   const barberosFiltrados = esIndependienteEst
     ? [{ id: estActual.id, nombre: `${estActual.propietario} (${estActual.nombreBarberia})`, especialidad: 'Barbero Autónomo', esIndependiente: true }]
     : barberos.filter(b => (!b.sedeId || b.sedeId === estActual?.id) && !b.pausado && !b.isLocked);
@@ -520,7 +517,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   const [barbero, setBarbero] = useState('');
   const [servicio, setServicio] = useState('');
 
-  // Actualizar barbero y servicio por defecto al cambiar de establecimiento
   useEffect(() => {
     if (barberosFiltrados.length > 0) {
       setBarbero(barberosFiltrados[0].nombre);
@@ -561,8 +557,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
       const desc = (precioFinal * (incCumple.porcentaje || 10)) / 100;
       precioFinal = precioFinal - desc;
     }
-
-    const nombreEstablecimientoFinal = esIndependienteEst ? `${estActual.nombreBarberia} - ${estActual.propietario}` : estActual.nombreBarberia;
 
     const nueva = {
       id: 'c' + Date.now(),
@@ -608,7 +602,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
           <AlertTriangle style={{ width: '48px', height: '48px', color: '#f43f5e', margin: '0 auto 12px auto' }} />
           <h3 style={{ color: '#f43f5e', margin: '0 0 8px 0', fontSize: '18px' }}>Barbero No disponible hoy</h3>
           <p style={{ color: '#cbd5e1', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.5' }}>{mensajeBarberoPausado}</p>
-          <button onClick={() => setBarbero(barberosFiltrados[0]?.nombre || '')} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>Seleccionar otro barbero</button>
+          <button type="button" onClick={() => setBarbero(barberosFiltrados[0]?.nombre || '')} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>Seleccionar otro barbero</button>
         </div>
       </div>
     );
@@ -626,11 +620,9 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
         <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>Seleccione su lugar de preferencia para reservar de forma exclusiva</p>
       </div>
 
-      {/* SELECTOR INTUITIVO Y EXCLUSIVO PARA EL CLIENTE (SIN MOSTRAR LISTAS CONFUSAS DE OTRAS SEDES) */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #f59e0b', padding: '14px', borderRadius: '12px', boxSizing: 'border-box' }}>
         <label style={{ display: 'block', fontSize: '12px', color: '#fbbf24', marginBottom: '8px', fontWeight: 'bold' }}>🏢 ¿A dónde deseas asistir hoy?</label>
         
-        {/* Pestañas de selección rápida */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
           <button
             type="button"
@@ -668,7 +660,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
           </button>
         </div>
 
-        {/* Desplegable limpio según la opción escogida */}
         {tipoSeleccionCliente === 'sede' ? (
           <select
             value={sedeSeleccionadaId}
@@ -694,12 +685,14 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
 
       <div style={{ display: 'flex', gap: '8px', backgroundColor: '#0f172a', padding: '6px', borderRadius: '10px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
         <button
+          type="button"
           onClick={() => { setModo('programada'); setCitaCreada(null); }}
           style={{ flex: 1, padding: '10px', backgroundColor: modo === 'programada' ? '#f59e0b' : 'transparent', color: modo === 'programada' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}
         >
           📅 Cita Mes Actual
         </button>
         <button
+          type="button"
           onClick={() => { setModo('qr_walkin'); setCitaCreada(null); }}
           style={{ flex: 1, padding: '10px', backgroundColor: modo === 'qr_walkin' ? '#f59e0b' : 'transparent', color: modo === 'qr_walkin' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}
         >
@@ -958,7 +951,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }}>
             Consolidado Ganancias: <span style={{ color: '#34d399', fontWeight: 'bold' }}>${ingresosHoy.toLocaleString()}</span>
           </div>
-          <button onClick={onCerrarSesion} style={{ padding: '6px 10px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
+          <button type="button" onClick={onCerrarSesion} style={{ padding: '6px 10px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
         </div>
       </div>
 
@@ -1016,6 +1009,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
               <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                 {c.estado !== 'completada' && c.estado !== 'cancelada' && (
                   <button 
+                    type="button"
                     onClick={() => handleEstadoCita(c.id, 'completada')} 
                     style={{ flex: 1, padding: '6px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                   >
@@ -1024,6 +1018,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                 )}
                 {c.estado !== 'cancelada' && c.estado !== 'completada' && (
                   <button 
+                    type="button"
                     onClick={() => setCitaACancelar(c)} 
                     style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                   >
@@ -1031,6 +1026,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
                   </button>
                 )}
                 <button 
+                  type="button"
                   onClick={() => handleEliminarCitaBarbero(c.id)} 
                   style={{ backgroundColor: '#334155', color: '#f87171', border: '1px solid #64748b', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
                 >
@@ -1211,7 +1207,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
               <MessageCircle style={{ width: '14px', height: '14px' }} /> WhatsApp Soporte / Renovar
             </a>
           )}
-          <button onClick={onCerrarSesion} style={{ padding: '8px 12px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
+          <button type="button" onClick={onCerrarSesion} style={{ padding: '8px 12px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
         </div>
       </div>
 
@@ -1237,7 +1233,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
             <div>
               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>Estado Agenda: {perfilIndependiente.agendaPausada ? 'Pausada (No Labora Hoy)' : 'Activa (Recibiendo Citas)'}</span>
             </div>
-            <button onClick={handleTogglePausarAgendaIndep} style={{ backgroundColor: perfilIndependiente.agendaPausada ? '#065f46' : '#78350f', color: perfilIndependiente.agendaPausada ? '#34d399' : '#fcd34d', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+            <button type="button" onClick={handleTogglePausarAgendaIndep} style={{ backgroundColor: perfilIndependiente.agendaPausada ? '#065f46' : '#78350f', color: perfilIndependiente.agendaPausada ? '#34d399' : '#fcd34d', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
               {perfilIndependiente.agendaPausada ? 'Activar Agenda' : 'Pausar Agenda'}
             </button>
           </div>
@@ -1272,6 +1268,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
                 <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                   {c.estado !== 'completada' && c.estado !== 'cancelada' && (
                     <button 
+                      type="button"
                       onClick={() => handleEstadoCitaIndep(c.id, 'completada')} 
                       style={{ flex: 1, padding: '6px', backgroundColor: '#064e3b', color: '#34d399', border: '1px solid #059669', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                     >
@@ -1280,13 +1277,14 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
                   )}
                   {c.estado !== 'cancelada' && c.estado !== 'completada' && (
                     <button 
+                      type="button"
                       onClick={() => setCitaACancelarIndep(c)} 
                       style={{ padding: '6px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '10px' }}
                     >
                       Anular
                     </button>
                   )}
-                  <button onClick={() => handleEliminarCitaIndep(c.id)} style={{ backgroundColor: '#334155', color: '#f87171', border: '1px solid #64748b', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                  <button type="button" onClick={() => handleEliminarCitaIndep(c.id)} style={{ backgroundColor: '#334155', color: '#f87171', border: '1px solid #64748b', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                     Eliminar
                   </button>
                 </div>
@@ -1317,7 +1315,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
               <div>
                 <span style={{ color: '#fff', fontWeight: 'bold' }}>{s.nombre}</span> <span style={{ color: '#34d399' }}>${s.precio.toLocaleString()}</span> ({s.duracion})
               </div>
-              <button onClick={() => handleEliminarServicioPropio(s.id, s.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+              <button type="button" onClick={() => handleEliminarServicioPropio(s.id, s.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
             </div>
           ))}
         </div>
@@ -1521,7 +1519,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
       mensajePausa: 'Barbero no disponible hoy.',
       billingCycle: 'mensual',
       isLocked: false,
-      sedeId: tenantActivo.id // VINCULACIÓN EXACTA A LA SEDE ACTIVA
+      sedeId: tenantActivo.id 
     }]);
     setNuevoNombreBarbero('');
     setNuevoUsernameBarbero('');
@@ -1578,7 +1576,6 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
 
   const ingresosTotalesDia = citas.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
 
-  // Filtrar barberos de esta sede para la administración local
   const barberosDeEstaSede = barberos.filter(b => !b.sedeId || b.sedeId === tenantActivo.id);
 
   return (
@@ -1596,12 +1593,12 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
       </div>
 
       <div style={{ backgroundColor: '#0f172a', padding: '6px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', gap: '6px', overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
-        <button onClick={() => setTab('resumen')} style={{ padding: '8px 12px', background: tab === 'resumen' ? '#f59e0b' : 'transparent', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Resumen & Ingresos</button>
-        <button onClick={() => setTab('incentivos')} style={{ padding: '8px 12px', background: tab === 'incentivos' ? '#f59e0b' : 'transparent', color: tab === 'incentivos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🎁 Incentivos</button>
-        <button onClick={() => setTab('barberos')} style={{ padding: '8px 12px', background: tab === 'barberos' ? '#f59e0b' : 'transparent', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Barberos & Sillas</button>
-        <button onClick={() => setTab('servicios')} style={{ padding: '8px 12px', background: tab === 'servicios' ? '#f59e0b' : 'transparent', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Servicios & Precios</button>
-        <button onClick={() => setTab('productos')} style={{ padding: '8px 12px', background: tab === 'productos' ? '#f59e0b' : 'transparent', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Inventario</button>
-        <button onClick={() => setTab('config_admin')} style={{ padding: '8px 12px', background: tab === 'config_admin' ? '#f59e0b' : 'transparent', color: tab === 'config_admin' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Ajustes & Tiempos</button>
+        <button type="button" onClick={() => setTab('resumen')} style={{ padding: '8px 12px', background: tab === 'resumen' ? '#f59e0b' : 'transparent', color: tab === 'resumen' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Resumen & Ingresos</button>
+        <button type="button" onClick={() => setTab('incentivos')} style={{ padding: '8px 12px', background: tab === 'incentivos' ? '#f59e0b' : 'transparent', color: tab === 'incentivos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🎁 Incentivos</button>
+        <button type="button" onClick={() => setTab('barberos')} style={{ padding: '8px 12px', background: tab === 'barberos' ? '#f59e0b' : 'transparent', color: tab === 'barberos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Barberos & Sillas</button>
+        <button type="button" onClick={() => setTab('servicios')} style={{ padding: '8px 12px', background: tab === 'servicios' ? '#f59e0b' : 'transparent', color: tab === 'servicios' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Servicios & Precios</button>
+        <button type="button" onClick={() => setTab('productos')} style={{ padding: '8px 12px', background: tab === 'productos' ? '#f59e0b' : 'transparent', color: tab === 'productos' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Inventario</button>
+        <button type="button" onClick={() => setTab('config_admin')} style={{ padding: '8px 12px', background: tab === 'config_admin' ? '#f59e0b' : 'transparent', color: tab === 'config_admin' ? '#020617' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Ajustes & Tiempos</button>
       </div>
 
       {tab === 'resumen' && (
@@ -1664,11 +1661,11 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                     <td style={{ padding: '6px' }}><span style={{ color: '#34d399', fontWeight: 'bold' }}>{c.estado}</span></td>
                     <td style={{ padding: '6px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                       {c.estado !== 'completada' && c.estado !== 'cancelada' && (
-                        <button onClick={() => setCitaAReasignar(c)} style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                        <button type="button" onClick={() => setCitaAReasignar(c)} style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                           🔄 Reasignar
                         </button>
                       )}
-                      <button onClick={() => handleEliminarCitaAdmin(c.id)} style={{ padding: '4px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                      <button type="button" onClick={() => handleEliminarCitaAdmin(c.id)} style={{ padding: '4px 8px', backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                         Anular / Eliminar
                       </button>
                     </td>
@@ -1744,10 +1741,10 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                   {i.porcentaje ? `Beneficio: ${i.porcentaje}%` : ''} {i.metaCitas ? `| Meta: ${i.metaCitas} citas` : ''}
                 </div>
                 <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid #1e293b' }}>
-                  <button onClick={() => handleToggleIncentivo(i.id)} style={{ flex: 1, backgroundColor: i.activo ? '#78350f' : '#065f46', color: i.activo ? '#fcd34d' : '#34d399', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  <button type="button" onClick={() => handleToggleIncentivo(i.id)} style={{ flex: 1, backgroundColor: i.activo ? '#78350f' : '#065f46', color: i.activo ? '#fcd34d' : '#34d399', border: 'none', padding: '6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
                     {i.activo ? 'Pausar' : 'Reanudar'}
                   </button>
-                  <button onClick={() => handleEliminarIncentivo(i.id)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '6px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  <button type="button" onClick={() => handleEliminarIncentivo(i.id)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '6px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
                     Eliminar
                   </button>
                 </div>
@@ -1825,11 +1822,11 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                     <option value="mensual">Cobro Mensual</option>
                   </select>
 
-                  <button onClick={() => toggleBarberLock(b.id, b.nombre)} style={{ backgroundColor: b.isLocked ? '#065f46' : '#92400e', color: b.isLocked ? '#34d399' : '#fef3c7', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  <button type="button" onClick={() => toggleBarberLock(b.id, b.nombre)} style={{ backgroundColor: b.isLocked ? '#065f46' : '#92400e', color: b.isLocked ? '#34d399' : '#fef3c7', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
                     {b.isLocked ? 'Activar (Pagó)' : 'Bloquear Cupo'}
                   </button>
 
-                  <button onClick={() => handleEliminarBarberoDefinitivo(b.id, b.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: 'auto' }}>
+                  <button type="button" onClick={() => handleEliminarBarberoDefinitivo(b.id, b.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: 'auto' }}>
                     🗑️ Eliminar Perfil
                   </button>
                 </div>
@@ -1856,7 +1853,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                   <p style={{ margin: '4px 0', color: '#34d399', fontWeight: 'bold' }}>${s.precio.toLocaleString()}</p>
                   <span style={{ fontSize: '10px', color: '#94a3b8' }}>⏱️ {s.duracion}</span>
                 </div>
-                <button onClick={() => handleEliminarServicioAdmin(s.id, s.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                <button type="button" onClick={() => handleEliminarServicioAdmin(s.id, s.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
               </div>
             ))}
           </div>
@@ -1893,7 +1890,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                         {p.stock} u. {stockBajo && <span style={{ color: '#f87171', fontWeight: 'bold', marginLeft: '4px' }}>⚠️ ¡Stock bajo, reabastecer!</span>}
                       </td>
                       <td style={{ padding: '6px', textAlign: 'right' }}>
-                        <button onClick={() => handleEliminarProductoAdmin(p.id, p.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                        <button type="button" onClick={() => handleEliminarProductoAdmin(p.id, p.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
                       </td>
                     </tr>
                   );
@@ -1915,6 +1912,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
               {['Mañana', 'Tarde', 'Noche'].map((slot) => (
                 <button
                   key={slot}
+                  type="button"
                   onClick={() => handleToggleGlobalTimeBlock(slot)}
                   style={{
                     padding: '8px 12px',
@@ -1938,7 +1936,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#020617', padding: '10px', borderRadius: '8px', border: '1px solid #334155' }}>
                 <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>Sede: {agendaPausadaSede ? 'Pausada (Cerrada)' : 'Activa (Abierta)'}</span>
-                <button onClick={handleTogglePausarSede} style={{ backgroundColor: agendaPausadaSede ? '#065f46' : '#78350f', color: agendaPausadaSede ? '#34d399' : '#fcd34d', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+                <button type="button" onClick={handleTogglePausarSede} style={{ backgroundColor: agendaPausadaSede ? '#065f46' : '#78350f', color: agendaPausadaSede ? '#34d399' : '#fcd34d', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
                   {agendaPausadaSede ? 'Activar Sede' : 'Pausar Sede'}
                 </button>
               </div>
@@ -2011,7 +2009,6 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
 function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   
-  // Estados para cambiar las propias credenciales del SuperAdmin
   const [nuevoSuperUser, setNuevoSuperUser] = useState(superAdminCreds.username);
   const [nuevoSuperPass, setNuevoSuperPass] = useState(superAdminCreds.password);
   const [nuevoSuperNombre, setNuevoSuperNombre] = useState(superAdminCreds.nombre);
@@ -2242,7 +2239,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Acceso Root</span>
       </div>
 
-      {/* CONFIGURACIÓN DEL WHATSAPP DE SOPORTE Y RENOVACIÓN */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 8px 0', color: '#34d399', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <MessageCircle style={{ width: '16px', height: '16px' }} /> Configurar WhatsApp de Soporte / Renovación
@@ -2261,7 +2257,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
         </form>
       </div>
 
-      {/* CAMBIAR PROPIAS CREDENCIALES DEL SUPERADMIN */}
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Key style={{ width: '16px', height: '16px' }} /> Cambiar mis Credenciales de Desarrollador (SuperAdmin)
@@ -2312,10 +2307,10 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes || 30} days restantes</strong> ({t.estadoLicencia})</p>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <button onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
-                  <button onClick={() => iniciarEdicionTenant(t)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Editar Clave Admin</button>
-                  <button onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}</button>
-                  <button onClick={() => eliminarTenant(t.id, t.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                  <button type="button" onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
+                  <button type="button" onClick={() => iniciarEdicionTenant(t)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Editar Clave Admin</button>
+                  <button type="button" onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}</button>
+                  <button type="button" onClick={() => eliminarTenant(t.id, t.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
                 </div>
               </div>
 
@@ -2351,12 +2346,12 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>Usuario: <strong>{pi.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{pi.clave}</strong> | Licencia: {pi.diasRestantes} días</p>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <button onClick={() => accederIndependienteTiempoReal(pi)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
-                  <button onClick={() => iniciarEdicionIndependiente(pi)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Editar Claves</button>
-                  <button onClick={() => togglePausarIndependiente(pi.id)} style={{ backgroundColor: pi.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: pi.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                  <button type="button" onClick={() => accederIndependienteTiempoReal(pi)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
+                  <button type="button" onClick={() => iniciarEdicionIndependiente(pi)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Editar Claves</button>
+                  <button type="button" onClick={() => togglePausarIndependiente(pi.id)} style={{ backgroundColor: pi.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: pi.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                     {pi.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}
                   </button>
-                  <button onClick={() => eliminarPerfilIndependiente(pi.id, pi.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
+                  <button type="button" onClick={() => eliminarPerfilIndependiente(pi.id, pi.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>
                 </div>
               </div>
 
@@ -2398,7 +2393,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
                   <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>User: <strong>{b.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{b.claveAcceso}</strong></p>
                 </div>
-                <button onClick={() => setBarberoEditandoClave(barberoEditandoClave === b.id ? null : b.id)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                <button type="button" onClick={() => setBarberoEditandoClave(barberoEditandoClave === b.id ? null : b.id)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                   {barberoEditandoClave === b.id ? 'Cancelar' : 'Modificar Clave'}
                 </button>
               </div>
