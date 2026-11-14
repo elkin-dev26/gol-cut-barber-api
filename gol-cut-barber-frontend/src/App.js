@@ -14,19 +14,17 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
 
   const [slotDuration, setSlotDuration] = useState(30); 
+  const [globalTimer, setGlobalTimer] = useState({ Mañana: false, Tarde: false, Noche: false });
   
   const [chairFeeConfig, setChairFeeConfig] = useState(() => {
     const guardado = localStorage.getItem('chairFeeConfig');
     return guardado ? JSON.parse(guardado) : { tipo: 'fijo', valor: 50000 };
   });
 
-  const [credencialesAdmin, setCredencialesAdmin] = useState(() => {
-    const guardado = localStorage.getItem('gol_cut_credenciales_admin');
-    return guardado ? JSON.parse(guardado) : {
-      username: 'admin',
-      password: 'admin123',
-      nombre: 'Administrador Local'
-    };
+  const [credencialesAdmin, setCredencialesAdmin] = useState({
+    username: 'admin',
+    password: 'admin123',
+    nombre: 'Administrador Local'
   });
 
   const [superAdminCreds, setSuperAdminCreds] = useState(() => {
@@ -38,12 +36,14 @@ export default function App() {
     localStorage.setItem('gol_cut_superadmin_creds', JSON.stringify(superAdminCreds));
   }, [superAdminCreds]);
 
+  const [agendaPausadaSede, setAgendaPausadaSede] = useState(false);
+  const [mensajePausaGeneral, setMensajePausaGeneral] = useState('Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.');
+
   const [devConfig, setDevConfig] = useState(() => {
     const guardado = localStorage.getItem('gol_cut_dev_config');
     return guardado ? JSON.parse(guardado) : {
       whatsappSoporte: '573001234567',
-      mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de SaaS Global.',
-      nombreGlobalPlataforma: 'SaaS Global'
+      mensajeRenovacion: 'Hola Elkin, deseo renovar mi membresía mensual de Gol Cut Barber.',
     };
   });
 
@@ -63,6 +63,16 @@ export default function App() {
         activo: true,
         porcentaje: 10,
         destinatario: 'Todos los Clientes'
+      },
+      {
+        id: 'inc2',
+        tipo: 'barbero',
+        titulo: 'Premio Alquiler Silla Barbero',
+        descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
+        activo: true,
+        metaCitas: 15,
+        porcentaje: 5,
+        destinatario: 'Todos los Barberos'
       }
     ];
   });
@@ -137,11 +147,14 @@ export default function App() {
   }, [perfilesIndependientes]);
 
   const [productos, setProductos] = useState([
-    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 }
+    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 },
+    { id: 'p2', nombre: 'Champú Anticaída Barba & Cabello', precio: 45000, stock: 10 }
   ]);
 
   const [servicios, setServicios] = useState([
-    { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' }
+    { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' },
+    { id: 's2', nombre: 'Barba Tradicional con Toalla Caliente', precio: 15000, duracion: '20 min' },
+    { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
   ]);
 
   const [citas, setCitas] = useState(() => {
@@ -232,7 +245,7 @@ export default function App() {
             </div>
             <div>
               <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#fbbf24', letterSpacing: '0.03em' }}>
-                {devConfig.nombreGlobalPlataforma.toUpperCase()}
+                {devConfig.nombreGlobalPlataforma || tenantPrincipal.nombreBarberia.toUpperCase()}
               </h1>
               <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8' }}>Plataforma Multi-Barberías y Autogestión</p>
             </div>
@@ -1086,7 +1099,7 @@ function VistaAdmin({ tenantActualParaAdmin, tenantPrincipal, setTenants, tenant
 }
 
 function VistaSuperAdmin({ devConfig, setDevConfig, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, superAdminCreds }) {
-  const [nombreGlobalInput, setNombreGlobalInput] = useState(devConfig.nombreGlobalPlataforma);
+  const [nombreGlobalInput, setNombreGlobalInput] = useState(devConfig.nombreGlobalPlataforma || 'SaaS Global');
   const [whatsappSoporteInput, setWhatsappSoporteInput] = useState(devConfig.whatsappSoporte || '');
 
   const [nuevoNombreBarberia, setNuevoNombreBarberia] = useState('');
