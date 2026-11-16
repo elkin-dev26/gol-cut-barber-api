@@ -1,0 +1,5 @@
+{
+  "installCommand": "npm --prefix gol-cut-barber-frontend ci",
+  "buildCommand": "npm --prefix gol-cut-barber-frontend run build",
+  "outputDirectory": "gol-cut-barber-frontend/build"
+}
