@@ -42,8 +42,6 @@ create table if not exists public.booking_entities (
   entity_type text not null check (entity_type in ('barber', 'independent')),
   name text not null,
   user_id uuid unique references auth.users(id) on delete set null,
-  contact_email text,
-  whatsapp_phone text,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -64,15 +62,6 @@ create table if not exists public.appointments (
 
 create index if not exists appointments_tenant_date_idx
   on public.appointments (tenant_id, appointment_date);
-
-create table if not exists public.booking_notifications (
-  appointment_id text primary key references public.appointments(id) on delete cascade,
-  status text not null default 'sending' check (status in ('sending', 'sent', 'partial', 'failed')),
-  whatsapp_status text not null default 'skipped' check (whatsapp_status in ('skipped', 'sent', 'failed')),
-  email_status text not null default 'skipped' check (email_status in ('skipped', 'sent', 'failed')),
-  error_message text,
-  updated_at timestamptz not null default now()
-);
 
 create table if not exists public.booking_rate_limits (
   key_hash text primary key,
@@ -155,7 +144,6 @@ alter table public.platform_settings enable row level security;
 alter table public.user_profiles enable row level security;
 alter table public.booking_entities enable row level security;
 alter table public.appointments enable row level security;
-alter table public.booking_notifications enable row level security;
 alter table public.booking_rate_limits enable row level security;
 
 drop policy if exists "Public can read active tenants" on public.tenants;
@@ -260,10 +248,9 @@ create policy "Staff can read permitted appointments"
     )
   );
 
-revoke all on public.booking_notifications, public.booking_rate_limits from anon, authenticated;
+revoke all on public.booking_rate_limits from anon, authenticated;
 grant select on public.tenants to anon, authenticated;
 grant select on public.platform_settings to anon, authenticated;
 grant select on public.user_profiles, public.booking_entities, public.appointments to authenticated;
-grant update (contact_email, whatsapp_phone, updated_at) on public.booking_entities to authenticated;
 grant all on public.tenants, public.user_profiles, public.booking_entities, public.appointments,
-  public.booking_notifications, public.booking_rate_limits, public.platform_settings to service_role;
+  public.booking_rate_limits, public.platform_settings to service_role;

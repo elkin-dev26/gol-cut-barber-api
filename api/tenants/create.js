@@ -34,8 +34,7 @@ module.exports = async (req, res) => {
       email,
       password,
       username,
-      displayName,
-      whatsappPhone
+      displayName
     } = req.body || {};
     if (!isId(id) || publicCode !== id || !isId(publicCode)
       || typeof name !== 'string' || !name.trim() || name.length > 120
@@ -50,11 +49,6 @@ module.exports = async (req, res) => {
     if (!['shop', 'independent'].includes(entityType)) {
       return res.status(400).json({ error: 'El tipo de cuenta no es válido.' });
     }
-    const phoneDigits = typeof whatsappPhone === 'string' ? whatsappPhone.replace(/\D/g, '') : '';
-    if (entityType === 'independent' && (phoneDigits.length < 8 || phoneDigits.length > 15)) {
-      return res.status(400).json({ error: 'Ingresa el WhatsApp del barbero con código de país.' });
-    }
-
     await serviceRequest('tenants', {
       method: 'POST',
       headers: { Prefer: 'return=minimal' },
@@ -112,9 +106,7 @@ module.exports = async (req, res) => {
           tenant_id: id,
           entity_type: 'independent',
           name: name.trim(),
-          user_id: authData.id,
-          contact_email: email.trim().toLowerCase(),
-          whatsapp_phone: phoneDigits ? `+${phoneDigits}` : null
+          user_id: authData.id
         })
       });
     }

@@ -9,7 +9,7 @@
 
 Para desplegar desde la raíz del repositorio en Vercel, `vercel.json` compila esta aplicación y publica las funciones de `api/`.
 
-## Configuración de Supabase y avisos de citas
+## Configuración de Supabase
 
 1. Crea un proyecto de Supabase y ejecuta `supabase/schema.sql` en el SQL Editor.
 2. Crea el usuario del desarrollador en **Authentication → Users** y confirma su correo. Copia su UUID y registra su perfil desde el SQL Editor:
@@ -19,7 +19,7 @@ Para desplegar desde la raíz del repositorio en Vercel, `vercel.json` compila e
    values ('UUID_DEL_USUARIO', 'developer', 'Desarrollador', 'developer', null, null);
    ```
 
-3. Configura estas variables en Vercel. No publiques ni compartas `SUPABASE_SERVICE_ROLE_KEY`, `WHATSAPP_ACCESS_TOKEN` ni `RESEND_API_KEY`.
+3. Configura estas variables en Vercel. No publiques ni compartas `SUPABASE_SERVICE_ROLE_KEY`.
 
    | Variable | Uso |
    | --- | --- |
@@ -28,19 +28,11 @@ Para desplegar desde la raíz del repositorio en Vercel, `vercel.json` compila e
    | `SUPABASE_URL` | La misma URL, para las funciones del servidor |
    | `SUPABASE_ANON_KEY` | La misma clave pública, para validar sesiones |
    | `SUPABASE_SERVICE_ROLE_KEY` | Clave privada de servidor; nunca usar el prefijo `REACT_APP_` |
-   | `WHATSAPP_ACCESS_TOKEN` | Token de Meta WhatsApp Cloud API |
-   | `WHATSAPP_PHONE_NUMBER_ID` | ID del número de WhatsApp en Meta |
-   | `WHATSAPP_API_VERSION` | Versión de Graph API habilitada en Meta, por ejemplo `v22.0` |
-   | `WHATSAPP_TEMPLATE_NAME` | Nombre de una plantilla de WhatsApp aprobada |
-   | `WHATSAPP_TEMPLATE_LANGUAGE` | Idioma aprobado de la plantilla, por ejemplo `es` |
-   | `RESEND_API_KEY` | Clave privada de Resend |
-   | `EMAIL_FROM` | Remitente verificado en Resend, por ejemplo `Agenda <citas@tudominio.com>` |
    | `APP_ORIGIN` | Dominio exacto de la aplicación en Vercel (opcional, protege el endpoint de reservas) |
 
-4. En Meta, aprueba una plantilla de utilidad con cinco variables en el cuerpo y en este orden: nombre del barbero o establecimiento, nombre del cliente, servicio, fecha y hora. WhatsApp exige plantillas aprobadas para mensajes iniciados por la empresa.
-5. Despliega de nuevo después de agregar las variables. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
+4. Despliega de nuevo después de agregar las variables. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
 
-El nombre global de la plataforma, el inicio de sesión, perfiles, códigos públicos, contactos y reservas nuevas usan Supabase. Los avisos se envían desde funciones de Vercel y los destinatarios se consultan en el servidor; el navegador nunca decide a qué correo o teléfono enviar. Otros módulos de demostración todavía guardan parte de su estado en `localStorage` y no se sincronizan entre dispositivos.
+El nombre global de la plataforma, el inicio de sesión, perfiles, códigos públicos y reservas nuevas usan Supabase. Las reservas se guardan en la base de datos, pero no se envían avisos de citas por WhatsApp ni correo. El correo que se solicita al crear una cuenta es únicamente para iniciar sesión. Otros módulos de demostración todavía guardan parte de su estado en `localStorage` y no se sincronizan entre dispositivos.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

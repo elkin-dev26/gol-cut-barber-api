@@ -29,8 +29,7 @@ module.exports = async (req, res) => {
       username,
       displayName,
       tenantId,
-      entityId,
-      whatsappPhone
+      entityId
     } = req.body || {};
     const canCreateRole = caller.role === 'developer'
       ? ['admin', 'barber', 'independent'].includes(role)
@@ -42,13 +41,6 @@ module.exports = async (req, res) => {
     }
     if (typeof displayName !== 'string' || !displayName.trim() || displayName.length > 120 || !isId(entityId) || !isId(tenantId) || !isUsername(username)) {
       return res.status(400).json({ error: 'Se requieren nombre, ID de perfil e ID de sede.' });
-    }
-    const phoneDigits = typeof whatsappPhone === 'string' ? whatsappPhone.replace(/\D/g, '') : '';
-    if (role !== 'admin' && phoneDigits.length === 0) {
-      return res.status(400).json({ error: 'Se requiere un WhatsApp para las cuentas de barbero.' });
-    }
-    if (role !== 'admin' && (phoneDigits.length < 8 || phoneDigits.length > 15)) {
-      return res.status(400).json({ error: 'Ingresa el WhatsApp con código de país.' });
     }
     if (role === 'independent' && entityId !== tenantId) {
       return res.status(400).json({ error: 'El ID del barbero independiente debe coincidir con su sede.' });
@@ -113,9 +105,7 @@ module.exports = async (req, res) => {
             tenant_id: tenantId,
             entity_type: entityType,
             name: displayName.trim(),
-            user_id: authData.id,
-            contact_email: email.trim().toLowerCase(),
-            whatsapp_phone: phoneDigits ? `+${phoneDigits}` : null
+            user_id: authData.id
           })
         });
       }

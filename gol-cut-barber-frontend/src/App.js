@@ -211,7 +211,6 @@ export default function App() {
         bloqueadoDesarrollador: false,
         codigoPublico: 'indep_tenant',
         diasRestantes: 30,
-        whatsappContacto: '573001234567',
         agendaPausada: false,
         mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
         ingresosMesAnterior: 1450000,
@@ -359,8 +358,6 @@ export default function App() {
         isLocked: false,
         claveAcceso: '',
         sedeId: entity.tenant_id,
-        whatsappContacto: entity.whatsapp_phone || '',
-        emailContacto: entity.contact_email || '',
         esIndependiente: entity.entity_type === 'independent'
       };
     });
@@ -861,7 +858,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   const [tipoSeleccionCliente, setTipoSeleccionCliente] = useState('');
   const [estActual, setEstActual] = useState(null);
   const [entidadesPublicas, setEntidadesPublicas] = useState([]);
-  const [citaNotificacion, setCitaNotificacion] = useState('');
 
   const esIndependienteEst = tipoSeleccionCliente === 'independiente';
 
@@ -1022,7 +1018,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
     e.preventDefault();
     if (!estActual || cuentaBloqueada(estActual) || !nombre.trim() || !barbero || (modo === 'programada' && !horasDisponibles.includes(hora))) return;
     setErrorReserva('');
-    setCitaNotificacion('');
     const servObj = serviciosFiltrados.find(s => s.nombre === servicio);
     const cumple = esCumpleanos();
     let precioFinal = servObj ? servObj.precio : 25000;
@@ -1056,14 +1051,14 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
         ? entidadesPublicas[0]
         : entidadesPublicas.find(entity => entity.id === barbero);
       if (!selectedEntity?.id) {
-        setErrorReserva('No se pudo identificar al barbero para guardar y notificar la cita.');
+        setErrorReserva('No se pudo identificar al barbero para guardar la cita.');
         return;
       }
 
       nueva.id = `c${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       setGuardandoReserva(true);
       try {
-        const response = await fetch('/api/notifications/appointment', {
+        const response = await fetch('/api/appointments/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1079,8 +1074,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'No se pudo registrar la cita.');
         nueva.bookingEntityId = selectedEntity.id;
-        nueva.notifications = result.notifications;
-        setCitaNotificacion(result.message || 'Cita procesada.');
         setCitas(actuales => [nueva, ...actuales]);
         setCitaCreada(nueva);
         setNombre('');
@@ -1345,8 +1338,6 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
             <div style={{ width: '100%', backgroundColor: '#020617', border: '1px solid #059669', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
               <CheckCircle style={{ width: '28px', height: '28px', color: '#34d399', margin: '0 auto 6px auto' }} />
               <h4 style={{ color: '#34d399', margin: '0 0 6px 0', fontSize: '14px' }}>¡Cita Registrada Correctamente!</h4>
-              {citaNotificacion && <p style={{ color: citaCreada.notifications?.status === 'sent' ? '#34d399' : '#fbbf24', fontSize: '11px', margin: '0 0 8px' }}>{citaNotificacion}</p>}
-              {citaCreada.notifications && <p style={{ color: '#94a3b8', fontSize: '10px', margin: '0 0 8px' }}>WhatsApp: {citaCreada.notifications.whatsapp || citaCreada.notifications.whatsapp_status} · Email: {citaCreada.notifications.email || citaCreada.notifications.email_status}</p>}
               <div style={{ fontSize: '11px', color: '#cbd5e1', textAlign: 'left', backgroundColor: '#0f172a', padding: '8px', borderRadius: '6px' }}>
                 <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Establecimiento:</span> {nombreEstablecimientoActual}</p>
                 <p style={{ margin: '2px 0' }}><span style={{ color: '#94a3b8' }}>Cliente:</span> {citaCreada.cliente}</p>
@@ -1370,9 +1361,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState('efectivo');
-  const [correoContacto, setCorreoContacto] = useState(barberoActual?.emailContacto || '');
-  const [whatsappContacto, setWhatsappContacto] = useState(barberoActual?.whatsappContacto || '');
-  const [contactoMensaje, setContactoMensaje] = useState('');
 
   const [citaACancelar, setCitaACancelar] = useState(null);
   const [motivoPreset, setMotivoPreset] = useState('Cliente no asistió a la cita');
@@ -1380,22 +1368,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
 
   const sedeBarbero = tenants.find(t => t.id === barberoActual?.sedeId) || tenantPrincipal;
   const urlWhatsapp = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(devConfig?.mensajeRenovacion || 'Hola')}`;
-  const guardarContacto = async (e) => {
-    e.preventDefault();
-    try {
-      await requestStaffApi('/api/staff/contact', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          entityId: barberoActual.entityId || barberoActual.id,
-          email: correoContacto,
-          whatsappPhone: whatsappContacto
-        })
-      });
-      setContactoMensaje('Correo y WhatsApp guardados para las notificaciones de nuevas citas.');
-    } catch (error) {
-      setContactoMensaje(error.message);
-    }
-  };
 
   if (licenciaVencida) {
     return (
@@ -1494,15 +1466,6 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
           <button type="button" onClick={onCerrarSesion} style={{ padding: '6px 10px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
         </div>
       </div>
-
-      {supabaseConfigured && (
-        <form onSubmit={guardarContacto} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', backgroundColor: '#0f172a', border: '1px solid #334155', padding: '12px', borderRadius: '10px' }}>
-          <input type="email" value={correoContacto} onChange={(e) => setCorreoContacto(e.target.value)} placeholder="Correo para recibir citas" required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-          <input type="tel" value={whatsappContacto} onChange={(e) => setWhatsappContacto(e.target.value)} placeholder="WhatsApp con código de país" required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-          <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Guardar mis datos de contacto</button>
-          {contactoMensaje && <p role="status" style={{ gridColumn: '1 / -1', margin: 0, color: contactoMensaje.includes('guardados') ? '#34d399' : '#fda4af', fontSize: '11px' }}>{contactoMensaje}</p>}
-        </form>
-      )}
 
       {incBarbero && (
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '10px', padding: '12px', boxSizing: 'border-box' }}>
@@ -1628,27 +1591,8 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   const [citaACancelarIndep, setCitaACancelarIndep] = useState(null);
   const [motivoPresetIndep, setMotivoPresetIndep] = useState('Cliente no asistió a la cita');
   const [motivoLibreIndep, setMotivoLibreIndep] = useState('');
-  const [correoContacto, setCorreoContacto] = useState(perfilIndependiente.emailContacto || '');
-  const [whatsappContacto, setWhatsappContacto] = useState(perfilIndependiente.whatsappContacto || '');
-  const [contactoMensaje, setContactoMensaje] = useState('');
 
-  const urlWhatsappIndep = `https://wa.me/${perfilIndependiente.whatsappContacto || devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(`Hola, soy ${perfilIndependiente.propietario} de la barbería independiente "${perfilIndependiente.nombreBarberia}" y deseo gestionar mi renovación o soporte.`)}`;
-  const guardarContacto = async (e) => {
-    e.preventDefault();
-    try {
-      await requestStaffApi('/api/staff/contact', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          entityId: perfilIndependiente.entityId || perfilIndependiente.id,
-          email: correoContacto,
-          whatsappPhone: whatsappContacto
-        })
-      });
-      setContactoMensaje('Correo y WhatsApp guardados para las notificaciones de nuevas citas.');
-    } catch (error) {
-      setContactoMensaje(error.message);
-    }
-  };
+  const urlWhatsappIndep = `https://wa.me/${devConfig?.whatsappSoporte || '573001234567'}?text=${encodeURIComponent(`Hola, soy ${perfilIndependiente.propietario} de la barbería independiente "${perfilIndependiente.nombreBarberia}" y deseo gestionar mi renovación o soporte.`)}`;
 
   const nombrePropLimpio = (perfilIndependiente.propietario || '').trim().toLowerCase();
   const nombreBarberiaIndepLimpio = (perfilIndependiente.nombreBarberia || '').trim().toLowerCase();
@@ -1781,15 +1725,6 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
           <button type="button" onClick={onCerrarSesion} style={{ padding: '8px 12px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Salir</button>
         </div>
       </div>
-
-      {supabaseConfigured && (
-        <form onSubmit={guardarContacto} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', backgroundColor: '#0f172a', border: '1px solid #334155', padding: '12px', borderRadius: '10px' }}>
-          <input type="email" value={correoContacto} onChange={(e) => setCorreoContacto(e.target.value)} placeholder="Correo para recibir citas" required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-          <input type="tel" value={whatsappContacto} onChange={(e) => setWhatsappContacto(e.target.value)} placeholder="WhatsApp con código de país" required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
-          <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Guardar mis datos de contacto</button>
-          {contactoMensaje && <p role="status" style={{ gridColumn: '1 / -1', margin: 0, color: contactoMensaje.includes('guardados') ? '#34d399' : '#fda4af', fontSize: '11px' }}>{contactoMensaje}</p>}
-        </form>
-      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
@@ -1963,7 +1898,6 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
   const [nuevoUsernameBarbero, setNuevoUsernameBarbero] = useState('');
   const [nuevaClaveBarbero, setNuevaClaveBarbero] = useState('');
   const [nuevoEmailBarbero, setNuevoEmailBarbero] = useState('');
-  const [nuevoWhatsappBarbero, setNuevoWhatsappBarbero] = useState('');
   const [especialidad, setEspecialidad] = useState('');
 
   const [nombreProd, setNombreProd] = useState('');
@@ -2112,8 +2046,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
             username: nuevoUsernameBarbero.trim(),
             displayName: nuevoNombreBarbero.trim(),
             tenantId: tenantActivo.id,
-            entityId,
-            whatsappPhone: nuevoWhatsappBarbero.trim()
+            entityId
           })
         });
       } catch (error) {
@@ -2134,15 +2067,12 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
       mensajePausa: 'Barbero no disponible hoy.',
       billingCycle: 'mensual',
       isLocked: false,
-      sedeId: tenantActivo.id,
-      emailContacto: nuevoEmailBarbero.trim(),
-      whatsappContacto: nuevoWhatsappBarbero.trim()
+      sedeId: tenantActivo.id
     }]);
     setNuevoNombreBarbero('');
     setNuevoUsernameBarbero('');
     setNuevaClaveBarbero('');
     setNuevoEmailBarbero('');
-    setNuevoWhatsappBarbero('');
     setEspecialidad('');
     alert(supabaseConfigured
       ? '¡Barbero creado! Ya puede ingresar con su correo y contraseña de Supabase.'
@@ -2419,8 +2349,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
             <input type="text" placeholder="Nombre completo..." value={nuevoNombreBarbero} onChange={(e) => setNuevoNombreBarbero(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} required />
             <input type="text" placeholder="Usuario login" value={nuevoUsernameBarbero} onChange={(e) => setNuevoUsernameBarbero(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} required />
             <input type="password" placeholder="Contraseña" value={nuevaClaveBarbero} onChange={(e) => setNuevaClaveBarbero(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} required />
-            {supabaseConfigured && <input type="email" placeholder="Correo para ingreso y notificaciones" value={nuevoEmailBarbero} onChange={(e) => setNuevoEmailBarbero(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} required />}
-            {supabaseConfigured && <input type="tel" placeholder="WhatsApp internacional" value={nuevoWhatsappBarbero} onChange={(e) => setNuevoWhatsappBarbero(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} required />}
+            {supabaseConfigured && <input type="email" placeholder="Correo de acceso (Supabase)" value={nuevoEmailBarbero} onChange={(e) => setNuevoEmailBarbero(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} required />}
             <input type="text" placeholder="Especialidad" value={especialidad} onChange={(e) => setEspecialidad(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '11px' }} />
             <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '6px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Registrar Nuevo Barbero en {tenantActivo.nombreBarberia}</button>
           </form>
@@ -2431,7 +2360,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                 <div>
                   <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{b.nombre}</h4>
                   <p style={{ margin: '2px 0', fontSize: '10px', color: '#fbbf24' }}>
-                    {supabaseConfigured ? `Correo de ingreso: ${b.emailContacto || 'Administrado en Supabase'}` : `User: ${b.username} | Clave: ${b.claveAcceso}`}
+                    {supabaseConfigured ? 'Acceso de cuenta administrado en Supabase.' : `User: ${b.username} | Clave: ${b.claveAcceso}`}
                   </p>
                   <p style={{ margin: '2px 0', fontSize: '10px', color: b.isLocked ? '#f43f5e' : '#34d399' }}>Estado Cuenta: {b.isLocked ? 'Bloqueado (Debe Cupo)' : 'Activo'}</p>
                 </div>
@@ -2661,11 +2590,9 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
   const [editIndepPropietario, setEditIndepPropietario] = useState('');
   const [editIndepUser, setEditIndepUser] = useState('');
   const [editIndepClave, setEditIndepClave] = useState('');
-  const [editIndepWp, setEditIndepWp] = useState('');
 
   const [nuevoIndepNombre, setNuevoIndepNombre] = useState('');
   const [nuevoIndepPropietario, setNuevoIndepPropietario] = useState('');
-  const [nuevoIndepWp, setNuevoIndepWp] = useState('573001234567');
   const [nuevoIndepUser, setNuevoIndepUser] = useState('');
   const [nuevoEmailIndep, setNuevoEmailIndep] = useState('');
   const [nuevoIndepPass, setNuevoIndepPass] = useState('');
@@ -2837,7 +2764,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setEditIndepPropietario(pi.propietario);
     setEditIndepUser(pi.username);
     setEditIndepClave(pi.clave);
-    setEditIndepWp(pi.whatsappContacto);
   };
 
   const handleGuardarIndependienteDev = async (e, id) => {
@@ -2860,8 +2786,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           ...(supabaseConfigured ? {} : {
             propietario: editIndepPropietario.trim(),
             username: editIndepUser.trim().toLowerCase(),
-            clave: editIndepClave.trim(),
-            whatsappContacto: editIndepWp.trim()
+            clave: editIndepClave.trim()
           })
         };
       }
@@ -2891,8 +2816,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
             email: nuevoEmailIndep.trim(),
             password: nuevoIndepPass,
             username: nuevoIndepUser.trim(),
-            displayName: nuevoIndepPropietario.trim(),
-            whatsappPhone: nuevoIndepWp.trim()
+            displayName: nuevoIndepPropietario.trim()
           })
         });
       } catch (error) {
@@ -2913,8 +2837,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       estadoLicencia: 'Activa',
       bloqueadoDesarrollador: false,
       diasRestantes: 30,
-      whatsappContacto: nuevoIndepWp.trim() || '573001234567',
-      emailContacto: nuevoEmailIndep.trim(),
       agendaPausada: false,
       mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
       ingresosMesAnterior: 1200000,
@@ -3178,7 +3100,6 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                     <input type="text" placeholder="Propietario" value={editIndepPropietario} onChange={(e) => setEditIndepPropietario(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                     <input type="text" placeholder="Usuario" value={editIndepUser} onChange={(e) => setEditIndepUser(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                     <input type="text" placeholder="Contraseña" value={editIndepClave} onChange={(e) => setEditIndepClave(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
-                    <input type="text" placeholder="WhatsApp" value={editIndepWp} onChange={(e) => setEditIndepWp(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                   </>}
                   {supabaseConfigured && <p style={{ gridColumn: '1 / -1', margin: 0, color: '#94a3b8', fontSize: '10px' }}>Las credenciales de acceso se gestionan de forma segura en Supabase.</p>}
                   <div style={{ display: 'flex', gap: '4px' }}>
@@ -3196,9 +3117,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           <input type="text" placeholder="Nombre de barbería..." value={nuevoIndepNombre} onChange={(e) => setNuevoIndepNombre(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
           <input type="text" placeholder="Nombre propietario..." value={nuevoIndepPropietario} onChange={(e) => setNuevoIndepPropietario(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
           <input type="text" placeholder="Usuario login" value={nuevoIndepUser} onChange={(e) => setNuevoIndepUser(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-          {supabaseConfigured && <input type="email" placeholder="Correo de acceso y notificaciones" value={nuevoEmailIndep} onChange={(e) => setNuevoEmailIndep(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />}
+          {supabaseConfigured && <input type="email" placeholder="Correo de acceso (Supabase)" value={nuevoEmailIndep} onChange={(e) => setNuevoEmailIndep(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />}
           <input type="password" placeholder="Contraseña" value={nuevoIndepPass} onChange={(e) => setNuevoIndepPass(e.target.value)} autoComplete="new-password" style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
-          <input type="text" placeholder="WhatsApp" value={nuevoIndepWp} onChange={(e) => setNuevoIndepWp(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} required />
           <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', gridColumn: '1 / -1' }}>Crear Perfil Independiente Nuevo</button>
         </form>
       </div>
@@ -3212,7 +3132,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                 <div>
                   <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
                   <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>
-                    {supabaseConfigured ? `Correo de ingreso: ${b.emailContacto || 'Administrado en Supabase'}` : <>User: <strong>{b.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{b.claveAcceso}</strong></>}
+                    {supabaseConfigured ? 'Acceso de cuenta administrado en Supabase.' : <>User: <strong>{b.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{b.claveAcceso}</strong></>}
                   </p>
                 </div>
                 {!supabaseConfigured && <button type="button" onClick={() => setBarberoEditandoClave(barberoEditandoClave === b.id ? null : b.id)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
