@@ -1,5 +1,6 @@
 const {
   authenticateStaff,
+  getServiceRoleKey,
   getSupabaseUrl,
   isConfigured,
   serviceRequest
@@ -64,8 +65,8 @@ module.exports = async (req, res) => {
     const authResponse = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users`, {
       method: 'POST',
       headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: getServiceRoleKey(),
+        Authorization: `Bearer ${getServiceRoleKey()}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -118,8 +119,8 @@ module.exports = async (req, res) => {
         const cleanupResponse = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users/${encodeURIComponent(createdUserId)}`, {
           method: 'DELETE',
           headers: {
-            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+            apikey: getServiceRoleKey(),
+            Authorization: `Bearer ${getServiceRoleKey()}`
           }
         });
         if (!cleanupResponse.ok) console.error('Tenant auth-user rollback failed:', cleanupResponse.status);
