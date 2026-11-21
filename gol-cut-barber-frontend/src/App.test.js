@@ -26,6 +26,7 @@ test('mantiene el nombre de la plataforma independiente del nombre de la sede', 
   render(<App />);
 
   expect(screen.getByRole('heading', { name: 'PLATAFORMA ELEGANTE' })).toBeInTheDocument();
+  expect(document.title).toBe('PLATAFORMA ELEGANTE');
 });
 
 test('busca directamente una barbería mediante su código público', () => {

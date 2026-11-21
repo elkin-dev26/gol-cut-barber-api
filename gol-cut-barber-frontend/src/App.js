@@ -71,7 +71,7 @@ const cicloDePagoVencido = (cuenta, now = Date.now()) => (
     + Number(cuenta.billingCycleDays || 30) * 24 * 60 * 60 * 1000 <= now
 );
 const barberoBloqueado = (barbero, now = Date.now()) => (
-  Boolean(barbero?.accessBlocked || barbero?.isLocked || cicloDePagoVencido(barbero, now))
+  Boolean(barbero?.pausado || barbero?.active === false || barbero?.accessBlocked || barbero?.isLocked || cicloDePagoVencido(barbero, now))
 );
 const diasCicloRestantes = (barbero, now = Date.now()) => {
   if (!barbero?.billingCycleStartedAt) return Number(barbero?.billingCycleDays) || 30;
@@ -135,6 +135,10 @@ export default function App() {
     if (supabaseConfigured) return;
     localStorage.setItem('gol_cut_dev_config', JSON.stringify(devConfig));
   }, [devConfig]);
+
+  useEffect(() => {
+    document.title = devConfig.nombrePlataforma || 'GOL CUT BARBER';
+  }, [devConfig.nombrePlataforma]);
 
   useEffect(() => {
     if (!supabaseConfigured) return;
@@ -2326,6 +2330,8 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
       setBarberos(current => current.map(b => b.id === barberId ? {
         ...b,
         accessBlocked: savedAccessBlocked,
+        active: updatedEntity?.active ?? !savedAccessBlocked,
+        pausado: updatedEntity ? !updatedEntity.active : (savedAccessBlocked ? b.pausado : false),
         isLocked: savedAccessBlocked || cicloDePagoVencido({
           billingCycleStartedAt: updatedEntity?.billing_cycle_started_at
             || (savedAccessBlocked ? b.billingCycleStartedAt : new Date().toISOString()),

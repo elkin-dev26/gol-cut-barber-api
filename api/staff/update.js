@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     }
 
     const entities = await serviceRequest(
-      `booking_entities?select=id,tenant_id,entity_type,access_blocked,billing_cycle_days,billing_cycle_started_at&id=eq.${encodeURIComponent(entityId)}&limit=1`
+      `booking_entities?select=id,tenant_id,entity_type,active,access_blocked,billing_cycle_days,billing_cycle_started_at&id=eq.${encodeURIComponent(entityId)}&limit=1`
     );
     const entity = entities?.[0];
     if (!entity || !['barber', 'independent'].includes(entity.entity_type)) {
@@ -61,6 +61,7 @@ module.exports = async (req, res) => {
     }
     if (accessBlocked === true) updates.access_blocked = true;
     if (accessBlocked === false) {
+      updates.active = true;
       updates.access_blocked = false;
       updates.billing_cycle_started_at = now.toISOString();
     }

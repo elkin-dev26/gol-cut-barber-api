@@ -37,6 +37,7 @@ beforeEach(() => {
           id: 'barber-1',
           tenant_id: entityTenantId,
           entity_type: 'barber',
+          active: false,
           access_blocked: true,
           billing_cycle_days: 15,
           billing_cycle_started_at: '2026-01-01T00:00:00.000Z'
@@ -82,8 +83,11 @@ test('reactivating a barber clears the lock and restarts the payment cycle', asy
   assert.equal(response.statusCode, 200);
   const update = requests.find(request => request.options.method === 'PATCH');
   const body = JSON.parse(update.options.body);
+  assert.equal(body.active, true);
   assert.equal(body.access_blocked, false);
   assert.ok(Date.parse(body.billing_cycle_started_at) > Date.parse('2026-01-01T00:00:00.000Z'));
+  assert.equal(response.body.entity.active, true);
+  assert.equal(response.body.entity.access_blocked, false);
 });
 
 test('an administrator cannot block a barber in another location', async () => {
