@@ -71,7 +71,12 @@ const cicloDePagoVencido = (cuenta, now = Date.now()) => (
     + Number(cuenta.billingCycleDays || 30) * 24 * 60 * 60 * 1000 <= now
 );
 const barberoBloqueado = (barbero, now = Date.now()) => (
-  Boolean(barbero?.pausado || barbero?.active === false || barbero?.accessBlocked || barbero?.isLocked || cicloDePagoVencido(barbero, now))
+  Boolean(
+    barbero?.pausado
+    || barbero?.active === false
+    || (barbero?.accessBlocked ?? barbero?.isLocked)
+    || cicloDePagoVencido(barbero, now)
+  )
 );
 const diasCicloRestantes = (barbero, now = Date.now()) => {
   if (!barbero?.billingCycleStartedAt) return Number(barbero?.billingCycleDays) || 30;

@@ -19,7 +19,7 @@ Para desplegar desde la raíz del repositorio en Vercel, configura **Root Direct
    values ('UUID_DEL_USUARIO', 'developer', 'Desarrollador', 'developer', null, null);
    ```
 
-3. Configura estas variables en el proyecto Vercel que está conectado al dominio de producción y habilítalas para **Production**. Si también usas previews, habilítalas para **Preview**. No publiques ni compartas `SUPABASE_SERVICE_ROLE_KEY`.
+3. Configura estas variables en el proyecto Vercel que está conectado al dominio de producción y habilítalas para **Production**. Si también usas previews, habilítalas para **Preview**. `REACT_APP_SUPABASE_URL` y `SUPABASE_URL` deben ser exactamente el mismo proyecto; el build ahora rechaza URLs diferentes. No publiques ni compartas `SUPABASE_SERVICE_ROLE_KEY`.
 
    | Variable | Uso |
    | --- | --- |
@@ -30,7 +30,7 @@ Para desplegar desde la raíz del repositorio en Vercel, configura **Root Direct
    | `SUPABASE_SERVICE_ROLE_KEY` | Clave privada de servidor; nunca usar el prefijo `REACT_APP_` |
    | `APP_ORIGIN` | Dominio exacto de la aplicación en Vercel (opcional, protege el endpoint de reservas) |
 
-4. Despliega de nuevo después de agregar las variables. El build de Vercel ahora se detiene con una lista explícita si falta alguna variable obligatoria; no publiques la clave `SUPABASE_SERVICE_ROLE_KEY` en el frontend. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
+4. Despliega de nuevo después de agregar las variables. Usa un único proyecto de Supabase para el perfil del administrador y el del barbero; no alternes entre dos despliegues Vercel conectados a proyectos Supabase distintos. El build de Vercel se detiene con un error explícito si faltan variables o las URLs cliente/servidor no coinciden. No publiques la clave `SUPABASE_SERVICE_ROLE_KEY` en el frontend. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
 
 El nombre global de la plataforma, el inicio de sesión, perfiles, códigos públicos y reservas nuevas usan Supabase. Las reservas se guardan en la base de datos, pero no se envían avisos de citas por WhatsApp ni correo. El correo que se solicita al crear una cuenta es únicamente para iniciar sesión. Otros módulos de demostración todavía guardan parte de su estado en `localStorage` y no se sincronizan entre dispositivos.
 
