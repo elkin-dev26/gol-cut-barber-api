@@ -90,6 +90,7 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [tenantVistaDesarrolladorId, setTenantVistaDesarrolladorId] = useState(null);
   const [perfilVistaDesarrolladorId, setPerfilVistaDesarrolladorId] = useState(null);
+  const platformSettingsRevision = useRef(0);
 
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -137,6 +138,7 @@ export default function App() {
 
   useEffect(() => {
     if (!supabaseConfigured) return;
+    const revisionAtRequest = platformSettingsRevision.current;
     fetch('/api/public/settings')
       .then(async response => {
         const result = await response.json();
@@ -144,6 +146,7 @@ export default function App() {
         return result.settings;
       })
       .then(settings => {
+        if (revisionAtRequest !== platformSettingsRevision.current) return;
         setDevConfig(current => ({
           ...current,
           nombrePlataforma: settings.platform_name,
@@ -152,8 +155,20 @@ export default function App() {
         }));
       })
       .catch(error => {
-        setPlatformSettingsError(error.message);
+        if (revisionAtRequest === platformSettingsRevision.current) {
+          setPlatformSettingsError(error.message);
+        }
       });
+  }, []);
+
+  const guardarConfiguracionPlataforma = useCallback((settings) => {
+    platformSettingsRevision.current += 1;
+    setDevConfig(current => ({
+      ...current,
+      nombrePlataforma: settings.platform_name,
+      whatsappSoporte: settings.support_whatsapp,
+      mensajeRenovacion: settings.renewal_message
+    }));
   }, []);
 
   const [incentivos, setIncentivos] = useState(() => {
@@ -997,7 +1012,8 @@ export default function App() {
           <VistaSuperAdmin 
             currentTime={currentTime}
             devConfig={devConfig} 
-            setDevConfig={setDevConfig} 
+            setDevConfig={setDevConfig}
+            guardarConfiguracionPlataforma={guardarConfiguracionPlataforma}
             barberos={barberos}
             setBarberos={setBarberos}
             tenants={tenants}
@@ -2267,18 +2283,25 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
 
   const handleBillingCycleChange = async (barberId, days) => {
     try {
+      let updatedEntity;
       if (supabaseConfigured) {
-        await requestStaffApi('/api/staff/update', {
+        const result = await requestStaffApi('/api/staff/update', {
           method: 'PATCH',
           body: JSON.stringify({ entityId: barberId, billingCycleDays: Number(days) })
         });
+        updatedEntity = result.entity;
       }
       setBarberos(current => current.map(b => b.id === barberId ? {
         ...b,
-        billingCycleDays: Number(days),
-        billingCycleStartedAt: new Date().toISOString(),
-        accessBlocked: barberoBloqueado(b),
-        isLocked: barberoBloqueado(b)
+        billingCycleDays: Number(updatedEntity?.billing_cycle_days ?? days),
+        billingCycleStartedAt: updatedEntity?.billing_cycle_started_at || new Date().toISOString(),
+        accessBlocked: updatedEntity ? updatedEntity.access_blocked : barberoBloqueado(b),
+        isLocked: updatedEntity
+          ? Boolean(updatedEntity.access_blocked) || cicloDePagoVencido({
+            billingCycleStartedAt: updatedEntity.billing_cycle_started_at,
+            billingCycleDays: updatedEntity.billing_cycle_days
+          })
+          : barberoBloqueado(b)
       } : b));
     } catch (error) {
       alert(error.message || 'No se pudo actualizar el ciclo de pago.');
@@ -2291,19 +2314,28 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
     const locked = barberoBloqueado(barber);
     const accessBlocked = !locked;
     try {
+      let updatedEntity;
       if (supabaseConfigured) {
-        await requestStaffApi('/api/staff/update', {
+        const result = await requestStaffApi('/api/staff/update', {
           method: 'PATCH',
           body: JSON.stringify({ entityId: barberId, accessBlocked })
         });
+        updatedEntity = result.entity;
       }
+      const savedAccessBlocked = updatedEntity ? Boolean(updatedEntity.access_blocked) : accessBlocked;
       setBarberos(current => current.map(b => b.id === barberId ? {
         ...b,
-        accessBlocked,
-        isLocked: accessBlocked,
-        billingCycleStartedAt: accessBlocked ? b.billingCycleStartedAt : new Date().toISOString()
+        accessBlocked: savedAccessBlocked,
+        isLocked: savedAccessBlocked || cicloDePagoVencido({
+          billingCycleStartedAt: updatedEntity?.billing_cycle_started_at
+            || (savedAccessBlocked ? b.billingCycleStartedAt : new Date().toISOString()),
+          billingCycleDays: updatedEntity?.billing_cycle_days || b.billingCycleDays
+        }),
+        billingCycleStartedAt: updatedEntity?.billing_cycle_started_at
+          || (savedAccessBlocked ? b.billingCycleStartedAt : new Date().toISOString()),
+        billingCycleDays: Number(updatedEntity?.billing_cycle_days || b.billingCycleDays)
       } : b));
-      alert(accessBlocked
+      alert(savedAccessBlocked
         ? `Acceso bloqueado para ${nombreBarbero}. Solo podrás activarlo desde este panel.`
         : `Acceso activado para ${nombreBarbero}; comenzó un nuevo ciclo de pago.`);
     } catch (error) {
@@ -2920,9 +2952,12 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
   );
 }
 
-function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, setTenantVistaDesarrolladorId, setPerfilVistaDesarrolladorId, setPlatformSettingsError, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
+function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfiguracionPlataforma, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, setTenantVistaDesarrolladorId, setPerfilVistaDesarrolladorId, setPlatformSettingsError, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
   const [nombrePlataforma, setNombrePlataforma] = useState(devConfig?.nombrePlataforma || 'GOL CUT BARBER');
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
+  const [nuevaClaveDesarrollador, setNuevaClaveDesarrollador] = useState('');
+  const [confirmarClaveDesarrollador, setConfirmarClaveDesarrollador] = useState('');
+  const platformSettingsRequest = useRef(0);
   
   const [nuevoSuperUser, setNuevoSuperUser] = useState(superAdminCreds.username);
   const [nuevoSuperPass, setNuevoSuperPass] = useState(superAdminCreds.password);
@@ -2959,6 +2994,32 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBa
   const [nuevoEmailIndep, setNuevoEmailIndep] = useState('');
   const [nuevoIndepPass, setNuevoIndepPass] = useState('');
 
+  useEffect(() => {
+    if (!supabaseConfigured) return undefined;
+    const requestId = ++platformSettingsRequest.current;
+    fetch('/api/public/settings')
+      .then(async response => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'No se pudo cargar la configuración de plataforma.');
+        return result.settings;
+      })
+      .then(settings => {
+        if (requestId !== platformSettingsRequest.current) return;
+        guardarConfiguracionPlataforma(settings);
+        setNombrePlataforma(settings.platform_name);
+        setWhatsapp(settings.support_whatsapp);
+        setPlatformSettingsError('');
+      })
+      .catch(error => {
+        if (requestId === platformSettingsRequest.current) {
+          setPlatformSettingsError(error.message || 'No se pudo cargar la configuración de plataforma.');
+        }
+      });
+    return () => {
+      platformSettingsRequest.current += 1;
+    };
+  }, [guardarConfiguracionPlataforma, setPlatformSettingsError]);
+
   const generarCodigoUnico = (prefijo) => {
     const codigosExistentes = new Set(
       [...tenants, ...perfilesIndependientes].map(cuenta => String(cuenta.codigoPublico || cuenta.id).toLowerCase())
@@ -2983,12 +3044,10 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBa
             renewalMessage: devConfig?.mensajeRenovacion || 'Hola, deseo solicitar soporte y activar mi cuenta.'
           })
         });
-        setDevConfig({
-          ...devConfig,
-          nombrePlataforma: result.settings.platform_name,
-          whatsappSoporte: result.settings.support_whatsapp,
-          mensajeRenovacion: result.settings.renewal_message
-        });
+        platformSettingsRequest.current += 1;
+        guardarConfiguracionPlataforma(result.settings);
+        setNombrePlataforma(result.settings.platform_name);
+        setWhatsapp(result.settings.support_whatsapp);
         setPlatformSettingsError('');
         alert('¡Nombre global y WhatsApp de soporte actualizados para toda la plataforma!');
         return;
@@ -3041,19 +3100,26 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBa
     const account = perfilesIndependientes.find(item => item.id === id);
     if (!account) return;
     try {
+      let updatedEntity;
       if (supabaseConfigured) {
-        await requestStaffApi('/api/staff/update', {
+        const result = await requestStaffApi('/api/staff/update', {
           method: 'PATCH',
           body: JSON.stringify({ entityId: id, billingCycleDays: Number(days) })
         });
+        updatedEntity = result.entity;
       }
-      const expired = barberoBloqueado(account, currentTime);
+      const savedAccessBlocked = updatedEntity ? Boolean(updatedEntity.access_blocked) : barberoBloqueado(account, currentTime);
+      const savedStartedAt = updatedEntity?.billing_cycle_started_at || new Date().toISOString();
+      const savedCycleDays = Number(updatedEntity?.billing_cycle_days || days);
       setPerfilesIndependientes(current => current.map(item => item.id === id ? {
         ...item,
-        billingCycleDays: Number(days),
-        billingCycleStartedAt: new Date().toISOString(),
-        accessBlocked: expired,
-        isLocked: expired
+        billingCycleDays: savedCycleDays,
+        billingCycleStartedAt: savedStartedAt,
+        accessBlocked: savedAccessBlocked,
+        isLocked: savedAccessBlocked || cicloDePagoVencido({
+          billingCycleStartedAt: savedStartedAt,
+          billingCycleDays: savedCycleDays
+        }, currentTime)
       } : item));
     } catch (error) {
       alert(error.message || 'No se pudo actualizar el ciclo del perfil independiente.');
@@ -3063,19 +3129,29 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBa
   const handleBloquearIndependiente = async (account) => {
     const accessBlocked = !barberoBloqueado(account, currentTime);
     try {
+      let updatedEntity;
       if (supabaseConfigured) {
-        await requestStaffApi('/api/staff/update', {
+        const result = await requestStaffApi('/api/staff/update', {
           method: 'PATCH',
           body: JSON.stringify({ entityId: account.id, accessBlocked })
         });
+        updatedEntity = result.entity;
       }
+      const savedAccessBlocked = updatedEntity ? Boolean(updatedEntity.access_blocked) : accessBlocked;
+      const savedStartedAt = updatedEntity?.billing_cycle_started_at
+        || (savedAccessBlocked ? account.billingCycleStartedAt : new Date().toISOString());
+      const savedCycleDays = Number(updatedEntity?.billing_cycle_days || account.billingCycleDays || 30);
       setPerfilesIndependientes(current => current.map(item => item.id === account.id ? {
         ...item,
-        accessBlocked,
-        isLocked: accessBlocked,
-        billingCycleStartedAt: accessBlocked ? item.billingCycleStartedAt : new Date().toISOString()
+        accessBlocked: savedAccessBlocked,
+        isLocked: savedAccessBlocked || cicloDePagoVencido({
+          billingCycleStartedAt: savedStartedAt,
+          billingCycleDays: savedCycleDays
+        }, currentTime),
+        billingCycleStartedAt: savedStartedAt,
+        billingCycleDays: savedCycleDays
       } : item));
-      alert(accessBlocked
+      alert(savedAccessBlocked
         ? `Acceso bloqueado para ${account.nombreBarberia}.`
         : `Acceso activado para ${account.nombreBarberia}; comenzó un nuevo ciclo.`);
     } catch (error) {
@@ -3092,6 +3168,29 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBa
       nombre: nuevoSuperNombre.trim() || 'SuperAdmin / Desarrollador'
     });
     alert('¡Tus credenciales de Desarrollador Root han sido actualizadas con éxito!');
+  };
+
+  const handleCambiarClaveDesarrollador = async (e) => {
+    e.preventDefault();
+    if (nuevaClaveDesarrollador.length < 8) {
+      alert('La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (nuevaClaveDesarrollador !== confirmarClaveDesarrollador) {
+      alert('Las contraseñas no coinciden.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: nuevaClaveDesarrollador });
+      if (error) throw error;
+    } catch (error) {
+      alert(error.message || 'No se pudo cambiar la contraseña.');
+      return;
+    }
+    setNuevaClaveDesarrollador('');
+    setConfirmarClaveDesarrollador('');
+    alert('La contraseña del desarrollador se actualizó correctamente.');
   };
 
   const handleCrearTenant = async (e) => {
@@ -3448,6 +3547,18 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBa
           <div style={{ gridColumn: '1 / -1', marginTop: '4px' }}>
             <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Actualizar Mis Credenciales Root</button>
           </div>
+        </form>
+      </div>}
+
+      {supabaseConfigured && <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Key style={{ width: '16px', height: '16px' }} /> Cambiar mi contraseña de desarrollador
+        </h3>
+        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>La contraseña se actualiza en tu cuenta personal de acceso.</p>
+        <form onSubmit={handleCambiarClaveDesarrollador} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+          <input type="password" autoComplete="new-password" aria-label="Nueva contraseña de desarrollador" placeholder="Nueva contraseña (mínimo 8 caracteres)" value={nuevaClaveDesarrollador} onChange={(e) => setNuevaClaveDesarrollador(e.target.value)} minLength={8} required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+          <input type="password" autoComplete="new-password" aria-label="Confirmar contraseña de desarrollador" placeholder="Confirmar nueva contraseña" value={confirmarClaveDesarrollador} onChange={(e) => setConfirmarClaveDesarrollador(e.target.value)} minLength={8} required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+          <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Actualizar contraseña</button>
         </form>
       </div>}
 
