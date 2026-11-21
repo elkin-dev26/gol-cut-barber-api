@@ -79,6 +79,25 @@ test('pausar la agenda de una sede no afecta a las demás', () => {
   expect(screen.getByText('Agenda Temporalmente Suspendida')).toBeInTheDocument();
 });
 
+test('guarda y recupera cambios del catálogo al volver a iniciar sesión', () => {
+  const firstRender = render(<App />);
+  iniciarSesion('admin', 'admin123');
+  fireEvent.click(screen.getByRole('button', { name: 'Servicios & Precios' }));
+  fireEvent.change(screen.getByPlaceholderText('Nombre nuevo corte / servicio...'), { target: { value: 'Corte Persistente' } });
+  fireEvent.change(screen.getByPlaceholderText('Precio ($)'), { target: { value: '40000' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Crear Servicio' }));
+
+  expect(JSON.parse(localStorage.getItem('gol_cut_services'))).toEqual(
+    expect.arrayContaining([expect.objectContaining({ nombre: 'Corte Persistente', precio: 40000 })])
+  );
+  firstRender.unmount();
+
+  render(<App />);
+  iniciarSesion('admin', 'admin123');
+  fireEvent.click(screen.getByRole('button', { name: 'Servicios & Precios' }));
+  expect(screen.getByText('Corte Persistente')).toBeInTheDocument();
+});
+
 test('el desarrollador puede abrir la sede específica seleccionada para repararla', () => {
   localStorage.setItem('gol_cut_tenants', JSON.stringify([
     {
@@ -143,4 +162,24 @@ test('bloquea también las cuentas de barberos independientes pausadas', () => {
   iniciarSesion('independiente', 'clave123');
 
   expect(screen.getByRole('link', { name: /Solicitar activación por WhatsApp/ })).toBeInTheDocument();
+});
+
+test('impide el inicio de sesión local de un barbero bloqueado', () => {
+  localStorage.setItem('gol_cut_barberos', JSON.stringify([
+    {
+      id: 'barber-1',
+      username: 'elkin',
+      nombre: 'Elkin Ramírez',
+      claveAcceso: 'barbero123',
+      estado: 'Activo',
+      accessBlocked: true,
+      sedeId: 't1'
+    }
+  ]));
+
+  render(<App />);
+  iniciarSesion('elkin', 'barbero123');
+
+  expect(screen.getByText('La cuenta está bloqueada. Solo el administrador puede volver a activarla.')).toBeInTheDocument();
+  expect(screen.queryByText('Panel Barbero - Elkin Ramírez')).not.toBeInTheDocument();
 });

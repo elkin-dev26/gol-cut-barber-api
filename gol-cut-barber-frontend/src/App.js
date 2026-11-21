@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {  
   Scissors, Lock, Smartphone, CheckCircle,  
   Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Edit3, DollarSign, Clock
@@ -28,6 +28,36 @@ const requestStaffApi = async (path, options = {}) => {
 const MENSAJE_PAUSA_SEDE = 'Lo sentimos mucho, la sede se encuentra cerrada por día libre o evento especial el día de hoy.';
 const TURNOS_DISPONIBLES = { Mañana: false, Tarde: false, Noche: false };
 const HORAS_DISPONIBLES = ['08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM'];
+const DEFAULT_PRODUCTS = [
+  { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 },
+  { id: 'p2', nombre: 'Champú Anticaída Barba & Cabello', precio: 45000, stock: 10 }
+];
+const DEFAULT_SERVICES = [
+  { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' },
+  { id: 's2', nombre: 'Barba Tradicional con Toalla Caliente', precio: 15000, duracion: '20 min' },
+  { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
+];
+const DEFAULT_INCENTIVES = [
+  {
+    id: 'inc1',
+    tipo: 'cumpleanos',
+    titulo: 'Descuento Cumpleaños Cliente',
+    descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar en su día.',
+    activo: true,
+    porcentaje: 10,
+    destinatario: 'Todos los Clientes'
+  },
+  {
+    id: 'inc2',
+    tipo: 'barbero',
+    titulo: 'Premio Alquiler Silla Barbero',
+    descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
+    activo: true,
+    metaCitas: 15,
+    porcentaje: 5,
+    destinatario: 'Todos los Barberos'
+  }
+];
 
 const cuentaBloqueada = (cuenta) => (
   !cuenta ||
@@ -35,11 +65,29 @@ const cuentaBloqueada = (cuenta) => (
   Number(cuenta.diasRestantes) <= 0 ||
   Boolean(cuenta.bloqueadoDesarrollador)
 );
+const cicloDePagoVencido = (cuenta, now = Date.now()) => (
+  Boolean(cuenta?.billingCycleStartedAt)
+  && new Date(cuenta.billingCycleStartedAt).getTime()
+    + Number(cuenta.billingCycleDays || 30) * 24 * 60 * 60 * 1000 <= now
+);
+const barberoBloqueado = (barbero, now = Date.now()) => (
+  Boolean(barbero?.accessBlocked || barbero?.isLocked || cicloDePagoVencido(barbero, now))
+);
+const diasCicloRestantes = (barbero, now = Date.now()) => {
+  if (!barbero?.billingCycleStartedAt) return Number(barbero?.billingCycleDays) || 30;
+  const expiresAt = new Date(barbero.billingCycleStartedAt).getTime()
+    + Number(barbero.billingCycleDays || 30) * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
+};
+const fechaLocalIso = (date = new Date()) => (
+  new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+);
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('cliente');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
   const [tenantVistaDesarrolladorId, setTenantVistaDesarrolladorId] = useState(null);
   const [perfilVistaDesarrolladorId, setPerfilVistaDesarrolladorId] = useState(null);
 
@@ -47,9 +95,12 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [slotDuration, setSlotDuration] = useState(30); 
+  const [slotDuration, setSlotDuration] = useState(() => {
+    const saved = localAuthAllowed ? localStorage.getItem('gol_cut_slot_duration') : null;
+    return saved ? Number(saved) : 30;
+  });
   const [chairFeeConfig, setChairFeeConfig] = useState(() => {
-    const guardado = localStorage.getItem('chairFeeConfig');
+    const guardado = localAuthAllowed ? localStorage.getItem('chairFeeConfig') : null;
     return guardado ? JSON.parse(guardado) : { tipo: 'fijo', valor: 50000 };
   });
 
@@ -106,34 +157,25 @@ export default function App() {
   }, []);
 
   const [incentivos, setIncentivos] = useState(() => {
-    const guardado = localStorage.getItem('gol_cut_incentivos');
+    const guardado = localAuthAllowed ? localStorage.getItem('gol_cut_incentivos') : null;
     if (guardado) return JSON.parse(guardado);
-    return [
-      {
-        id: 'inc1',
-        tipo: 'cumpleanos',
-        titulo: 'Descuento Cumpleaños Cliente',
-        descripcion: 'Los clientes obtienen un 10% de descuento automático al reservar en su día.',
-        activo: true,
-        porcentaje: 10,
-        destinatario: 'Todos los Clientes'
-      },
-      {
-        id: 'inc2',
-        tipo: 'barbero',
-        titulo: 'Premio Alquiler Silla Barbero',
-        descripcion: 'Barberos que superen la meta mensual ganan descuento en alquiler.',
-        activo: true,
-        metaCitas: 15,
-        porcentaje: 5,
-        destinatario: 'Todos los Barberos'
-      }
-    ];
+    return DEFAULT_INCENTIVES;
   });
 
   useEffect(() => {
+    if (!localAuthAllowed) return;
     localStorage.setItem('gol_cut_incentivos', JSON.stringify(incentivos));
   }, [incentivos]);
+
+  useEffect(() => {
+    if (!localAuthAllowed) return;
+    localStorage.setItem('chairFeeConfig', JSON.stringify(chairFeeConfig));
+  }, [chairFeeConfig]);
+
+  useEffect(() => {
+    if (!localAuthAllowed) return;
+    localStorage.setItem('gol_cut_slot_duration', String(slotDuration));
+  }, [slotDuration]);
 
   const [tenants, setTenants] = useState(() => {
     const guardado = localAuthAllowed ? localStorage.getItem('gol_cut_tenants') : null;
@@ -183,9 +225,9 @@ export default function App() {
     const guardado = localAuthAllowed ? localStorage.getItem('gol_cut_barberos') : null;
     if (guardado) return JSON.parse(guardado);
     return [
-      { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.', billingCycle: 'mensual', isLocked: false, sedeId: 't1' },
-      { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycle: 'mensual', isLocked: false, sedeId: 't1' },
-      { id: 'b3', username: 'carlos', nombre: 'Carlos Mijares', especialidad: 'Master Barber', estado: 'Activo', claveAcceso: 'carlos2026', pausado: false, mensajePausa: 'Carlos descansa hoy.', billingCycle: 'mensual', isLocked: false, sedeId: 't2' }
+      { id: 'b1', username: 'elkin', nombre: 'Elkin Ramírez', especialidad: 'Estilista Profesional', estado: 'Activo', claveAcceso: 'barbero123', pausado: false, mensajePausa: 'Elkin no laborará este día por motivos personales.', billingCycleDays: 30, billingCycleStartedAt: new Date().toISOString(), isLocked: false, sedeId: 't1' },
+      { id: 'b2', username: 'mateo', nombre: 'Mateo Gómez', especialidad: 'Barbero Senior', estado: 'Activo', claveAcceso: 'mateo2026', pausado: false, mensajePausa: 'Mateo se encuentra en evento especial hoy.', billingCycleDays: 30, billingCycleStartedAt: new Date().toISOString(), isLocked: false, sedeId: 't1' },
+      { id: 'b3', username: 'carlos', nombre: 'Carlos Mijares', especialidad: 'Master Barber', estado: 'Activo', claveAcceso: 'carlos2026', pausado: false, mensajePausa: 'Carlos descansa hoy.', billingCycleDays: 30, billingCycleStartedAt: new Date().toISOString(), isLocked: false, sedeId: 't2' }
     ];
   });
 
@@ -209,6 +251,9 @@ export default function App() {
         propietario: 'Juan Solista',
         estadoLicencia: 'Activa',
         bloqueadoDesarrollador: false,
+        billingCycleDays: 30,
+        billingCycleStartedAt: new Date().toISOString(),
+        accessBlocked: false,
         codigoPublico: 'indep_tenant',
         diasRestantes: 30,
         agendaPausada: false,
@@ -227,16 +272,25 @@ export default function App() {
     localStorage.setItem('gol_cut_perfiles_independientes', JSON.stringify(perfilesIndependientes));
   }, [perfilesIndependientes]);
 
-  const [productos, setProductos] = useState([
-    { id: 'p1', nombre: 'Cera Moldear Mate Gold', precio: 30000, stock: 3 },
-    { id: 'p2', nombre: 'Champú Anticaída Barba & Cabello', precio: 45000, stock: 10 }
-  ]);
+  const [productos, setProductos] = useState(() => {
+    const saved = localAuthAllowed ? localStorage.getItem('gol_cut_products') : null;
+    return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+  });
 
-  const [servicios, setServicios] = useState([
-    { id: 's1', nombre: 'Corte de Cabello Clásico', precio: 25000, duracion: '30 min' },
-    { id: 's2', nombre: 'Barba Tradicional con Toalla Caliente', precio: 15000, duracion: '20 min' },
-    { id: 's3', nombre: 'Combo Corte + Barba', precio: 35000, duracion: '45 min' }
-  ]);
+  const [servicios, setServicios] = useState(() => {
+    const saved = localAuthAllowed ? localStorage.getItem('gol_cut_services') : null;
+    return saved ? JSON.parse(saved) : DEFAULT_SERVICES;
+  });
+
+  useEffect(() => {
+    if (!localAuthAllowed) return;
+    localStorage.setItem('gol_cut_products', JSON.stringify(productos));
+  }, [productos]);
+
+  useEffect(() => {
+    if (!localAuthAllowed) return;
+    localStorage.setItem('gol_cut_services', JSON.stringify(servicios));
+  }, [servicios]);
 
   const [citas, setCitas] = useState(() => {
     const saved = localAuthAllowed ? localStorage.getItem('gol_cut_citas_mes') : null;
@@ -260,10 +314,97 @@ export default function App() {
     localStorage.setItem('gol_cut_citas_mes', JSON.stringify(citas));
   }, [citas]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const tenantPrincipal = tenants[0]; 
   const tenantActualParaAdmin = tenants.find(t => t.id === usuarioAutenticado?.tenantObj?.id)
     || tenants.find(t => t.id === tenantVistaDesarrolladorId)
     || tenantPrincipal;
+  const [loadedSettingsTenantId, setLoadedSettingsTenantId] = useState(null);
+  const [loadedIndependentSettingsId, setLoadedIndependentSettingsId] = useState(null);
+  const [tenantSettingsError, setTenantSettingsError] = useState('');
+  const settingsSaveQueue = useRef(Promise.resolve());
+
+  useEffect(() => {
+    const independentId = activeRole === 'barbero_independiente'
+      ? usuarioAutenticado?.perfilIndepObj?.id || perfilVistaDesarrolladorId
+      : null;
+    const tenantId = activeRole === 'admin'
+      ? tenantActualParaAdmin?.id
+      : independentId
+        ? usuarioAutenticado?.perfilIndepObj?.sedeId || independentId
+        : null;
+    if (!supabaseConfigured || !tenantId) {
+      setLoadedSettingsTenantId(null);
+      setLoadedIndependentSettingsId(null);
+      return undefined;
+    }
+
+    let active = true;
+    setLoadedSettingsTenantId(null);
+    setLoadedIndependentSettingsId(null);
+    requestStaffApi(`/api/tenants/settings?id=${encodeURIComponent(tenantId)}`)
+      .then(result => {
+        if (!active) return;
+        const settings = result.settings || {};
+        if (independentId) {
+          const ownServices = settings.independentServices?.[independentId];
+          setPerfilesIndependientes(current => current.map(profile => profile.id === independentId ? {
+            ...profile,
+            serviciosPropios: Array.isArray(ownServices) ? ownServices : []
+          } : profile));
+          setLoadedIndependentSettingsId(independentId);
+          setTenantSettingsError('');
+          return;
+        }
+        setProductos(Array.isArray(settings.products) ? settings.products : DEFAULT_PRODUCTS);
+        setServicios(Array.isArray(settings.services) ? settings.services : DEFAULT_SERVICES);
+        setIncentivos(Array.isArray(settings.incentives) ? settings.incentives : DEFAULT_INCENTIVES);
+        if (settings.chairFeeConfig && typeof settings.chairFeeConfig === 'object') {
+          setChairFeeConfig(settings.chairFeeConfig);
+        } else {
+          setChairFeeConfig({ tipo: 'fijo', valor: 50000 });
+        }
+        setSlotDuration([30, 60].includes(Number(settings.slotDuration)) ? Number(settings.slotDuration) : 30);
+        setTenantSettingsError('');
+        setLoadedSettingsTenantId(tenantId);
+      })
+      .catch(error => {
+        if (!active) return;
+        setTenantSettingsError(error.message || 'No se pudo cargar la configuración de la sede.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeRole, tenantActualParaAdmin?.id, usuarioAutenticado?.perfilIndepObj?.id, usuarioAutenticado?.perfilIndepObj?.sedeId, perfilVistaDesarrolladorId]);
+
+  useEffect(() => {
+    const tenantId = tenantActualParaAdmin?.id;
+    if (!supabaseConfigured || activeRole !== 'admin' || !tenantId || loadedSettingsTenantId !== tenantId) return undefined;
+
+    const settings = {
+      products: productos,
+      services: servicios,
+      incentives: incentivos,
+      chairFeeConfig,
+      slotDuration
+    };
+    const timer = window.setTimeout(() => {
+      settingsSaveQueue.current = settingsSaveQueue.current
+        .catch(() => {})
+        .then(() => requestStaffApi('/api/tenants/settings', {
+          method: 'PATCH',
+          body: JSON.stringify({ id: tenantId, settings })
+        }))
+        .then(() => setTenantSettingsError(''))
+        .catch(error => setTenantSettingsError(error.message || 'No se pudieron guardar los cambios de la sede.'));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [activeRole, tenantActualParaAdmin?.id, loadedSettingsTenantId, productos, servicios, incentivos, chairFeeConfig, slotDuration]);
+
   const perfilIndependienteActual = perfilesIndependientes.find(pi => pi.id === usuarioAutenticado?.perfilIndepObj?.id)
     || perfilesIndependientes.find(pi => pi.id === perfilVistaDesarrolladorId)
     || perfilesIndependientes[0];
@@ -276,8 +417,47 @@ export default function App() {
         ? tenants.find(t => t.id === usuarioAutenticado.barberoObj.sedeId)
         : null;
   const cuentaSesionBloqueada = Boolean(usuarioAutenticado && usuarioAutenticado.role !== 'superadmin' && (
-    usuarioAutenticado.cuentaSuspendida || (cuentaSesion && cuentaBloqueada(cuentaSesion))
+    usuarioAutenticado.cuentaSuspendida
+    || (usuarioAutenticado.barberoObj && (
+      barberoBloqueado(usuarioAutenticado.barberoObj, currentTime)
+    ))
+    || (usuarioAutenticado.perfilIndepObj && (
+      barberoBloqueado(usuarioAutenticado.perfilIndepObj, currentTime)
+    ))
+    || (cuentaSesion && cuentaBloqueada(cuentaSesion))
   ));
+  const independentSettingsId = activeRole === 'barbero_independiente'
+    ? perfilIndependienteActual?.id
+    : null;
+  const independentSettingsTenantId = independentSettingsId
+    ? usuarioAutenticado?.perfilIndepObj?.sedeId || independentSettingsId
+    : null;
+  const independentServices = useMemo(() => (
+    independentSettingsId
+      ? perfilesIndependientes.find(profile => profile.id === independentSettingsId)?.serviciosPropios || []
+      : []
+  ), [independentSettingsId, perfilesIndependientes]);
+
+  useEffect(() => {
+    if (!supabaseConfigured
+      || !independentSettingsId
+      || !independentSettingsTenantId
+      || loadedIndependentSettingsId !== independentSettingsId
+    ) return undefined;
+
+    const settings = { independentServices: { [independentSettingsId]: independentServices } };
+    const timer = window.setTimeout(() => {
+      settingsSaveQueue.current = settingsSaveQueue.current
+        .catch(() => {})
+        .then(() => requestStaffApi('/api/tenants/settings', {
+          method: 'PATCH',
+          body: JSON.stringify({ id: independentSettingsTenantId, settings })
+        }))
+        .then(() => setTenantSettingsError(''))
+        .catch(error => setTenantSettingsError(error.message || 'No se pudieron guardar los servicios del perfil independiente.'));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [independentSettingsId, independentSettingsTenantId, independentServices, loadedIndependentSettingsId]);
 
   const exitoLogin = useCallback((userObj) => {
     setUsuarioAutenticado(userObj);
@@ -287,6 +467,50 @@ export default function App() {
     setIsLoginOpen(false);
     setUsernameInput('');
     setPasswordInput('');
+  }, []);
+
+  const crearCitaDesdePanel = useCallback(async (appointment, entityId) => {
+    if (supabaseConfigured) {
+      if (!entityId) throw new Error('No se pudo identificar al barbero para guardar el registro.');
+      await requestStaffApi('/api/appointments/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          appointmentId: appointment.id,
+          entityId,
+          customerName: appointment.cliente,
+          serviceName: appointment.servicio,
+          appointmentDate: appointment.fecha,
+          appointmentTime: appointment.hora,
+          price: appointment.precio
+        })
+      });
+    }
+    setCitas(current => [{ ...appointment, bookingEntityId: entityId }, ...current]);
+  }, []);
+
+  const actualizarCitaPersistida = useCallback(async (appointmentId, changes) => {
+    if (supabaseConfigured) {
+      const payload = { appointmentId };
+      if (changes.estado !== undefined) payload.status = changes.estado;
+      if (changes.bookingEntityId !== undefined) payload.bookingEntityId = changes.bookingEntityId;
+      if (changes.motivoCancelacion !== undefined) payload.cancellationReason = changes.motivoCancelacion;
+      await requestStaffApi('/api/appointments/update', {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+      });
+    }
+    setCitas(current => current.map(appointment => (
+      appointment.id === appointmentId ? { ...appointment, ...changes } : appointment
+    )));
+  }, []);
+
+  const eliminarCitaPersistida = useCallback(async (appointmentId) => {
+    if (supabaseConfigured) {
+      await requestStaffApi(`/api/appointments/update?id=${encodeURIComponent(appointmentId)}`, {
+        method: 'DELETE'
+      });
+    }
+    setCitas(current => current.filter(appointment => appointment.id !== appointmentId));
   }, []);
 
   const iniciarSesionDeCuenta = useCallback((userObj, cuenta, nombreCuenta) => {
@@ -300,11 +524,12 @@ export default function App() {
   const cargarSesionSupabase = useCallback(async (session) => {
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('id,role,display_name,username,tenant_id,entity_id')
+      .select('id,role,display_name,username,tenant_id,entity_id,disabled_at')
       .eq('id', session.user.id)
       .maybeSingle();
     if (profileError) throw profileError;
     if (!profile) throw new Error('Tu cuenta no tiene un perfil de acceso configurado. Contacta al desarrollador.');
+    if (profile.disabled_at) throw new Error('Esta cuenta fue desactivada por el desarrollador.');
 
     const isDeveloper = profile.role === 'developer';
     const tenantQuery = isDeveloper
@@ -328,7 +553,7 @@ export default function App() {
 
     const { data: staffProfiles, error: staffError } = await supabase
       .from('user_profiles')
-      .select('id,role,display_name,username,tenant_id,entity_id');
+      .select('id,role,display_name,username,tenant_id,entity_id,disabled_at');
     if (staffError) throw staffError;
     const profilesByUserId = new Map((staffProfiles || []).map(item => [item.id, item]));
     const mapTenant = (tenant) => ({
@@ -340,7 +565,10 @@ export default function App() {
       diasRestantes: tenant.license_status === 'active' ? 30 : 0,
       agendaPausada: false,
       mensajePausaGeneral: MENSAJE_PAUSA_SEDE,
-      globalTimer: { ...TURNOS_DISPONIBLES }
+      globalTimer: { ...TURNOS_DISPONIBLES },
+      bookingBlackouts: tenant.booking_blackouts || [],
+      authUserId: (staffProfiles || []).find(item => item.role === 'admin' && item.tenant_id === tenant.id)?.id,
+      accessDisabled: Boolean((staffProfiles || []).find(item => item.role === 'admin' && item.tenant_id === tenant.id)?.disabled_at)
     });
     const mappedTenants = tenantRows.map(mapTenant);
     const mappedEntities = (entityRows || []).map(entity => {
@@ -355,7 +583,16 @@ export default function App() {
         especialidad: 'Barbero Profesional',
         estado: 'Activo',
         pausado: !entity.active,
-        isLocked: false,
+        accessBlocked: entity.access_blocked,
+        authUserId: entity.user_id,
+        accessDisabled: Boolean(staff?.disabled_at),
+        isLocked: entity.access_blocked
+          || cicloDePagoVencido({
+            billingCycleStartedAt: entity.billing_cycle_started_at,
+            billingCycleDays: entity.billing_cycle_days
+          }),
+        billingCycleDays: Number(entity.billing_cycle_days) || 30,
+        billingCycleStartedAt: entity.billing_cycle_started_at,
         claveAcceso: '',
         sedeId: entity.tenant_id,
         esIndependiente: entity.entity_type === 'independent'
@@ -393,7 +630,7 @@ export default function App() {
       establecimientoId: appointment.tenant_id,
       bookingEntityId: appointment.booking_entity_id,
       registradoEnApp: true,
-      motivoCancelacion: null
+      motivoCancelacion: appointment.cancellation_reason || null
     })));
 
     if (profile.role === 'developer') {
@@ -419,6 +656,20 @@ export default function App() {
     }
 
     const entity = mappedEntities.find(item => item.id === profile.entity_id);
+    if (['barber', 'independent'].includes(profile.role) && entity && (!entity.active || entity.isLocked)) {
+      const localRole = profile.role === 'barber' ? 'barbero' : 'barbero_independiente';
+      const entityUser = profile.role === 'barber'
+        ? { barberoObj: entity }
+        : { perfilIndepObj: entity };
+      iniciarSesionDeCuenta({
+        id: profile.id,
+        username: profile.username || session.user.email,
+        nombre: profile.display_name,
+        role: localRole,
+        ...entityUser
+      }, { estadoLicencia: 'Pausada', diasRestantes: 0 }, tenant?.nombreBarberia || 'la barbería');
+      return;
+    }
     if (profile.role === 'admin') {
       iniciarSesionDeCuenta({
         id: profile.id,
@@ -532,6 +783,10 @@ export default function App() {
         setLoginError('Su usuario se encuentra inactivo.');
         return;
       }
+      if (barberoBloqueado(barberoEncontrado)) {
+        setLoginError('La cuenta está bloqueada. Solo el administrador puede volver a activarla.');
+        return;
+      }
       const usuarioBarbero = {
         username: barberoEncontrado.username, 
         nombre: barberoEncontrado.nombre, 
@@ -639,9 +894,9 @@ export default function App() {
         </div>
       </header>
 
-      {(platformSettingsError || (!supabaseConfigured && process.env.NODE_ENV === 'production' && 'Configura Supabase antes de habilitar los inicios de sesión en producción.')) && (
+      {(platformSettingsError || tenantSettingsError || (!supabaseConfigured && process.env.NODE_ENV === 'production' && 'Configura Supabase antes de habilitar los inicios de sesión en producción.')) && (
         <div role="alert" style={{ backgroundColor: '#7f1d1d', color: '#fecaca', padding: '8px 16px', fontSize: '12px', textAlign: 'center' }}>
-          {platformSettingsError || 'Configura Supabase antes de habilitar los inicios de sesión en producción.'}
+          {platformSettingsError || tenantSettingsError || 'Configura Supabase antes de habilitar los inicios de sesión en producción.'}
         </div>
       )}
 
@@ -668,7 +923,9 @@ export default function App() {
           <VistaBarbero 
             barberoActual={usuarioAutenticado?.barberoObj || barberos[0]} 
             citas={citas} 
-            setCitas={setCitas} 
+            onCrearCita={crearCitaDesdePanel}
+            onActualizarCita={actualizarCitaPersistida}
+            onEliminarCita={eliminarCitaPersistida}
             servicios={servicios} 
             onCerrarSesion={handleCerrarSesion} 
             devConfig={devConfig}
@@ -686,7 +943,9 @@ export default function App() {
             setPerfilesIndependientes={setPerfilesIndependientes}
             perfilesIndependientes={perfilesIndependientes}
             citas={citas}
-            setCitas={setCitas}
+            onCrearCita={crearCitaDesdePanel}
+            onActualizarCita={actualizarCitaPersistida}
+            onEliminarCita={eliminarCitaPersistida}
             onCerrarSesion={handleCerrarSesion}
             devConfig={devConfig}
             activeRole={activeRole}
@@ -698,7 +957,9 @@ export default function App() {
             usuario={usuarioAutenticado || { nombre: 'Administrador' }} 
             tenantActualParaAdmin={tenantActualParaAdmin}
             citas={citas} 
-            setCitas={setCitas} 
+            onActualizarCita={actualizarCitaPersistida}
+            onEliminarCita={eliminarCitaPersistida}
+            currentTime={currentTime}
             barberos={barberos} 
             setBarberos={setBarberos} 
             productos={productos}
@@ -714,17 +975,19 @@ export default function App() {
             tenantPrincipal={tenantPrincipal}
             setTenants={setTenants}
             tenants={tenants}
-            agendaPausadaSede={Boolean(tenantActualParaAdmin?.agendaPausada)}
-            setAgendaPausadaSede={(agendaPausada) => setTenants(actuales => actuales.map(t => t.id === tenantActualParaAdmin?.id ? { ...t, agendaPausada } : t))}
-            mensajePausaGeneral={tenantActualParaAdmin?.mensajePausaGeneral || MENSAJE_PAUSA_SEDE}
-            setMensajePausaGeneral={(mensajePausaGeneral) => setTenants(actuales => actuales.map(t => t.id === tenantActualParaAdmin?.id ? { ...t, mensajePausaGeneral } : t))}
-            globalTimer={tenantActualParaAdmin?.globalTimer || TURNOS_DISPONIBLES}
-            setGlobalTimer={(actualizarTurnos) => setTenants(actuales => actuales.map(t => {
-              if (t.id !== tenantActualParaAdmin?.id) return t;
-              const turnosActuales = t.globalTimer || TURNOS_DISPONIBLES;
-              const globalTimer = typeof actualizarTurnos === 'function' ? actualizarTurnos(turnosActuales) : actualizarTurnos;
-              return { ...t, globalTimer };
-            }))}
+            agendaPausadaSede={(tenantActualParaAdmin?.bookingBlackouts || []).some(blackout => (
+              blackout.date === fechaLocalIso() && blackout.shift === 'Día completo'
+            ))}
+            bookingBlackouts={tenantActualParaAdmin?.bookingBlackouts || []}
+            setBookingBlackouts={async (bookingBlackouts) => {
+              if (supabaseConfigured) {
+                await requestStaffApi('/api/tenants/update', {
+                  method: 'PATCH',
+                  body: JSON.stringify({ id: tenantActualParaAdmin?.id, bookingBlackouts })
+                });
+              }
+              setTenants(actuales => actuales.map(t => t.id === tenantActualParaAdmin?.id ? { ...t, bookingBlackouts } : t));
+            }}
             chairFeeConfig={chairFeeConfig}
             setChairFeeConfig={setChairFeeConfig}
           />
@@ -732,6 +995,7 @@ export default function App() {
 
         {activeRole === 'superadmin' && (
           <VistaSuperAdmin 
+            currentTime={currentTime}
             devConfig={devConfig} 
             setDevConfig={setDevConfig} 
             barberos={barberos}
@@ -881,11 +1145,14 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   const serviciosFiltrados = useMemo(() => (
     esIndependienteEst && estActual?.serviciosPropios
       ? estActual.serviciosPropios
-      : servicios
+      : estActual?.servicios?.length ? estActual.servicios : servicios
   ), [esIndependienteEst, estActual, servicios]);
 
   const [barbero, setBarbero] = useState('');
   const [servicio, setServicio] = useState('');
+  const hoyStr = fechaLocalIso();
+  const [fecha, setFecha] = useState(hoyStr);
+  const [hora, setHora] = useState('08:00 AM');
 
   const cargarCatalogoPublico = async (codigo) => {
     const response = await fetch(`/api/public/catalog?code=${encodeURIComponent(codigo)}`);
@@ -903,7 +1170,9 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
       bloqueadoDesarrollador: tenant.developer_blocked,
       agendaPausada: false,
       globalTimer: { ...TURNOS_DISPONIBLES },
-      serviciosPropios: []
+      bookingBlackouts: result.bookingBlackouts || [],
+      serviciosPropios: result.independentServices || [],
+      servicios: result.services || []
     });
     setTipoSeleccionCliente(tenant.entity_type === 'independent' ? 'independiente' : 'sede');
     setEntidadesPublicas(result.entities || []);
@@ -986,20 +1255,17 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
     }
   }, [barberosFiltrados, serviciosFiltrados]);
    
-  const hoyStr = new Date().toISOString().split('T')[0];
-  const [fecha, setFecha] = useState(hoyStr);
-  const [hora, setHora] = useState('08:00 AM');
   const [citaCreada, setCitaCreada] = useState(null);
 
   const incCumple = incentivos.find(i => i.tipo === 'cumpleanos' && i.activo);
 
-  const turnosActivos = !esIndependienteEst ? estActual?.globalTimer || TURNOS_DISPONIBLES : TURNOS_DISPONIBLES;
+  const cierresFechaSeleccionada = (estActual?.bookingBlackouts || []).filter(cierre => cierre.date === fecha);
   const horasDisponibles = useMemo(() => HORAS_DISPONIBLES.filter(h => {
     const [horaTexto, periodo] = h.split(' ');
     const horaNumerica = Number(horaTexto.split(':')[0]);
     const turno = periodo === 'AM' || horaNumerica === 12 ? 'Mañana' : horaNumerica < 6 ? 'Tarde' : 'Noche';
-    return !turnosActivos[turno];
-  }), [turnosActivos]);
+    return !cierresFechaSeleccionada.some(cierre => cierre.shift === 'Día completo' || cierre.shift === turno);
+  }), [cierresFechaSeleccionada]);
 
   useEffect(() => {
     if (horasDisponibles.length > 0 && !horasDisponibles.includes(hora)) {
@@ -1145,6 +1411,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
 
   const agendaPausada = Boolean(
     estActual.agendaPausada ||
+    cierresFechaSeleccionada.some(cierre => cierre.shift === 'Día completo') ||
     (!esIndependienteEst && horasDisponibles.length === 0)
   );
   if (cuentaBloqueada(estActual) || agendaPausada) {
@@ -1357,7 +1624,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   );
 }
 
-function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, activeRole, tenantPrincipal, tenants }) {
+function VistaBarbero({ barberoActual, citas, onCrearCita, onActualizarCita, onEliminarCita, servicios, onCerrarSesion, devConfig, licenciaVencida, incentivos, activeRole, tenantPrincipal, tenants }) {
   const [servicioRapido, setServicioRapido] = useState(servicios[0]?.nombre || '');
   const [precioRapido, setPrecioRapido] = useState(servicios[0]?.precio || 25000);
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState('efectivo');
@@ -1398,13 +1665,17 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   const meta = incBarbero?.metaCitas || 15;
   const porcentajeAvance = Math.max(0, Math.min(Math.round(((atencionesBarbero - (transferenciasNoRegistradas * 2)) / meta) * 100), 100));
 
-  const handleEstadoCita = (id, nuevoEstado) => {
-    setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado, registradoEnApp: true } : c));
+  const handleEstadoCita = async (id, nuevoEstado) => {
+    try {
+      await onActualizarCita(id, { estado: nuevoEstado, registradoEnApp: true });
+    } catch (error) {
+      alert(error.message || 'No se pudo actualizar la cita.');
+    }
   };
 
   const handleEliminarCitaBarbero = (id) => {
     if (window.confirm('¿Desea anular o eliminar definitivamente esta cita de la lista?')) {
-      setCitas(citas.filter(c => c.id !== id));
+      onEliminarCita(id).catch(error => alert(error.message || 'No se pudo eliminar la cita.'));
     }
   };
 
@@ -1413,11 +1684,10 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
     if (!citaACancelar) return;
     const justificacionFinal = motivoPreset === 'Otro motivo...' ? motivoLibre.trim() : motivoPreset;
 
-    setCitas(citas.map(c => c.id === citaACancelar.id ? { 
-      ...c, 
-      estado: 'cancelada', 
-      motivoCancelacion: justificacionFinal 
-    } : c));
+    onActualizarCita(citaACancelar.id, {
+      estado: 'cancelada',
+      motivoCancelacion: justificacionFinal
+    }).catch(error => alert(error.message || 'No se pudo cancelar la cita.'));
 
     setCitaACancelar(null);
     setMotivoLibre('');
@@ -1438,7 +1708,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       cliente: metodoPagoSeleccionado === 'transferencia' ? 'Cliente (Pago por Transferencia)' : 'Cliente Presencial (Efectivo)',
       barbero: barberoActual?.nombre || 'Barbero',
       servicio: servicioRapido,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: fechaLocalIso(),
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       precio: valorFinal,
       estado: 'completada',
@@ -1447,7 +1717,8 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
       motivoCancelacion: null
     };
 
-    setCitas([nueva, ...citas]);
+    onCrearCita(nueva, barberoActual?.id)
+      .catch(error => alert(error.message || 'No se pudo guardar el servicio.'));
   };
 
   const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
@@ -1579,7 +1850,7 @@ function VistaBarbero({ barberoActual, citas, setCitas, servicios, onCerrarSesio
   );
 }
 
-function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, setCitas, onCerrarSesion, devConfig, activeRole }) {
+function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependientes, perfilesIndependientes, citas, onCrearCita, onActualizarCita, onEliminarCita, onCerrarSesion, devConfig, activeRole }) {
   const [servicioNombre, setServicioNombre] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
   const [servicioDuracion, setServicioDuracion] = useState('30 min');
@@ -1669,7 +1940,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
       cliente: metodoPago === 'transferencia' ? 'Cliente (Pago por Transferencia)' : 'Cliente Presencial (Efectivo)',
       barbero: `${perfilIndependiente.propietario} (${perfilIndependiente.nombreBarberia})`,
       servicio: servicioSeleccionado,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: fechaLocalIso(),
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       precio: Number(precioCobro),
       estado: 'completada',
@@ -1677,17 +1948,22 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
       registradoEnApp: true,
       motivoCancelacion: null
     };
-    setCitas([nueva, ...citas]);
-    alert('Cobro registrado en tu caja independiente.');
+    onCrearCita(nueva, perfilIndependiente.id)
+      .then(() => alert('Cobro registrado en tu caja independiente.'))
+      .catch(error => alert(error.message || 'No se pudo registrar el cobro.'));
   };
 
-  const handleEstadoCitaIndep = (id, nuevoEstado) => {
-    setCitas(citas.map(c => c.id === id ? { ...c, estado: nuevoEstado, registradoEnApp: true } : c));
+  const handleEstadoCitaIndep = async (id, nuevoEstado) => {
+    try {
+      await onActualizarCita(id, { estado: nuevoEstado, registradoEnApp: true });
+    } catch (error) {
+      alert(error.message || 'No se pudo actualizar la cita.');
+    }
   };
 
   const handleEliminarCitaIndep = (id) => {
     if (window.confirm('¿Desea anular o eliminar esta cita de su lista?')) {
-      setCitas(citas.filter(c => c.id !== id));
+      onEliminarCita(id).catch(error => alert(error.message || 'No se pudo eliminar la cita.'));
     }
   };
 
@@ -1696,11 +1972,10 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
     if (!citaACancelarIndep) return;
     const justificacionFinal = motivoPresetIndep === 'Otro motivo...' ? motivoLibreIndep.trim() : motivoPresetIndep;
 
-    setCitas(citas.map(c => c.id === citaACancelarIndep.id ? { 
-      ...c, 
-      estado: 'cancelada', 
-      motivoCancelacion: justificacionFinal 
-    } : c));
+    onActualizarCita(citaACancelarIndep.id, {
+      estado: 'cancelada',
+      motivoCancelacion: justificacionFinal
+    }).catch(error => alert(error.message || 'No se pudo cancelar la cita.'));
 
     setCitaACancelarIndep(null);
     setMotivoLibreIndep('');
@@ -1713,7 +1988,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>⭐ {perfilIndependiente.nombreBarberia} ({perfilIndependiente.propietario})</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>
             Conteo regresivo del mes (Licencia): <strong style={{ color: '#38bdf8' }}>{perfilIndependiente.diasRestantes || 30} días</strong>
-            {!supabaseConfigured && <> | Clave de acceso: <strong style={{ color: '#fbbf24' }}>{perfilIndependiente.clave}</strong></>}
+            {!supabaseConfigured && <> | La contraseña no se muestra en pantalla.</>}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1876,7 +2151,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   );
 }
 
-function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, setAgendaPausadaSede, mensajePausaGeneral, setMensajePausaGeneral, globalTimer, setGlobalTimer, chairFeeConfig, setChairFeeConfig }) {
+function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, onEliminarCita, currentTime, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, bookingBlackouts, setBookingBlackouts, chairFeeConfig, setChairFeeConfig }) {
   const [tab, setTab] = useState('resumen');
    
   const tenantActivo = tenantActualParaAdmin || tenantPrincipal;
@@ -1886,6 +2161,8 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
   const [nuevoNombreAdmin, setNuevoNombreAdmin] = useState(tenantActivo.dueno || credencialesAdmin.nombre);
 
   const [nombreNegocioInput, setNombreNegocioInput] = useState(tenantActivo.nombreBarberia);
+  const [blackoutDate, setBlackoutDate] = useState(fechaLocalIso());
+  const [blackoutShift, setBlackoutShift] = useState('Mañana');
 
   const [citaAReasignar, setCitaAReasignar] = useState(null);
   const [nuevoBarberoDestino, setNuevoBarberoDestino] = useState(barberos[0]?.nombre || '');
@@ -1951,40 +2228,110 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
     alert(`¡Nombre de la barbería actualizado exitosamente a "${nombreNegocioInput.trim()}"!`);
   };
 
+  const guardarCierres = async (cierres) => {
+    try {
+      await setBookingBlackouts(cierres);
+    } catch (error) {
+      alert(error.message || 'No se pudieron guardar los cierres de agenda.');
+      throw error;
+    }
+  };
+
+  const agregarCierreAgenda = async (e) => {
+    e.preventDefault();
+    const nuevoCierre = { date: blackoutDate, shift: blackoutShift };
+    if (bookingBlackouts.some(item => item.date === nuevoCierre.date && item.shift === nuevoCierre.shift)) return;
+    try {
+      await guardarCierres([...bookingBlackouts, nuevoCierre]);
+    } catch (error) {
+      return;
+    }
+  };
+
+  const eliminarCierreAgenda = (cierre) => {
+    guardarCierres(bookingBlackouts.filter(item => (
+      item.date !== cierre.date || item.shift !== cierre.shift
+    ))).catch(() => {});
+  };
+
   const handleTogglePausarSede = () => {
-    setAgendaPausadaSede(!agendaPausadaSede);
-    alert(!agendaPausadaSede ? 'Agenda general de sede PAUSADA. Los clientes verán aviso de disculpa.' : 'Agenda general de sede ACTIVADA.');
+    const today = fechaLocalIso();
+    const cierreDia = { date: today, shift: 'Día completo' };
+    const cierres = agendaPausadaSede
+      ? bookingBlackouts.filter(item => item.date !== today || item.shift !== 'Día completo')
+      : [...bookingBlackouts, cierreDia];
+    guardarCierres(cierres)
+      .then(() => alert(agendaPausadaSede ? 'Sede activada para hoy.' : 'Sede bloqueada para citas durante todo el día de hoy.'))
+      .catch(() => {});
   };
 
-  const handleToggleGlobalTimeBlock = (slot) => {
-    setGlobalTimer(prev => ({ ...prev, [slot]: !prev[slot] }));
-  };
-
-  const handleBillingCycleChange = (barberId, cycle) => {
-    setBarberos(barberos.map(b => b.id === barberId ? { ...b, billingCycle: cycle } : b));
-  };
-
-  const toggleBarberLock = (barberId, nombreBarbero) => {
-    setBarberos(barberos.map(b => {
-      if (b.id === barberId) {
-        const nuevoEstado = !b.isLocked;
-        alert(nuevoEstado ? `Permisos bloqueados para ${nombreBarbero} por ciclo de pago.` : `Permisos activados (Pago recibido) para ${nombreBarbero}.`);
-        return { ...b, isLocked: nuevoEstado };
+  const handleBillingCycleChange = async (barberId, days) => {
+    try {
+      if (supabaseConfigured) {
+        await requestStaffApi('/api/staff/update', {
+          method: 'PATCH',
+          body: JSON.stringify({ entityId: barberId, billingCycleDays: Number(days) })
+        });
       }
-      return b;
-    }));
+      setBarberos(current => current.map(b => b.id === barberId ? {
+        ...b,
+        billingCycleDays: Number(days),
+        billingCycleStartedAt: new Date().toISOString(),
+        accessBlocked: barberoBloqueado(b),
+        isLocked: barberoBloqueado(b)
+      } : b));
+    } catch (error) {
+      alert(error.message || 'No se pudo actualizar el ciclo de pago.');
+    }
   };
 
-  const handleEliminarBarberoDefinitivo = (barberId, nombreBarbero) => {
-    if (window.confirm(`¿Está seguro de eliminar permanentemente el perfil de ${nombreBarbero}? Esto liberará memoria y espacio en el sistema.`)) {
-      setBarberos(barberos.filter(b => b.id !== barberId));
-      alert(`Perfil de ${nombreBarbero} eliminado con éxito.`);
+  const toggleBarberLock = async (barberId, nombreBarbero) => {
+    const barber = barberos.find(b => b.id === barberId);
+    if (!barber) return;
+    const locked = barberoBloqueado(barber);
+    const accessBlocked = !locked;
+    try {
+      if (supabaseConfigured) {
+        await requestStaffApi('/api/staff/update', {
+          method: 'PATCH',
+          body: JSON.stringify({ entityId: barberId, accessBlocked })
+        });
+      }
+      setBarberos(current => current.map(b => b.id === barberId ? {
+        ...b,
+        accessBlocked,
+        isLocked: accessBlocked,
+        billingCycleStartedAt: accessBlocked ? b.billingCycleStartedAt : new Date().toISOString()
+      } : b));
+      alert(accessBlocked
+        ? `Acceso bloqueado para ${nombreBarbero}. Solo podrás activarlo desde este panel.`
+        : `Acceso activado para ${nombreBarbero}; comenzó un nuevo ciclo de pago.`);
+    } catch (error) {
+      alert(error.message || 'No se pudo cambiar el bloqueo del barbero.');
+    }
+  };
+
+  const handleEliminarBarberoDefinitivo = async (barberId, nombreBarbero) => {
+    if (window.confirm(`¿Desea desactivar la cuenta de ${nombreBarbero}? Se conservará el historial de sus citas.`)) {
+      if (supabaseConfigured) {
+        try {
+          await requestStaffApi('/api/staff/remove', {
+            method: 'POST',
+            body: JSON.stringify({ entityId: barberId })
+          });
+        } catch (error) {
+          alert(error.message || 'No se pudo desactivar la cuenta del barbero.');
+          return;
+        }
+      }
+      setBarberos(current => current.filter(b => b.id !== barberId));
+      alert(`Cuenta de ${nombreBarbero} desactivada. El historial de citas se conservó.`);
     }
   };
 
   const handleEliminarCitaAdmin = (id) => {
     if (window.confirm('¿Desea anular o eliminar definitivamente esta cita de la sede?')) {
-      setCitas(citas.filter(c => c.id !== id));
+      onEliminarCita(id).catch(error => alert(error.message || 'No se pudo eliminar la cita.'));
     }
   };
 
@@ -2011,9 +2358,18 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
   const handleReasignarCitaSubmit = (e) => {
     e.preventDefault();
     if (!citaAReasignar) return;
-    setCitas(citas.map(c => c.id === citaAReasignar.id ? { ...c, barbero: nuevoBarberoDestino } : c));
-    setCitaAReasignar(null);
-    alert(`Cita reasignada exitosamente a ${nuevoBarberoDestino}.`);
+    const barber = barberos.find(b => b.nombre === nuevoBarberoDestino && b.sedeId === tenantActivo.id);
+    if (supabaseConfigured && !barber) {
+      alert('No se pudo identificar al barbero seleccionado.');
+      return;
+    }
+    onActualizarCita(citaAReasignar.id, {
+      barbero: nuevoBarberoDestino,
+      bookingEntityId: barber?.entityId || barber?.id
+    }).then(() => {
+      setCitaAReasignar(null);
+      alert(`Cita reasignada exitosamente a ${nuevoBarberoDestino}.`);
+    }).catch(error => alert(error.message || 'No se pudo reasignar la cita.'));
   };
 
   const handleAgregarServicio = (e) => {
@@ -2065,7 +2421,9 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
       claveAcceso: supabaseConfigured ? '' : nuevaClaveBarbero || 'barbero123',
       pausado: false,
       mensajePausa: 'Barbero no disponible hoy.',
-      billingCycle: 'mensual',
+      billingCycleDays: 30,
+      billingCycleStartedAt: new Date().toISOString(),
+      accessBlocked: false,
       isLocked: false,
       sedeId: tenantActivo.id
     }]);
@@ -2319,7 +2677,6 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                   onChange={(e) => {
                     const nuevo = { ...chairFeeConfig, tipo: e.target.value };
                     setChairFeeConfig(nuevo);
-                    localStorage.setItem('chairFeeConfig', JSON.stringify(nuevo));
                   }}
                   style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px' }}
                 >
@@ -2337,7 +2694,6 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                   onChange={(e) => {
                     const nuevo = { ...chairFeeConfig, valor: Number(e.target.value) };
                     setChairFeeConfig(nuevo);
-                    localStorage.setItem('chairFeeConfig', JSON.stringify(nuevo));
                   }}
                   style={{ width: '100%', backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }}
                 />
@@ -2360,24 +2716,26 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                 <div>
                   <h4 style={{ margin: 0, color: '#fff', fontSize: '13px' }}>{b.nombre}</h4>
                   <p style={{ margin: '2px 0', fontSize: '10px', color: '#fbbf24' }}>
-                    {supabaseConfigured ? 'Acceso de cuenta administrado en Supabase.' : `User: ${b.username} | Clave: ${b.claveAcceso}`}
+                    Usuario: {b.username} · Las contraseñas no se muestran; deben restablecerse de forma segura.
                   </p>
-                  <p style={{ margin: '2px 0', fontSize: '10px', color: b.isLocked ? '#f43f5e' : '#34d399' }}>Estado Cuenta: {b.isLocked ? 'Bloqueado (Debe Cupo)' : 'Activo'}</p>
+                  <p style={{ margin: '2px 0', fontSize: '10px', color: barberoBloqueado(b, currentTime) ? '#f43f5e' : '#34d399' }}>
+                    Estado Cuenta: {barberoBloqueado(b, currentTime) ? 'Bloqueado hasta activación del administrador' : 'Activo'} · Ciclo: {b.billingCycleDays || 30} días · Restan: {diasCicloRestantes(b, currentTime)} días
+                  </p>
                 </div>
                  
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <select 
-                    value={b.billingCycle || 'mensual'} 
+                    value={b.billingCycleDays || 30}
                     onChange={(e) => handleBillingCycleChange(b.id, e.target.value)}
                     style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '10px' }}
                   >
-                    <option value="semanal">Cobro Semanal</option>
-                    <option value="quincenal">Cobro Quincenal</option>
-                    <option value="mensual">Cobro Mensual</option>
+                    <option value={8}>Cobro cada 8 días</option>
+                    <option value={15}>Cobro cada 15 días</option>
+                    <option value={30}>Cobro cada 30 días</option>
                   </select>
 
-                  <button type="button" onClick={() => toggleBarberLock(b.id, b.nombre)} style={{ backgroundColor: b.isLocked ? '#065f46' : '#92400e', color: b.isLocked ? '#34d399' : '#fef3c7', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    {b.isLocked ? 'Activar (Pagó)' : 'Bloquear Cupo'}
+                  <button type="button" onClick={() => toggleBarberLock(b.id, b.nombre)} style={{ backgroundColor: barberoBloqueado(b, currentTime) ? '#065f46' : '#92400e', color: barberoBloqueado(b, currentTime) ? '#34d399' : '#fef3c7', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    {barberoBloqueado(b, currentTime) ? 'Activar y reiniciar ciclo' : 'Bloquear acceso'}
                   </button>
 
                   <button type="button" onClick={() => handleEliminarBarberoDefinitivo(b.id, b.nombre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: 'auto' }}>
@@ -2459,28 +2817,31 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '520px' }}>
           <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Clock style={{ width: '16px', height: '16px' }} /> Control de Temporizadores y Bloqueos Globales (Admin)
+              <Clock style={{ width: '16px', height: '16px' }} /> Bloqueo de citas por fecha y turno
             </h3>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Bloquea o habilita franjas horarias completas para todo el sistema de la barbería:</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {['Mañana', 'Tarde', 'Noche'].map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => handleToggleGlobalTimeBlock(slot)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    backgroundColor: globalTimer[slot] ? '#dc2626' : '#334155',
-                    color: '#fff',
-                    border: 'none'
-                  }}
-                >
-                  Turno {slot}: {globalTimer[slot] ? 'Bloqueado' : 'Disponible'}
-                </button>
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Elige una fecha y bloquea un turno o el día completo. Los cambios se guardan en la sede.</p>
+            <form onSubmit={agregarCierreAgenda} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <input
+                type="date"
+                value={blackoutDate}
+                onChange={(e) => setBlackoutDate(e.target.value)}
+                required
+                style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }}
+              />
+              <select value={blackoutShift} onChange={(e) => setBlackoutShift(e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }}>
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noche">Noche</option>
+                <option value="Día completo">Día completo</option>
+              </select>
+              <button type="submit" style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Bloquear citas</button>
+            </form>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+              {bookingBlackouts.map(cierre => (
+                <div key={`${cierre.date}-${cierre.shift}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', color: '#cbd5e1', fontSize: '11px', backgroundColor: '#020617', padding: '8px', borderRadius: '6px' }}>
+                  <span>{cierre.date} · {cierre.shift}</span>
+                  <button type="button" onClick={() => eliminarCierreAgenda(cierre)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>Desbloquear</button>
+                </div>
               ))}
             </div>
           </div>
@@ -2494,7 +2855,6 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
                   {agendaPausadaSede ? 'Activar Sede' : 'Pausar Sede'}
                 </button>
               </div>
-              <input type="text" value={mensajePausaGeneral} onChange={(e) => setMensajePausaGeneral(e.target.value)} placeholder="Mensaje disculpa general..." style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
             </div>
           </div>
 
@@ -2560,7 +2920,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, setCitas, barberos,
   );
 }
 
-function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, setTenantVistaDesarrolladorId, setPerfilVistaDesarrolladorId, setPlatformSettingsError, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
+function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, setTenantVistaDesarrolladorId, setPerfilVistaDesarrolladorId, setPlatformSettingsError, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
   const [nombrePlataforma, setNombrePlataforma] = useState(devConfig?.nombrePlataforma || 'GOL CUT BARBER');
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   
@@ -2584,6 +2944,8 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
 
   const [barberoEditandoClave, setBarberoEditandoClave] = useState(null);
   const [nuevaClaveBarberoDev, setNuevaClaveBarberoDev] = useState('');
+  const [cuentaRestableciendoId, setCuentaRestableciendoId] = useState(null);
+  const [nuevaClaveCuenta, setNuevaClaveCuenta] = useState('');
 
   const [perfilIndepEditandoId, setPerfilIndepEditandoId] = useState(null);
   const [editIndepNombre, setEditIndepNombre] = useState('');
@@ -2638,6 +3000,87 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setNombrePlataforma(nombreGuardado);
     setDevConfig({ ...devConfig, nombrePlataforma: nombreGuardado, whatsappSoporte: whatsapp.trim() });
     alert('¡Nombre de plataforma y WhatsApp de soporte actualizados!');
+  };
+
+  const handleRestablecerClaveCuenta = async (e, userId) => {
+    e.preventDefault();
+    if (nuevaClaveCuenta.length < 8) {
+      alert('La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    try {
+      await requestStaffApi('/api/staff/credentials', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId, action: 'reset', password: nuevaClaveCuenta })
+      });
+      setNuevaClaveCuenta('');
+      setCuentaRestableciendoId(null);
+      alert('La contraseña se restableció. Por seguridad, la clave anterior no se puede consultar.');
+    } catch (error) {
+      alert(error.message || 'No se pudo restablecer la contraseña.');
+    }
+  };
+
+  const handleCambiarAccesoCuenta = async (userId, action) => {
+    try {
+      await requestStaffApi('/api/staff/credentials', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId, action })
+      });
+      const accessDisabled = action === 'revoke';
+      setTenants(current => current.map(account => account.authUserId === userId ? { ...account, accessDisabled } : account));
+      setPerfilesIndependientes(current => current.map(account => account.authUserId === userId ? { ...account, accessDisabled } : account));
+      setBarberos(current => current.map(account => account.authUserId === userId ? { ...account, accessDisabled } : account));
+      alert(accessDisabled ? 'El acceso a esta cuenta fue anulado.' : 'El acceso a esta cuenta fue habilitado.');
+    } catch (error) {
+      alert(error.message || 'No se pudo actualizar el acceso de la cuenta.');
+    }
+  };
+
+  const handleCicloIndependiente = async (id, days) => {
+    const account = perfilesIndependientes.find(item => item.id === id);
+    if (!account) return;
+    try {
+      if (supabaseConfigured) {
+        await requestStaffApi('/api/staff/update', {
+          method: 'PATCH',
+          body: JSON.stringify({ entityId: id, billingCycleDays: Number(days) })
+        });
+      }
+      const expired = barberoBloqueado(account, currentTime);
+      setPerfilesIndependientes(current => current.map(item => item.id === id ? {
+        ...item,
+        billingCycleDays: Number(days),
+        billingCycleStartedAt: new Date().toISOString(),
+        accessBlocked: expired,
+        isLocked: expired
+      } : item));
+    } catch (error) {
+      alert(error.message || 'No se pudo actualizar el ciclo del perfil independiente.');
+    }
+  };
+
+  const handleBloquearIndependiente = async (account) => {
+    const accessBlocked = !barberoBloqueado(account, currentTime);
+    try {
+      if (supabaseConfigured) {
+        await requestStaffApi('/api/staff/update', {
+          method: 'PATCH',
+          body: JSON.stringify({ entityId: account.id, accessBlocked })
+        });
+      }
+      setPerfilesIndependientes(current => current.map(item => item.id === account.id ? {
+        ...item,
+        accessBlocked,
+        isLocked: accessBlocked,
+        billingCycleStartedAt: accessBlocked ? item.billingCycleStartedAt : new Date().toISOString()
+      } : item));
+      alert(accessBlocked
+        ? `Acceso bloqueado para ${account.nombreBarberia}.`
+        : `Acceso activado para ${account.nombreBarberia}; comenzó un nuevo ciclo.`);
+    } catch (error) {
+      alert(error.message || 'No se pudo cambiar el bloqueo del perfil independiente.');
+    }
   };
 
   const handleGuardarCredencialesSuperAdmin = (e) => {
@@ -2711,7 +3154,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setEditTenantNombre(t.nombreBarberia);
     setEditTenantDueno(t.dueno);
     setEditTenantUser(t.usernameAdmin || 'admin');
-    setEditTenantPass(t.passwordAdmin || 'admin123');
+    setEditTenantPass('');
     setEditTenantWp(t.whatsappContacto);
   };
 
@@ -2744,7 +3187,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           ...(supabaseConfigured ? {} : {
             dueno: editTenantDueno.trim(),
             usernameAdmin: editTenantUser.trim().toLowerCase(),
-            passwordAdmin: editTenantPass.trim(),
+            passwordAdmin: editTenantPass.trim() || t.passwordAdmin,
             whatsappContacto: editTenantWp.trim()
           })
         };
@@ -2763,7 +3206,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
     setEditIndepNombre(pi.nombreBarberia);
     setEditIndepPropietario(pi.propietario);
     setEditIndepUser(pi.username);
-    setEditIndepClave(pi.clave);
+    setEditIndepClave('');
   };
 
   const handleGuardarIndependienteDev = async (e, id) => {
@@ -2786,7 +3229,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
           ...(supabaseConfigured ? {} : {
             propietario: editIndepPropietario.trim(),
             username: editIndepUser.trim().toLowerCase(),
-            clave: editIndepClave.trim()
+            clave: editIndepClave.trim() || pi.clave
           })
         };
       }
@@ -2836,6 +3279,9 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       propietario: nuevoIndepPropietario.trim(),
       estadoLicencia: 'Activa',
       bloqueadoDesarrollador: false,
+      billingCycleDays: 30,
+      billingCycleStartedAt: new Date().toISOString(),
+      accessBlocked: false,
       diasRestantes: 30,
       agendaPausada: false,
       mensajePausa: 'Lo siento, hoy no tendré servicio de barbería independiente.',
@@ -3021,7 +3467,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>Control SaaS: Sedes Registradas, Temporizadores & Modificación de Contraseñas de Administrador</h3>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>Control SaaS: Sedes Registradas, Temporizadores y Acceso de Administrador</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {tenants.map(t => (
             <div key={t.id} style={{ backgroundColor: '#020617', padding: '14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -3030,18 +3476,27 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{t.nombreBarberia} ({t.dueno})</span>
                   <p style={{ fontSize: '10px', color: '#a5b4fc', margin: '2px 0 0 0' }}>Código para clientes: <strong>{t.codigoPublico || t.id}</strong></p>
                   <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>
-                    {supabaseConfigured ? 'Acceso de administrador administrado por Supabase.' : <>Usuario Admin: <strong>{t.usernameAdmin || 'admin'}</strong> | Clave: <strong style={{ color: '#34d399' }}>{t.passwordAdmin || 'admin123'}</strong></>}
+                    {supabaseConfigured ? 'Acceso de administrador administrado por Supabase.' : <>Usuario Admin: <strong>{t.usernameAdmin || 'admin'}</strong> · La contraseña no se muestra.</>}
                   </p>
                   <p style={{ fontSize: '10px', color: '#38bdf8', margin: '2px 0 0 0' }}>⏳ Temporizador: <strong>{t.diasRestantes ?? 30} días restantes</strong> ({t.estadoLicencia}){t.bloqueadoDesarrollador ? ' · Bloqueo de mantenimiento activo' : ''}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => accederTenantTiempoReal(t)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
                   <button type="button" onClick={() => iniciarEdicionTenant(t)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{supabaseConfigured ? 'Editar nombre' : 'Editar Clave Admin'}</button>
+                  {supabaseConfigured && t.authUserId && <button type="button" onClick={() => { setCuentaRestableciendoId(t.authUserId); setNuevaClaveCuenta(''); }} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Restablecer clave</button>}
+                  {supabaseConfigured && t.authUserId && <button type="button" onClick={() => handleCambiarAccesoCuenta(t.authUserId, t.accessDisabled ? 'activate' : 'revoke')} style={{ backgroundColor: t.accessDisabled ? '#065f46' : '#7f1d1d', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.accessDisabled ? 'Habilitar acceso' : 'Anular acceso'}</button>}
                   <button type="button" onClick={() => togglePausarTenant(t.id)} style={{ backgroundColor: t.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: t.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}</button>
                   <button type="button" onClick={() => toggleBloqueoDesarrolladorTenant(t.id)} style={{ backgroundColor: t.bloqueadoDesarrollador ? '#065f46' : '#7f1d1d', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{t.bloqueadoDesarrollador ? 'Quitar bloqueo técnico' : 'Bloquear por mantenimiento'}</button>
                   {!supabaseConfigured && <button type="button" onClick={() => eliminarTenant(t.id, t.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>}
                 </div>
               </div>
+
+              {supabaseConfigured && cuentaRestableciendoId === t.authUserId && (
+                <form onSubmit={(e) => handleRestablecerClaveCuenta(e, t.authUserId)} style={{ display: 'flex', gap: '6px' }}>
+                  <input type="password" autoComplete="new-password" placeholder="Nueva contraseña (mínimo 8 caracteres)" value={nuevaClaveCuenta} onChange={(e) => setNuevaClaveCuenta(e.target.value)} required minLength={8} style={{ flex: 1, backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} />
+                  <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Guardar</button>
+                </form>
+              )}
 
               {tenantEditandoId === t.id && (
                 <form onSubmit={(e) => handleGuardarTenantDev(e, t.id)} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '10px', borderTop: '1px solid #1e293b', paddingTop: '10px' }}>
@@ -3049,7 +3504,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   {!supabaseConfigured && <>
                     <input type="text" placeholder="Propietario / Admin" value={editTenantDueno} onChange={(e) => setEditTenantDueno(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                     <input type="text" placeholder="Usuario admin" value={editTenantUser} onChange={(e) => setEditTenantUser(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
-                    <input type="text" placeholder="Contraseña admin" value={editTenantPass} onChange={(e) => setEditTenantPass(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                    <input type="password" placeholder="Nueva contraseña admin (opcional)" autoComplete="new-password" value={editTenantPass} onChange={(e) => setEditTenantPass(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} />
                     <input type="text" placeholder="WhatsApp" value={editTenantWp} onChange={(e) => setEditTenantWp(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                   </>}
                   {supabaseConfigured && <p style={{ gridColumn: '1 / -1', margin: 0, color: '#94a3b8', fontSize: '10px' }}>Las credenciales de acceso se gestionan de forma segura en Supabase.</p>}
@@ -3066,7 +3521,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 10px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Edit3 style={{ width: '16px', height: '16px' }} /> Administrar Perfiles Independientes / Solistas (Claves y Credenciales)
+          <Edit3 style={{ width: '16px', height: '16px' }} /> Administrar Perfiles Independientes / Solistas
         </h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -3077,12 +3532,22 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                   <span style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>⭐ {pi.nombreBarberia} ({pi.propietario})</span>
                   <p style={{ fontSize: '10px', color: '#a5b4fc', margin: '2px 0 0 0' }}>Código para clientes: <strong>{pi.codigoPublico || pi.id}</strong></p>
                   <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>
-                    {supabaseConfigured ? 'Acceso administrado por Supabase.' : <>Usuario: <strong>{pi.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{pi.clave}</strong></>} | Licencia: {pi.diasRestantes} días{pi.bloqueadoDesarrollador ? ' · Bloqueo de mantenimiento activo' : ''}
+                    {supabaseConfigured ? 'Acceso administrado por Supabase.' : <>Usuario: <strong>{pi.username}</strong> · La contraseña no se muestra.</>} | Ciclo: {pi.billingCycleDays || 30} días, restan {diasCicloRestantes(pi, currentTime)} · Licencia: {pi.diasRestantes} días{pi.bloqueadoDesarrollador ? ' · Bloqueo de mantenimiento activo' : ''}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <select value={pi.billingCycleDays || 30} onChange={(e) => handleCicloIndependiente(pi.id, e.target.value)} style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '10px' }}>
+                    <option value={8}>Ciclo cada 8 días</option>
+                    <option value={15}>Ciclo cada 15 días</option>
+                    <option value={30}>Ciclo cada 30 días</option>
+                  </select>
+                  <button type="button" onClick={() => handleBloquearIndependiente(pi)} style={{ backgroundColor: barberoBloqueado(pi, currentTime) ? '#065f46' : '#92400e', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                    {barberoBloqueado(pi, currentTime) ? 'Activar y reiniciar ciclo' : 'Bloquear acceso'}
+                  </button>
                   <button type="button" onClick={() => accederIndependienteTiempoReal(pi)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Ver</button>
                   <button type="button" onClick={() => iniciarEdicionIndependiente(pi)} style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{supabaseConfigured ? 'Editar nombre' : 'Editar Claves'}</button>
+                  {supabaseConfigured && pi.authUserId && <button type="button" onClick={() => { setCuentaRestableciendoId(pi.authUserId); setNuevaClaveCuenta(''); }} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Restablecer clave</button>}
+                  {supabaseConfigured && pi.authUserId && <button type="button" onClick={() => handleCambiarAccesoCuenta(pi.authUserId, pi.accessDisabled ? 'activate' : 'revoke')} style={{ backgroundColor: pi.accessDisabled ? '#065f46' : '#7f1d1d', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{pi.accessDisabled ? 'Habilitar acceso' : 'Anular acceso'}</button>}
                   <button type="button" onClick={() => togglePausarIndependiente(pi.id)} style={{ backgroundColor: pi.estadoLicencia === 'Activa' ? '#78350f' : '#065f46', color: pi.estadoLicencia === 'Activa' ? '#fcd34d' : '#34d399', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                     {pi.estadoLicencia === 'Activa' ? 'Pausar' : 'Activar'}
                   </button>
@@ -3093,13 +3558,20 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                 </div>
               </div>
 
+              {supabaseConfigured && cuentaRestableciendoId === pi.authUserId && (
+                <form onSubmit={(e) => handleRestablecerClaveCuenta(e, pi.authUserId)} style={{ display: 'flex', gap: '6px' }}>
+                  <input type="password" autoComplete="new-password" placeholder="Nueva contraseña (mínimo 8 caracteres)" value={nuevaClaveCuenta} onChange={(e) => setNuevaClaveCuenta(e.target.value)} required minLength={8} style={{ flex: 1, backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} />
+                  <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Guardar</button>
+                </form>
+              )}
+
               {perfilIndepEditandoId === pi.id && (
                 <form onSubmit={(e) => handleGuardarIndependienteDev(e, pi.id)} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '10px', borderTop: '1px solid #1e293b', paddingTop: '10px' }}>
                   <input type="text" placeholder="Nombre barbería" value={editIndepNombre} onChange={(e) => setEditIndepNombre(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                   {!supabaseConfigured && <>
                     <input type="text" placeholder="Propietario" value={editIndepPropietario} onChange={(e) => setEditIndepPropietario(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
                     <input type="text" placeholder="Usuario" value={editIndepUser} onChange={(e) => setEditIndepUser(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
-                    <input type="text" placeholder="Contraseña" value={editIndepClave} onChange={(e) => setEditIndepClave(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} required />
+                    <input type="password" placeholder="Nueva contraseña (opcional)" autoComplete="new-password" value={editIndepClave} onChange={(e) => setEditIndepClave(e.target.value)} style={{ backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} />
                   </>}
                   {supabaseConfigured && <p style={{ gridColumn: '1 / -1', margin: 0, color: '#94a3b8', fontSize: '10px' }}>Las credenciales de acceso se gestionan de forma segura en Supabase.</p>}
                   <div style={{ display: 'flex', gap: '4px' }}>
@@ -3124,7 +3596,7 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
       </div>
 
       <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '14px', borderRadius: '10px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>{supabaseConfigured ? 'Cuentas de barberos (credenciales gestionadas por Supabase)' : 'Control Desarrollador: Claves y Contraseñas de Todos los Barberos (Sede)'}</h3>
+        <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '13px' }}>{supabaseConfigured ? 'Cuentas de barberos y control de acceso' : 'Control Desarrollador: Cuentas de Barberos de la Sede'}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
           {barberos.map(b => (
             <div key={b.id} style={{ backgroundColor: '#020617', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -3132,13 +3604,22 @@ function VistaSuperAdmin({ devConfig, setDevConfig, barberos, setBarberos, tenan
                 <div>
                   <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>{b.nombre}</span>
                   <p style={{ fontSize: '10px', color: '#fbbf24', margin: '2px 0 0 0' }}>
-                    {supabaseConfigured ? 'Acceso de cuenta administrado en Supabase.' : <>User: <strong>{b.username}</strong> | Clave: <strong style={{ color: '#34d399' }}>{b.claveAcceso}</strong></>}
+                    Usuario: <strong>{b.username}</strong> · La contraseña no se muestra.
                   </p>
                 </div>
+                {supabaseConfigured && b.authUserId && <button type="button" onClick={() => { setCuentaRestableciendoId(b.authUserId); setNuevaClaveCuenta(''); }} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Restablecer clave</button>}
+                {supabaseConfigured && b.authUserId && <button type="button" onClick={() => handleCambiarAccesoCuenta(b.authUserId, b.accessDisabled ? 'activate' : 'revoke')} style={{ backgroundColor: b.accessDisabled ? '#065f46' : '#7f1d1d', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>{b.accessDisabled ? 'Habilitar acceso' : 'Anular acceso'}</button>}
                 {!supabaseConfigured && <button type="button" onClick={() => setBarberoEditandoClave(barberoEditandoClave === b.id ? null : b.id)} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
                   {barberoEditandoClave === b.id ? 'Cancelar' : 'Modificar Clave'}
                 </button>}
               </div>
+
+              {supabaseConfigured && cuentaRestableciendoId === b.authUserId && (
+                <form onSubmit={(e) => handleRestablecerClaveCuenta(e, b.authUserId)} style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                  <input type="password" autoComplete="new-password" placeholder="Nueva contraseña (mínimo 8 caracteres)" value={nuevaClaveCuenta} onChange={(e) => setNuevaClaveCuenta(e.target.value)} required minLength={8} style={{ flex: 1, backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '10px' }} />
+                  <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Guardar</button>
+                </form>
+              )}
 
               {!supabaseConfigured && barberoEditandoClave === b.id && (
                 <form onSubmit={(e) => handleModificarClaveBarberoDev(e, b.id)} style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>

@@ -56,7 +56,12 @@ module.exports = async (req, res) => {
         id,
         public_code: publicCode,
         name: name.trim(),
-        entity_type: entityType
+        entity_type: entityType,
+        app_settings: entityType === 'independent' ? {
+          independentServices: {
+            [id]: [{ id: 'si1', nombre: 'Corte Ejecutivo Solo', precio: 30000, duracion: '30 min' }]
+          }
+        } : {}
       })
     });
     createdTenantId = id;

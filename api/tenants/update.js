@@ -4,6 +4,17 @@ const {
   serviceRequest
 } = require('../../lib/supabase-server');
 const isId = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
+const isIsoDate = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
+const isValidBlackout = (item) => (
+  item
+  && typeof item === 'object'
+  && isIsoDate(item.date)
+  && ['Mañana', 'Tarde', 'Noche', 'Día completo'].includes(item.shift)
+);
 
 module.exports = async (req, res) => {
   if (req.method !== 'PATCH') {
@@ -16,7 +27,7 @@ module.exports = async (req, res) => {
 
   try {
     const caller = await authenticateStaff(req);
-    const { id, name, licenseStatus, developerBlocked } = req.body || {};
+    const { id, name, licenseStatus, developerBlocked, bookingBlackouts } = req.body || {};
     if (!caller || !['admin', 'developer'].includes(caller.role)) {
       return res.status(403).json({ error: 'No tienes permiso para modificar esta sede.' });
     }
@@ -50,6 +61,16 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'El bloqueo de mantenimiento debe ser verdadero o falso.' });
       }
       updates.developer_blocked = developerBlocked;
+    }
+    if (bookingBlackouts !== undefined) {
+      if (!Array.isArray(bookingBlackouts) || bookingBlackouts.length > 100 || !bookingBlackouts.every(isValidBlackout)) {
+        return res.status(400).json({ error: 'La lista de cierres contiene fechas o turnos no válidos.' });
+      }
+      const uniqueBlackouts = new Set(bookingBlackouts.map(item => `${item.date}:${item.shift}`));
+      if (uniqueBlackouts.size !== bookingBlackouts.length) {
+        return res.status(400).json({ error: 'No se pueden registrar cierres duplicados.' });
+      }
+      updates.booking_blackouts = bookingBlackouts;
     }
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No se enviaron campos de sede válidos.' });

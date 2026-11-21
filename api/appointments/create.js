@@ -16,6 +16,14 @@ const isIsoDate = (value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 };
+const getShift = (value) => {
+  const match = typeof value === 'string' && value.match(/^(\d{1,2}):\d{2}\s*(AM|PM)$/i);
+  if (!match) return null;
+  const hour = Number(match[1]) % 12 + (match[2].toUpperCase() === 'PM' ? 12 : 0);
+  if (hour < 13) return 'Mañana';
+  if (hour < 17) return 'Tarde';
+  return 'Noche';
+};
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -75,18 +83,37 @@ module.exports = async (req, res) => {
     if (rateLimit !== true) return res.status(429).json({ error: 'Se realizaron demasiados intentos. Inténtalo más tarde.' });
 
     const entities = await serviceRequest(
-      `booking_entities?select=id,tenant_id,active&id=eq.${encodeURIComponent(entityId)}&limit=1`
+      `booking_entities?select=id,tenant_id,active,access_blocked,billing_cycle_days,billing_cycle_started_at,user_id&id=eq.${encodeURIComponent(entityId)}&limit=1`
     );
     const entity = entities?.[0];
-    if (!entity || !entity.active) return res.status(404).json({ error: 'Este perfil no está disponible para reservas.' });
+    const cycleExpiresAt = entity
+      ? new Date(entity.billing_cycle_started_at).getTime() + Number(entity.billing_cycle_days) * 24 * 60 * 60 * 1000
+      : 0;
+    if (!entity || !entity.active || entity.access_blocked || cycleExpiresAt <= Date.now()) {
+      return res.status(404).json({ error: 'Este perfil no está disponible para reservas.' });
+    }
+    if (entity.user_id) {
+      const profiles = await serviceRequest(
+        `user_profiles?select=disabled_at&id=eq.${encodeURIComponent(entity.user_id)}&limit=1`
+      );
+      if (!profiles?.[0] || profiles[0].disabled_at) {
+        return res.status(404).json({ error: 'Este perfil no está disponible para reservas.' });
+      }
+    }
 
     const tenants = await serviceRequest(
-      `tenants?select=id,license_status,developer_blocked&id=eq.${encodeURIComponent(entity.tenant_id)}&limit=1`
+      `tenants?select=id,license_status,developer_blocked,booking_blackouts&id=eq.${encodeURIComponent(entity.tenant_id)}&limit=1`
     );
     const tenant = tenants?.[0];
     if (!tenant || tenant.license_status !== 'active' || tenant.developer_blocked) {
       return res.status(409).json({ error: 'Este perfil no está disponible actualmente.' });
     }
+    const shift = getShift(appointmentTime);
+    const isBlocked = (tenant.booking_blackouts || []).some(blackout => (
+      blackout.date === appointmentDate
+      && (blackout.shift === 'Día completo' || (shift && blackout.shift === shift))
+    ));
+    if (isBlocked) return res.status(409).json({ error: 'La sede no recibe citas en la fecha u horario seleccionado.' });
 
     const appointment = {
       id: appointmentId,

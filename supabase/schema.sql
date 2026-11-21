@@ -5,6 +5,8 @@ create table if not exists public.tenants (
   entity_type text not null default 'shop' check (entity_type in ('shop', 'independent')),
   license_status text not null default 'active' check (license_status in ('active', 'paused')),
   developer_blocked boolean not null default false,
+  booking_blackouts jsonb not null default '[]'::jsonb,
+  app_settings jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -27,6 +29,7 @@ create table if not exists public.user_profiles (
   username text unique,
   tenant_id text references public.tenants(id) on delete cascade,
   entity_id text,
+  disabled_at timestamptz,
   created_at timestamptz not null default now(),
   constraint user_profile_scope check (
     (role = 'developer' and tenant_id is null and entity_id is null)
@@ -43,9 +46,15 @@ create table if not exists public.booking_entities (
   name text not null,
   user_id uuid unique references auth.users(id) on delete set null,
   active boolean not null default true,
+  access_blocked boolean not null default false,
+  billing_cycle_days integer not null default 30 check (billing_cycle_days in (8, 15, 30)),
+  billing_cycle_started_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.user_profiles
+  add column if not exists disabled_at timestamptz;
 
 create table if not exists public.appointments (
   id text primary key,
@@ -57,8 +66,35 @@ create table if not exists public.appointments (
   appointment_time text not null,
   price numeric(12, 2) not null default 0,
   status text not null default 'confirmed' check (status in ('confirmed', 'completed', 'cancelled')),
+  cancellation_reason text,
   created_at timestamptz not null default now()
 );
+
+alter table public.appointments
+  add column if not exists cancellation_reason text;
+
+alter table public.tenants
+  add column if not exists booking_blackouts jsonb not null default '[]'::jsonb,
+  add column if not exists app_settings jsonb not null default '{}'::jsonb;
+
+alter table public.booking_entities
+  add column if not exists access_blocked boolean not null default false,
+  add column if not exists billing_cycle_days integer not null default 30,
+  add column if not exists billing_cycle_started_at timestamptz not null default now();
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'booking_entities_billing_cycle_days_check'
+      and conrelid = 'public.booking_entities'::regclass
+  ) then
+    alter table public.booking_entities
+      add constraint booking_entities_billing_cycle_days_check
+      check (billing_cycle_days in (8, 15, 30));
+  end if;
+end;
+$$;
 
 create index if not exists appointments_tenant_date_idx
   on public.appointments (tenant_id, appointment_date);
@@ -76,7 +112,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select role from public.user_profiles where id = auth.uid()
+  select role from public.user_profiles where id = auth.uid() and disabled_at is null
 $$;
 
 create or replace function public.current_user_tenant_id()
@@ -86,7 +122,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select tenant_id from public.user_profiles where id = auth.uid()
+  select tenant_id from public.user_profiles where id = auth.uid() and disabled_at is null
 $$;
 
 create or replace function public.is_tenant_admin(target_tenant_id text)
@@ -100,6 +136,7 @@ as $$
     select 1
     from public.user_profiles
     where id = auth.uid()
+      and disabled_at is null
       and role in ('admin', 'developer')
       and (role = 'developer' or tenant_id = target_tenant_id)
   )
@@ -136,8 +173,33 @@ begin
 end;
 $$;
 
+create or replace function public.update_tenant_app_settings(
+  target_tenant_id text,
+  settings_patch jsonb
+)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  update public.tenants
+  set app_settings = app_settings || (settings_patch - 'independentServices') ||
+    case
+      when settings_patch ? 'independentServices' then jsonb_build_object(
+        'independentServices',
+        coalesce(app_settings->'independentServices', '{}'::jsonb)
+          || settings_patch->'independentServices'
+      )
+      else '{}'::jsonb
+    end
+  where id = target_tenant_id
+  returning app_settings
+$$;
+
 revoke all on function public.consume_booking_rate_limit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.consume_booking_rate_limit(text, integer, integer) to service_role;
+revoke all on function public.update_tenant_app_settings(text, jsonb) from public, anon, authenticated;
+grant execute on function public.update_tenant_app_settings(text, jsonb) to service_role;
 
 alter table public.tenants enable row level security;
 alter table public.platform_settings enable row level security;
@@ -191,6 +253,8 @@ create policy "Staff can read permitted booking entities"
   using (
     public.current_staff_role() = 'developer'
     or (
+      public.current_staff_role() is not null
+      and
       (user_id = auth.uid() or public.is_tenant_admin(tenant_id))
       and exists (
         select 1 from public.tenants
@@ -207,6 +271,8 @@ create policy "Staff can update permitted booking contacts"
   using (
     public.current_staff_role() = 'developer'
     or (
+      public.current_staff_role() is not null
+      and
       (user_id = auth.uid() or public.is_tenant_admin(tenant_id))
       and exists (
         select 1 from public.tenants
@@ -219,6 +285,8 @@ create policy "Staff can update permitted booking contacts"
   with check (
     public.current_staff_role() = 'developer'
     or (
+      public.current_staff_role() is not null
+      and
       (user_id = auth.uid() or public.is_tenant_admin(tenant_id))
       and exists (
         select 1 from public.tenants
@@ -235,6 +303,8 @@ create policy "Staff can read permitted appointments"
   using (
     public.current_staff_role() = 'developer'
     or (
+      public.current_staff_role() is not null
+      and
       exists (
         select 1 from public.user_profiles
         where id = auth.uid() and entity_id = booking_entity_id
@@ -245,6 +315,11 @@ create policy "Staff can read permitted appointments"
       where id = tenant_id
         and license_status = 'active'
         and not developer_blocked
+    ) and exists (
+      select 1 from public.booking_entities
+      where id = booking_entity_id
+        and not access_blocked
+        and billing_cycle_started_at + make_interval(days => billing_cycle_days) > now()
     )
   );
 
