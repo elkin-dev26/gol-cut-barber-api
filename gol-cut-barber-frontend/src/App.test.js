@@ -184,3 +184,21 @@ test('impide el inicio de sesión local de un barbero bloqueado', () => {
   expect(screen.getByText('La cuenta está bloqueada. Solo el administrador puede volver a activarla.')).toBeInTheDocument();
   expect(screen.queryByText('Panel Barbero - Elkin Ramírez')).not.toBeInTheDocument();
 });
+
+test('el consolidado del barbero suma solo servicios completados de hoy', () => {
+  const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const ayer = new Date(Date.now() - new Date().getTimezoneOffset() * 60000 - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  localStorage.setItem('gol_cut_last_reset', String(Date.now()));
+  localStorage.setItem('gol_cut_citas_mes', JSON.stringify([
+    { id: 'hoy-1', barbero: 'Elkin Ramírez', fecha: hoy, precio: 42000, estado: 'completada' },
+    { id: 'ayer-1', barbero: 'Elkin Ramírez', fecha: ayer, precio: 80000, estado: 'completada' },
+    { id: 'hoy-2', barbero: 'Elkin Ramírez', fecha: hoy, precio: 15000, estado: 'cancelada' }
+  ]));
+
+  render(<App />);
+  iniciarSesion('elkin', 'barbero123');
+
+  const consolidado = screen.getByText(/Consolidado Ganancias:/);
+  expect(consolidado.textContent).toContain((42000).toLocaleString());
+  expect(consolidado.textContent).not.toContain((122000).toLocaleString());
+});

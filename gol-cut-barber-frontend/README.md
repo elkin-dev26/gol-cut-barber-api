@@ -7,7 +7,7 @@
 - Los bloqueos de agenda de un administrador se guardan por sede. El desarrollador puede pausar la licencia o aplicar/quitar un bloqueo técnico de forma independiente para cada sede o perfil independiente.
 - Una cuenta bloqueada solo puede solicitar su activación por WhatsApp desde la pantalla de acceso restringido.
 
-Para desplegar desde la raíz del repositorio en Vercel, `vercel.json` compila esta aplicación y publica las funciones de `api/`.
+Para desplegar desde la raíz del repositorio en Vercel, configura **Root Directory** como `./` (raíz del repositorio). `vercel.json` compila `gol-cut-barber-frontend` y publica las funciones de `api/`. No configures `gol-cut-barber-frontend` como raíz del proyecto: las funciones API están en la carpeta `api/` de la raíz.
 
 ## Configuración de Supabase
 
@@ -19,7 +19,7 @@ Para desplegar desde la raíz del repositorio en Vercel, `vercel.json` compila e
    values ('UUID_DEL_USUARIO', 'developer', 'Desarrollador', 'developer', null, null);
    ```
 
-3. Configura estas variables en Vercel. No publiques ni compartas `SUPABASE_SERVICE_ROLE_KEY`.
+3. Configura estas variables en el proyecto Vercel que está conectado al dominio de producción y habilítalas para **Production**. Si también usas previews, habilítalas para **Preview**. No publiques ni compartas `SUPABASE_SERVICE_ROLE_KEY`.
 
    | Variable | Uso |
    | --- | --- |
@@ -30,7 +30,7 @@ Para desplegar desde la raíz del repositorio en Vercel, `vercel.json` compila e
    | `SUPABASE_SERVICE_ROLE_KEY` | Clave privada de servidor; nunca usar el prefijo `REACT_APP_` |
    | `APP_ORIGIN` | Dominio exacto de la aplicación en Vercel (opcional, protege el endpoint de reservas) |
 
-4. Despliega de nuevo después de agregar las variables. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
+4. Despliega de nuevo después de agregar las variables. El build de Vercel ahora se detiene con una lista explícita si falta alguna variable obligatoria; no publiques la clave `SUPABASE_SERVICE_ROLE_KEY` en el frontend. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
 
 El nombre global de la plataforma, el inicio de sesión, perfiles, códigos públicos y reservas nuevas usan Supabase. Las reservas se guardan en la base de datos, pero no se envían avisos de citas por WhatsApp ni correo. El correo que se solicita al crear una cuenta es únicamente para iniciar sesión. Otros módulos de demostración todavía guardan parte de su estado en `localStorage` y no se sincronizan entre dispositivos.
 

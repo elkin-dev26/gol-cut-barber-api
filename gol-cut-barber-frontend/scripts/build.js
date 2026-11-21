@@ -11,5 +11,19 @@ for (const [target, sources] of Object.entries(fallbacks)) {
   if (source) process.env[target] = process.env[source];
 }
 
+if (process.env.VERCEL === '1') {
+  const missing = [];
+  if (!process.env.REACT_APP_SUPABASE_URL) missing.push('REACT_APP_SUPABASE_URL');
+  if (!process.env.REACT_APP_SUPABASE_ANON_KEY) missing.push('REACT_APP_SUPABASE_ANON_KEY');
+  if (!(process.env.SUPABASE_URL || process.env.STORAGE_SUPABASE_URL)) missing.push('SUPABASE_URL');
+  if (!(process.env.SUPABASE_ANON_KEY || process.env.STORAGE_SUPABASE_ANON_KEY)) missing.push('SUPABASE_ANON_KEY');
+  if (!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.STORAGE_SUPABASE_SERVICE_ROLE_KEY)) {
+    missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  }
+  if (missing.length) {
+    throw new Error(`Missing required Vercel environment variables: ${missing.join(', ')}. Configure them for the Production environment and redeploy.`);
+  }
+}
+
 process.env.CI = 'false';
 require('react-scripts/scripts/build');

@@ -1741,7 +1741,10 @@ function VistaBarbero({ barberoActual, citas, onCrearCita, onActualizarCita, onE
       .catch(error => alert(error.message || 'No se pudo guardar el servicio.'));
   };
 
-  const ingresosHoy = citasBarbero.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
+  const hoy = fechaLocalIso();
+  const ingresosHoy = citasBarbero
+    .filter(c => c.estado === 'completada' && c.fecha === hoy)
+    .reduce((sum, c) => sum + (c.precio || 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
@@ -2179,6 +2182,8 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
   const [nuevoUserAdmin, setNuevoUserAdmin] = useState(tenantActivo.usernameAdmin || credencialesAdmin.username);
   const [nuevoPassAdmin, setNuevoPassAdmin] = useState(tenantActivo.passwordAdmin || credencialesAdmin.password);
   const [nuevoNombreAdmin, setNuevoNombreAdmin] = useState(tenantActivo.dueno || credencialesAdmin.nombre);
+  const [nuevaClaveAdmin, setNuevaClaveAdmin] = useState('');
+  const [confirmarClaveAdmin, setConfirmarClaveAdmin] = useState('');
 
   const [nombreNegocioInput, setNombreNegocioInput] = useState(tenantActivo.nombreBarberia);
   const [blackoutDate, setBlackoutDate] = useState(fechaLocalIso());
@@ -2391,6 +2396,30 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
       nombre: nuevoNombreAdmin.trim() || 'Administrador'
     });
     alert('Credenciales de administrador actualizadas con éxito.');
+  };
+
+  const handleCambiarClaveAdmin = async (e) => {
+    e.preventDefault();
+    if (nuevaClaveAdmin.length < 8) {
+      alert('La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (nuevaClaveAdmin !== confirmarClaveAdmin) {
+      alert('Las contraseñas no coinciden.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: nuevaClaveAdmin });
+      if (error) throw error;
+    } catch (error) {
+      alert(error.message || 'No se pudo cambiar la contraseña del administrador.');
+      return;
+    }
+
+    setNuevaClaveAdmin('');
+    setConfirmarClaveAdmin('');
+    alert('La contraseña del administrador se actualizó correctamente.');
   };
 
   const handleReasignarCitaSubmit = (e) => {
@@ -2913,6 +2942,16 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
               </button>
             </form>
           </div>
+
+          {supabaseConfigured && <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '15px' }}>Cambiar mi contraseña de administrador</h3>
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>La contraseña se actualizará en tu cuenta de acceso.</p>
+            <form onSubmit={handleCambiarClaveAdmin} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+              <input type="password" autoComplete="new-password" aria-label="Nueva contraseña de administrador" placeholder="Nueva contraseña (mínimo 8 caracteres)" value={nuevaClaveAdmin} onChange={(e) => setNuevaClaveAdmin(e.target.value)} minLength={8} required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+              <input type="password" autoComplete="new-password" aria-label="Confirmar contraseña de administrador" placeholder="Confirmar nueva contraseña" value={confirmarClaveAdmin} onChange={(e) => setConfirmarClaveAdmin(e.target.value)} minLength={8} required style={{ backgroundColor: '#020617', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '11px' }} />
+              <button type="submit" style={{ backgroundColor: '#3b82f6', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Actualizar contraseña</button>
+            </form>
+          </div>}
 
           {!supabaseConfigured && <div style={{ backgroundColor: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '15px' }}>Credenciales de Administrador ({tenantActivo?.nombreBarberia})</h3>
