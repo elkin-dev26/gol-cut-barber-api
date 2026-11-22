@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
+
+const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
 
 beforeEach(() => {
   localStorage.clear();
@@ -8,6 +10,11 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+  if (clipboardDescriptor) {
+    Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+  } else {
+    delete navigator.clipboard;
+  }
 });
 
 const iniciarSesion = (usuario, clave) => {
@@ -274,4 +281,38 @@ test('el consolidado del barbero suma solo servicios completados de hoy', () => 
   const consolidado = screen.getByText(/Consolidado Ganancias:/);
   expect(consolidado.textContent).toContain((42000).toLocaleString());
   expect(consolidado.textContent).not.toContain((122000).toLocaleString());
+});
+
+test('el administrador ve y puede copiar el código de búsqueda de su sede', async () => {
+  const writeText = jest.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText }
+  });
+
+  render(<App />);
+  iniciarSesion('admin', 'admin123');
+
+  expect(screen.getByText('t1')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Copiar código de búsqueda t1' }));
+
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('t1'));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Código copiado.'));
+});
+
+test('el perfil independiente ve y puede copiar su código de búsqueda', async () => {
+  const writeText = jest.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText }
+  });
+
+  render(<App />);
+  iniciarSesion('independiente', 'solo2026');
+
+  expect(screen.getByText('indep_tenant')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Copiar código de búsqueda indep_tenant' }));
+
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('indep_tenant'));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Código copiado.'));
 });

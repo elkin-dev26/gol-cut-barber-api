@@ -1118,6 +1118,40 @@ export default function App() {
   );
 }
 
+function CodigoBusqueda({ codigo }) {
+  const [copiado, setCopiado] = useState(false);
+
+  const copiarCodigo = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('El navegador no permite copiar al portapapeles. Selecciona y copia el código manualmente.');
+      }
+      await navigator.clipboard.writeText(codigo);
+      setCopiado(true);
+    } catch (error) {
+      alert(error.message || 'No se pudo copiar el código de búsqueda.');
+    }
+  };
+
+  if (!codigo) return null;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px', padding: '8px 10px', backgroundColor: '#020617', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '8px', width: 'fit-content' }}>
+      <span style={{ color: '#cbd5e1', fontSize: '11px' }}>Código de búsqueda para clientes:</span>
+      <strong style={{ color: '#fbbf24', fontSize: '13px', letterSpacing: '0.04em' }}>{codigo}</strong>
+      <button
+        type="button"
+        onClick={copiarCodigo}
+        aria-label={`Copiar código de búsqueda ${codigo}`}
+        style={{ backgroundColor: '#f59e0b', color: '#020617', border: 'none', borderRadius: '5px', padding: '5px 8px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+      >
+        {copiado ? 'Copiado' : 'Copiar'}
+      </button>
+      {copiado && <span role="status" style={{ color: '#34d399', fontSize: '10px' }}>Código copiado.</span>}
+    </div>
+  );
+}
+
 function VistaCuentaBloqueada({ usuario, devConfig, onCerrarSesion }) {
   const numeroSoporte = devConfig?.whatsappSoporte || '573001234567';
   const mensaje = `Hola, necesito ayuda para activar la cuenta de ${usuario?.cuentaNombre || 'mi barbería'}.`;
@@ -2024,6 +2058,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
             Conteo regresivo del mes (Licencia): <strong style={{ color: '#38bdf8' }}>{perfilIndependiente.diasRestantes || 30} días</strong>
             {!supabaseConfigured && <> | La contraseña no se muestra en pantalla.</>}
           </p>
+          <CodigoBusqueda codigo={perfilIndependiente.codigoPublico || perfilIndependiente.id} />
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {activeRole !== 'evaluador' && activeRole !== 'sucursal_demo' && (
@@ -2571,6 +2606,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({tenantActivo?.nombreBarberia})</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantActivo?.diasRestantes || 30} días</strong> | Control de ingresos y stock de productos</p>
+          <CodigoBusqueda codigo={tenantActivo?.codigoPublico || tenantActivo?.id} />
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
