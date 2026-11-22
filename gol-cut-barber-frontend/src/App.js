@@ -62,7 +62,6 @@ const DEFAULT_INCENTIVES = [
 const cuentaBloqueada = (cuenta) => (
   !cuenta ||
   cuenta.estadoLicencia !== 'Activa' ||
-  Number(cuenta.diasRestantes) <= 0 ||
   Boolean(cuenta.bloqueadoDesarrollador)
 );
 const cicloDePagoVencido = (cuenta, now = Date.now()) => (
@@ -76,6 +75,13 @@ const barberoBloqueado = (barbero, now = Date.now()) => (
     || barbero?.active === false
     || (barbero?.accessBlocked ?? barbero?.isLocked)
     || cicloDePagoVencido(barbero, now)
+  )
+);
+const barberoAccesoBloqueado = (barbero) => (
+  Boolean(
+    barbero?.pausado
+    || barbero?.active === false
+    || (barbero?.accessBlocked ?? barbero?.isLocked)
   )
 );
 const diasCicloRestantes = (barbero, now = Date.now()) => {
@@ -443,10 +449,10 @@ export default function App() {
   const cuentaSesionBloqueada = Boolean(usuarioAutenticado && usuarioAutenticado.role !== 'superadmin' && (
     usuarioAutenticado.cuentaSuspendida
     || (usuarioAutenticado.barberoObj && (
-      barberoBloqueado(usuarioAutenticado.barberoObj, currentTime)
+      barberoAccesoBloqueado(usuarioAutenticado.barberoObj)
     ))
     || (usuarioAutenticado.perfilIndepObj && (
-      barberoBloqueado(usuarioAutenticado.perfilIndepObj, currentTime)
+      barberoAccesoBloqueado(usuarioAutenticado.perfilIndepObj)
     ))
     || (cuentaSesion && cuentaBloqueada(cuentaSesion))
   ));
@@ -680,7 +686,7 @@ export default function App() {
     }
 
     const entity = mappedEntities.find(item => item.id === profile.entity_id);
-    if (['barber', 'independent'].includes(profile.role) && entity && (!entity.active || entity.isLocked)) {
+    if (['barber', 'independent'].includes(profile.role) && entity && barberoAccesoBloqueado(entity)) {
       const localRole = profile.role === 'barber' ? 'barbero' : 'barbero_independiente';
       const entityUser = profile.role === 'barber'
         ? { barberoObj: entity }
@@ -807,7 +813,7 @@ export default function App() {
         setLoginError('Su usuario se encuentra inactivo.');
         return;
       }
-      if (barberoBloqueado(barberoEncontrado)) {
+      if (barberoAccesoBloqueado(barberoEncontrado)) {
         setLoginError('La cuenta está bloqueada. Solo el administrador puede volver a activarla.');
         return;
       }

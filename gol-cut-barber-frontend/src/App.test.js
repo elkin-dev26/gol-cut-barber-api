@@ -208,6 +208,56 @@ test('el estado explícito desbloqueado prevalece sobre un indicador de bloqueo 
   expect(screen.queryByText('La cuenta está bloqueada. Solo el administrador puede volver a activarla.')).not.toBeInTheDocument();
 });
 
+test('una sede activa permite iniciar sesión aunque el contador local esté en cero', () => {
+  localStorage.setItem('gol_cut_tenants', JSON.stringify([
+    {
+      id: 't1',
+      nombreBarberia: 'Sede Activa',
+      estadoLicencia: 'Activa',
+      diasRestantes: 0,
+      bloqueadoDesarrollador: false
+    }
+  ]));
+
+  render(<App />);
+  iniciarSesion('elkin', 'barbero123');
+
+  expect(screen.getByText('Panel Barbero - Elkin Ramírez')).toBeInTheDocument();
+  expect(screen.queryByText('Cuenta temporalmente bloqueada')).not.toBeInTheDocument();
+});
+
+test('el ciclo vencido del barbero no bloquea el panel de una sede activa', () => {
+  localStorage.setItem('gol_cut_tenants', JSON.stringify([
+    {
+      id: 't1',
+      nombreBarberia: 'Sede Activa',
+      estadoLicencia: 'Activa',
+      diasRestantes: 23,
+      bloqueadoDesarrollador: false
+    }
+  ]));
+  localStorage.setItem('gol_cut_barberos', JSON.stringify([
+    {
+      id: 'barber-1',
+      username: 'elkin',
+      nombre: 'Elkin Ramírez',
+      claveAcceso: 'barbero123',
+      estado: 'Activo',
+      accessBlocked: false,
+      isLocked: true,
+      billingCycleDays: 30,
+      billingCycleStartedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString(),
+      sedeId: 't1'
+    }
+  ]));
+
+  render(<App />);
+  iniciarSesion('elkin', 'barbero123');
+
+  expect(screen.getByText('Panel Barbero - Elkin Ramírez')).toBeInTheDocument();
+  expect(screen.queryByText('Cuenta temporalmente bloqueada')).not.toBeInTheDocument();
+});
+
 test('el consolidado del barbero suma solo servicios completados de hoy', () => {
   const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const ayer = new Date(Date.now() - new Date().getTimezoneOffset() * 60000 - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
