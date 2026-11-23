@@ -283,6 +283,63 @@ test('el consolidado del barbero suma solo servicios completados de hoy', () => 
   expect(consolidado.textContent).not.toContain((122000).toLocaleString());
 });
 
+test('confirmar una cita de hoy actualiza el consolidado y conserva el estado', async () => {
+  const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  localStorage.setItem('gol_cut_last_reset', String(Date.now()));
+  localStorage.setItem('gol_cut_citas_mes', JSON.stringify([
+    { id: 'cita-pendiente', barbero: 'Elkin Ramírez', fecha: hoy, precio: 32000, estado: 'confirmada' }
+  ]));
+
+  render(<App />);
+  iniciarSesion('elkin', 'barbero123');
+  fireEvent.click(screen.getByRole('button', { name: 'Atendido' }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Consolidado Ganancias:/).textContent).toContain((32000).toLocaleString());
+    expect(JSON.parse(localStorage.getItem('gol_cut_citas_mes'))[0].estado).toBe('completada');
+  });
+});
+
+test('el cobro presencial del barbero se suma al consolidado diario', async () => {
+  localStorage.setItem('gol_cut_last_reset', String(Date.now()));
+  localStorage.setItem('gol_cut_citas_mes', JSON.stringify([]));
+
+  render(<App />);
+  iniciarSesion('elkin', 'barbero123');
+  fireEvent.click(screen.getByRole('button', { name: 'Registrar Cobro' }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Consolidado Ganancias:/).textContent).toContain((25000).toLocaleString());
+    expect(JSON.parse(localStorage.getItem('gol_cut_citas_mes'))[0]).toEqual(expect.objectContaining({
+      estado: 'completada',
+      fecha: expect.any(String),
+      precio: 25000
+    }));
+  });
+});
+
+test('los perfiles con administrador e independiente pueden cargar y conservar su logo', async () => {
+  const { unmount } = render(<App />);
+  iniciarSesion('admin', 'admin123');
+  const logoSede = screen.getByLabelText('Cargar logo de Gol Cut Barber - Sede Principal');
+  const archivoLogo = new File(['logo-demo'], 'logo.png', { type: 'image/png' });
+  fireEvent.change(logoSede, { target: { files: [archivoLogo] } });
+  await waitFor(() => {
+    const sedes = JSON.parse(localStorage.getItem('gol_cut_tenants'));
+    expect(sedes.find(tenant => tenant.id === 't1').logo).toMatch(/^data:image\/png;base64,/);
+  });
+  unmount();
+
+  render(<App />);
+  iniciarSesion('independiente', 'solo2026');
+  const logoIndependiente = screen.getByLabelText('Cargar logo de Barbería Independiente (Solista)');
+  fireEvent.change(logoIndependiente, { target: { files: [archivoLogo] } });
+  await waitFor(() => {
+    const perfiles = JSON.parse(localStorage.getItem('gol_cut_perfiles_independientes'));
+    expect(perfiles[0].logo).toMatch(/^data:image\/png;base64,/);
+  });
+});
+
 test('el administrador ve y puede copiar el código de búsqueda de su sede', async () => {
   const writeText = jest.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', {

@@ -191,6 +191,14 @@ as $$
           || settings_patch->'independentServices'
       )
       else '{}'::jsonb
+    end ||
+    case
+      when settings_patch ? 'independentLogos' then jsonb_build_object(
+        'independentLogos',
+        coalesce(app_settings->'independentLogos', '{}'::jsonb)
+          || settings_patch->'independentLogos'
+      )
+      else '{}'::jsonb
     end
   where id = target_tenant_id
   returning app_settings

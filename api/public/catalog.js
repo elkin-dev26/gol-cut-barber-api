@@ -57,6 +57,9 @@ module.exports = async (req, res) => {
       independentServices: tenant.entity_type === 'independent' && availableEntities[0]
         ? appSettings.independentServices?.[availableEntities[0].id] || []
         : [],
+      logo: tenant.entity_type === 'independent' && availableEntities[0]
+        ? appSettings.independentLogos?.[availableEntities[0].id] || ''
+        : appSettings.logo || '',
       entities: availableEntities.map(entity => ({
         id: entity.id,
         entity_type: entity.entity_type,

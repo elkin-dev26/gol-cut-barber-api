@@ -93,6 +93,21 @@ const diasCicloRestantes = (barbero, now = Date.now()) => {
 const fechaLocalIso = (date = new Date()) => (
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 );
+const leerLogo = (file) => new Promise((resolve, reject) => {
+  if (!file || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    reject(new Error('Selecciona una imagen PNG, JPG o WebP.'));
+    return;
+  }
+  if (file.size > 120 * 1024) {
+    reject(new Error('El logo debe pesar máximo 120 KB.'));
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error('No se pudo leer el archivo del logo.'));
+  reader.readAsDataURL(file);
+});
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('cliente');
@@ -353,6 +368,12 @@ export default function App() {
   const tenantActualParaAdmin = tenants.find(t => t.id === usuarioAutenticado?.tenantObj?.id)
     || tenants.find(t => t.id === tenantVistaDesarrolladorId)
     || tenantPrincipal;
+  const [tenantLogo, setTenantLogo] = useState(tenantActualParaAdmin?.logo || '');
+  useEffect(() => {
+    if (!supabaseConfigured && activeRole === 'admin') {
+      setTenantLogo(tenantActualParaAdmin?.logo || '');
+    }
+  }, [activeRole, tenantActualParaAdmin?.id, tenantActualParaAdmin?.logo]);
   const [loadedSettingsTenantId, setLoadedSettingsTenantId] = useState(null);
   const [loadedIndependentSettingsId, setLoadedIndependentSettingsId] = useState(null);
   const [tenantSettingsError, setTenantSettingsError] = useState('');
@@ -384,7 +405,8 @@ export default function App() {
           const ownServices = settings.independentServices?.[independentId];
           setPerfilesIndependientes(current => current.map(profile => profile.id === independentId ? {
             ...profile,
-            serviciosPropios: Array.isArray(ownServices) ? ownServices : []
+            serviciosPropios: Array.isArray(ownServices) ? ownServices : [],
+            logo: settings.independentLogos?.[independentId] || ''
           } : profile));
           setLoadedIndependentSettingsId(independentId);
           setTenantSettingsError('');
@@ -399,6 +421,7 @@ export default function App() {
           setChairFeeConfig({ tipo: 'fijo', valor: 50000 });
         }
         setSlotDuration([30, 60].includes(Number(settings.slotDuration)) ? Number(settings.slotDuration) : 30);
+        setTenantLogo(settings.logo || '');
         setTenantSettingsError('');
         setLoadedSettingsTenantId(tenantId);
       })
@@ -420,7 +443,8 @@ export default function App() {
       services: servicios,
       incentives: incentivos,
       chairFeeConfig,
-      slotDuration
+      slotDuration,
+      logo: tenantLogo
     };
     const timer = window.setTimeout(() => {
       settingsSaveQueue.current = settingsSaveQueue.current
@@ -433,7 +457,7 @@ export default function App() {
         .catch(error => setTenantSettingsError(error.message || 'No se pudieron guardar los cambios de la sede.'));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeRole, tenantActualParaAdmin?.id, loadedSettingsTenantId, productos, servicios, incentivos, chairFeeConfig, slotDuration]);
+  }, [activeRole, tenantActualParaAdmin?.id, loadedSettingsTenantId, productos, servicios, incentivos, chairFeeConfig, slotDuration, tenantLogo]);
 
   const perfilIndependienteActual = perfilesIndependientes.find(pi => pi.id === usuarioAutenticado?.perfilIndepObj?.id)
     || perfilesIndependientes.find(pi => pi.id === perfilVistaDesarrolladorId)
@@ -467,6 +491,9 @@ export default function App() {
       ? perfilesIndependientes.find(profile => profile.id === independentSettingsId)?.serviciosPropios || []
       : []
   ), [independentSettingsId, perfilesIndependientes]);
+  const independentLogo = independentSettingsId
+    ? perfilesIndependientes.find(profile => profile.id === independentSettingsId)?.logo || ''
+    : '';
 
   useEffect(() => {
     if (!supabaseConfigured
@@ -475,7 +502,10 @@ export default function App() {
       || loadedIndependentSettingsId !== independentSettingsId
     ) return undefined;
 
-    const settings = { independentServices: { [independentSettingsId]: independentServices } };
+    const settings = {
+      independentServices: { [independentSettingsId]: independentServices },
+      independentLogos: { [independentSettingsId]: independentLogo }
+    };
     const timer = window.setTimeout(() => {
       settingsSaveQueue.current = settingsSaveQueue.current
         .catch(() => {})
@@ -484,10 +514,10 @@ export default function App() {
           body: JSON.stringify({ id: independentSettingsTenantId, settings })
         }))
         .then(() => setTenantSettingsError(''))
-        .catch(error => setTenantSettingsError(error.message || 'No se pudieron guardar los servicios del perfil independiente.'));
+        .catch(error => setTenantSettingsError(error.message || 'No se pudieron guardar los ajustes del perfil independiente.'));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [independentSettingsId, independentSettingsTenantId, independentServices, loadedIndependentSettingsId]);
+  }, [independentSettingsId, independentSettingsTenantId, independentServices, independentLogo, loadedIndependentSettingsId]);
 
   const exitoLogin = useCallback((userObj) => {
     setUsuarioAutenticado(userObj);
@@ -511,7 +541,8 @@ export default function App() {
           serviceName: appointment.servicio,
           appointmentDate: appointment.fecha,
           appointmentTime: appointment.hora,
-          price: appointment.precio
+          price: appointment.precio,
+          status: appointment.estado === 'completada' ? 'completed' : 'confirmed'
         })
       });
     }
@@ -1020,6 +1051,11 @@ export default function App() {
             }}
             chairFeeConfig={chairFeeConfig}
             setChairFeeConfig={setChairFeeConfig}
+            logo={tenantLogo}
+            onLogoChange={(logo) => {
+              setTenantLogo(logo);
+              setTenants(current => current.map(tenant => tenant.id === tenantActualParaAdmin?.id ? { ...tenant, logo } : tenant));
+            }}
           />
         )}
 
@@ -1152,6 +1188,39 @@ function CodigoBusqueda({ codigo }) {
   );
 }
 
+function LogoUploader({ nombre, logo, onChange }) {
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      onChange(await leerLogo(file));
+    } catch (error) {
+      alert(error.message || 'No se pudo cargar el logo.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '10px', padding: '10px', backgroundColor: '#020617', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box' }}>
+      {logo ? (
+        <img src={logo} alt={`Logo de ${nombre}`} style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '8px', backgroundColor: '#fff', padding: '4px', boxSizing: 'border-box' }} />
+      ) : (
+        <div aria-label={`Espacio para logo de ${nombre}`} style={{ width: '64px', height: '64px', display: 'grid', placeItems: 'center', border: '1px dashed #64748b', borderRadius: '8px', color: '#94a3b8', fontSize: '10px', textAlign: 'center' }}>Logo</div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <strong style={{ color: '#cbd5e1', fontSize: '11px' }}>Logo de {nombre}</strong>
+        <label style={{ color: '#fbbf24', fontSize: '11px', cursor: 'pointer' }}>
+          {logo ? 'Cambiar logo' : 'Cargar logo'}
+          <input type="file" accept="image/png,image/jpeg,image/webp" aria-label={`Cargar logo de ${nombre}`} onChange={handleFileChange} style={{ display: 'block', marginTop: '4px', maxWidth: '190px', fontSize: '10px' }} />
+        </label>
+        {logo && <button type="button" onClick={() => onChange('')} style={{ width: 'fit-content', padding: '4px 8px', backgroundColor: '#334155', color: '#fda4af', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>Quitar logo</button>}
+        <span style={{ color: '#64748b', fontSize: '9px' }}>PNG, JPG o WebP · máximo 120 KB</span>
+      </div>
+    </div>
+  );
+}
+
 function VistaCuentaBloqueada({ usuario, devConfig, onCerrarSesion }) {
   const numeroSoporte = devConfig?.whatsappSoporte || '573001234567';
   const mensaje = `Hola, necesito ayuda para activar la cuenta de ${usuario?.cuentaNombre || 'mi barbería'}.`;
@@ -1236,6 +1305,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
       agendaPausada: false,
       globalTimer: { ...TURNOS_DISPONIBLES },
       bookingBlackouts: result.bookingBlackouts || [],
+      logo: result.logo || '',
       serviciosPropios: result.independentServices || [],
       servicios: result.services || []
     });
@@ -1455,6 +1525,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
           Seleccionado: <strong>{nombreEstablecimientoActual}</strong> · Código: <strong>{codigoEstablecimientoActual}</strong>
         </p>
       )}
+      {estActual?.logo && <img src={estActual.logo} alt={`Logo de ${nombreEstablecimientoActual}`} style={{ width: '72px', height: '72px', objectFit: 'contain', marginTop: '10px', padding: '4px', backgroundColor: '#fff', borderRadius: '8px', boxSizing: 'border-box' }} />}
     </div>
   );
 
@@ -1465,6 +1536,14 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
   if (!estActual) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', alignItems: 'center', gap: '20px', padding: '18px', background: 'linear-gradient(120deg, #0f172a, #172554)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '14px', overflow: 'hidden' }}>
+          <div>
+            <p style={{ margin: '0 0 6px', color: '#fbbf24', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.12em' }}>ESTILO QUE SE NOTA</p>
+            <h2 style={{ margin: '0 0 8px', color: '#f8fafc', fontSize: '24px' }}>Tu próximo corte empieza aquí.</h2>
+            <p style={{ margin: 0, color: '#cbd5e1', fontSize: '12px', lineHeight: 1.6 }}>Encuentra tu barbería, elige tu servicio y reserva con tu barbero.</p>
+          </div>
+          <img src="/home-barber.svg" alt="Ilustración de una silla de barbería y herramientas de corte" style={{ width: '100%', maxHeight: '190px', objectFit: 'contain' }} />
+        </section>
         <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Módulo de Reservas</h2>
           <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0' }}>Busca directamente el establecimiento al que deseas asistir.</p>
@@ -1720,8 +1799,10 @@ function VistaBarbero({ barberoActual, citas, onCrearCita, onActualizarCita, onE
   const incBarbero = incentivos.find(i => (i.tipo === 'barbero' || i.tipo === 'bono_barbero') && i.activo && (i.destinatario === 'Todos los Barberos' || i.destinatario?.toLowerCase() === nombreBarberoActualLimpio));
   
   const citasBarbero = citas.filter(c => {
+    if (c.bookingEntityId && c.bookingEntityId === barberoActual?.id) return true;
     const barberoCitaLimpio = (c.barbero || '').trim().toLowerCase();
-    return barberoCitaLimpio.includes(nombreBarberoActualLimpio) || nombreBarberoActualLimpio.includes(barberoCitaLimpio);
+    return Boolean(nombreBarberoActualLimpio)
+      && (barberoCitaLimpio.includes(nombreBarberoActualLimpio) || nombreBarberoActualLimpio.includes(barberoCitaLimpio));
   });
 
   const atencionesBarbero = citasBarbero.filter(c => c.estado === 'completada').length;
@@ -2059,6 +2140,11 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
             {!supabaseConfigured && <> | La contraseña no se muestra en pantalla.</>}
           </p>
           <CodigoBusqueda codigo={perfilIndependiente.codigoPublico || perfilIndependiente.id} />
+          <LogoUploader
+            nombre={perfilIndependiente.nombreBarberia}
+            logo={perfilIndependiente.logo || ''}
+            onChange={(logo) => actualizarPerfilActual({ ...perfilIndependiente, logo })}
+          />
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {activeRole !== 'evaluador' && activeRole !== 'sucursal_demo' && (
@@ -2220,7 +2306,7 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   );
 }
 
-function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, onEliminarCita, currentTime, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, bookingBlackouts, setBookingBlackouts, chairFeeConfig, setChairFeeConfig }) {
+function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, onEliminarCita, currentTime, barberos, setBarberos, productos, setProductos, servicios, setServicios, devConfig, licenciaVencida, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, tenantPrincipal, setTenants, tenants, agendaPausadaSede, bookingBlackouts, setBookingBlackouts, chairFeeConfig, setChairFeeConfig, logo, onLogoChange }) {
   const [tab, setTab] = useState('resumen');
    
   const tenantActivo = tenantActualParaAdmin || tenantPrincipal;
@@ -2607,6 +2693,7 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Panel Administrativo General ({tenantActivo?.nombreBarberia})</h2>
           <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0 0' }}>Conteo regresivo del mes: <strong style={{ color: '#38bdf8' }}>{tenantActivo?.diasRestantes || 30} días</strong> | Control de ingresos y stock de productos</p>
           <CodigoBusqueda codigo={tenantActivo?.codigoPublico || tenantActivo?.id} />
+          <LogoUploader nombre={tenantActivo?.nombreBarberia || 'la barbería'} logo={logo} onChange={onLogoChange} />
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <a href={urlWhatsapp} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#059669', color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>

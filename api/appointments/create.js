@@ -1,5 +1,6 @@
 const { createHash } = require('crypto');
 const {
+  authenticateStaff,
   isConfigured,
   serviceRequest
 } = require('../../lib/supabase-server');
@@ -45,7 +46,8 @@ module.exports = async (req, res) => {
       serviceName,
       appointmentDate,
       appointmentTime,
-      price
+      price,
+      status = 'confirmed'
     } = req.body || {};
     if (
       !isText(appointmentId, 100)
@@ -57,8 +59,16 @@ module.exports = async (req, res) => {
       || typeof price !== 'number'
       || !Number.isFinite(price)
       || price < 0
+      || !['confirmed', 'completed'].includes(status)
     ) {
       return res.status(400).json({ error: 'Los datos de la cita están incompletos o no son válidos.' });
+    }
+
+    if (status === 'completed') {
+      const caller = await authenticateStaff(req);
+      if (!caller || !['barber', 'independent'].includes(caller.role) || caller.entity_id !== entityId) {
+        return res.status(403).json({ error: 'Solo el profesional asignado puede registrar una atención completada.' });
+      }
     }
 
     const forwardedFor = req.headers['x-forwarded-for'] || '';
@@ -123,7 +133,8 @@ module.exports = async (req, res) => {
       service_name: serviceName.trim(),
       appointment_date: appointmentDate,
       appointment_time: appointmentTime.trim(),
-      price: Number(price)
+      price: Number(price),
+      status
     };
     const insertedAppointments = await serviceRequest('appointments?on_conflict=id', {
       method: 'POST',
@@ -133,7 +144,7 @@ module.exports = async (req, res) => {
 
     if (!insertedAppointments?.length) {
       const previousAppointments = await serviceRequest(
-        `appointments?select=tenant_id,booking_entity_id,customer_name,service_name,appointment_date,appointment_time,price&id=eq.${encodeURIComponent(appointmentId)}&limit=1`
+        `appointments?select=tenant_id,booking_entity_id,customer_name,service_name,appointment_date,appointment_time,price,status&id=eq.${encodeURIComponent(appointmentId)}&limit=1`
       );
       const previousAppointment = previousAppointments?.[0];
       if (!previousAppointment
@@ -144,6 +155,7 @@ module.exports = async (req, res) => {
         || previousAppointment.appointment_date !== appointment.appointment_date
         || previousAppointment.appointment_time !== appointment.appointment_time
         || Number(previousAppointment.price) !== appointment.price
+        || previousAppointment.status !== appointment.status
       ) {
         return res.status(409).json({ error: 'El identificador de esta cita ya está en uso.' });
       }

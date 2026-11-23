@@ -30,11 +30,30 @@ beforeEach(() => {
         }])
       };
     }
+    if (String(url).includes('/rest/v1/booking_entities?select=active')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          active: true,
+          access_blocked: false,
+          billing_cycle_days: 30,
+          billing_cycle_started_at: new Date().toISOString()
+        }])
+      };
+    }
     if (String(url).includes('/rest/v1/tenants?select=id,app_settings')) {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify([{ id: 'shop-1', app_settings: { services: [{ id: 's1' }] } }])
+        text: async () => JSON.stringify([{
+          id: 'shop-1',
+          app_settings: {
+            services: [{ id: 's1' }],
+            independentServices: { 'shop-1': [{ id: 'independent-service' }], 'other-entity': [{ id: 'private-service' }] },
+            independentLogos: { 'shop-1': 'data:image/png;base64,logo', 'other-entity': 'private-logo' }
+          }
+        }])
       };
     }
     if (String(url).includes('/rest/v1/rpc/update_tenant_app_settings')) {
@@ -79,6 +98,18 @@ test('admin can reload saved business settings', async () => {
   assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 
+test('independent profiles can read only their own services and logo', async () => {
+  callerRole = 'independent';
+  const response = makeResponse();
+  await handler(makeRequest('GET', {}, { id: 'shop-1' }), response);
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body.settings, {
+    independentServices: { 'shop-1': [{ id: 'independent-service' }] },
+    independentLogos: { 'shop-1': 'data:image/png;base64,logo' }
+  });
+});
+
 test('business settings updates use the atomic merge function', async () => {
   const settings = { services: [{ id: 's2' }] };
   const response = makeResponse();
@@ -87,6 +118,42 @@ test('business settings updates use the atomic merge function', async () => {
   assert.equal(response.statusCode, 200);
   const update = requests.find(request => request.url.includes('rpc/update_tenant_app_settings'));
   assert.deepEqual(JSON.parse(update.options.body), { target_tenant_id: 'shop-1', settings_patch: settings });
+});
+
+test('admin can save a business logo through settings', async () => {
+  const settings = { logo: 'data:image/png;base64,logo' };
+  const response = makeResponse();
+  await handler(makeRequest('PATCH', { id: 'shop-1', settings }), response);
+
+  assert.equal(response.statusCode, 200);
+  const update = requests.find(request => request.url.includes('rpc/update_tenant_app_settings'));
+  assert.deepEqual(JSON.parse(update.options.body).settings_patch, settings);
+});
+
+test('independent profiles can save only their own logo map', async () => {
+  callerRole = 'independent';
+  const settings = {
+    independentServices: { 'shop-1': [{ id: 's1' }] },
+    independentLogos: { 'shop-1': 'data:image/png;base64,logo' }
+  };
+  const response = makeResponse();
+  await handler(makeRequest('PATCH', { id: 'shop-1', settings }), response);
+
+  assert.equal(response.statusCode, 200);
+  const update = requests.find(request => request.url.includes('rpc/update_tenant_app_settings'));
+  assert.deepEqual(JSON.parse(update.options.body).settings_patch, settings);
+});
+
+test('independent profiles cannot save a logo for another entity', async () => {
+  callerRole = 'independent';
+  const response = makeResponse();
+  await handler(makeRequest('PATCH', {
+    id: 'shop-1',
+    settings: { independentLogos: { 'another-entity': 'data:image/png;base64,logo' } }
+  }), response);
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(requests.some(request => request.url.includes('rpc/update_tenant_app_settings')), false);
 });
 
 test('admin cannot read another business settings', async () => {

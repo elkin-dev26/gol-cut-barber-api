@@ -5,7 +5,11 @@ const {
 } = require('../../lib/supabase-server');
 
 const isId = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
-const allowedSettings = new Set(['products', 'services', 'incentives', 'chairFeeConfig', 'slotDuration', 'independentServices']);
+const isLogo = (value) => value === ''
+  || (typeof value === 'string'
+    && value.length <= 165000
+    && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value));
+const allowedSettings = new Set(['products', 'services', 'incentives', 'chairFeeConfig', 'slotDuration', 'independentServices', 'independentLogos', 'logo']);
 
 module.exports = async (req, res) => {
   if (!['GET', 'PATCH'].includes(req.method)) {
@@ -40,6 +44,9 @@ module.exports = async (req, res) => {
           settings: {
             independentServices: {
               [caller.entity_id]: settings.independentServices?.[caller.entity_id] || []
+            },
+            independentLogos: {
+              [caller.entity_id]: settings.independentLogos?.[caller.entity_id] || ''
             }
           }
         });
@@ -56,16 +63,24 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'La configuración contiene campos no permitidos o supera el tamaño máximo.' });
     }
     if (caller.role === 'independent') {
-      const servicesByEntity = settings.independentServices;
-      if (keys.length !== 1
-        || !servicesByEntity
-        || typeof servicesByEntity !== 'object'
-        || Array.isArray(servicesByEntity)
-        || Object.keys(servicesByEntity).some(entityId => entityId !== caller.entity_id)
-        || !Array.isArray(servicesByEntity[caller.entity_id])
-      ) {
-        return res.status(403).json({ error: 'Solo puedes guardar los servicios de tu perfil independiente.' });
+      const validEntityMap = (value, isValid) => (
+        value
+        && typeof value === 'object'
+        && !Array.isArray(value)
+        && Object.keys(value).length === 1
+        && Object.keys(value)[0] === caller.entity_id
+        && isValid(value[caller.entity_id])
+      );
+      const validServices = !Object.prototype.hasOwnProperty.call(settings, 'independentServices')
+        || validEntityMap(settings.independentServices, Array.isArray);
+      const validLogos = !Object.prototype.hasOwnProperty.call(settings, 'independentLogos')
+        || validEntityMap(settings.independentLogos, isLogo);
+      if (keys.some(key => !['independentServices', 'independentLogos'].includes(key)) || !validServices || !validLogos) {
+        return res.status(403).json({ error: 'Solo puedes guardar ajustes válidos de tu perfil independiente.' });
       }
+    }
+    if (Object.prototype.hasOwnProperty.call(settings, 'logo') && !isLogo(settings.logo)) {
+      return res.status(400).json({ error: 'El logo debe ser una imagen PNG, JPG o WebP válida.' });
     }
 
     const updated = await serviceRequest('rpc/update_tenant_app_settings', {

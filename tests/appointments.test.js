@@ -10,14 +10,44 @@ let requests;
 let rateAllowed;
 let entityRecord;
 let tenantRecord;
+let staffAuthorized;
+let staffRole;
 
 beforeEach(() => {
   requests = [];
   rateAllowed = true;
+  staffAuthorized = false;
+  staffRole = 'barber';
   entityRecord = { id: 'barber-1', tenant_id: 'shop-1', active: true };
   tenantRecord = { id: 'shop-1', license_status: 'active', developer_blocked: false };
   global.fetch = async (url, options = {}) => {
     requests.push({ url: String(url), options });
+    if (String(url).endsWith('/auth/v1/user')) {
+      return {
+        ok: staffAuthorized,
+        json: async () => ({ id: 'staff-1' })
+      };
+    }
+    if (String(url).includes('/rest/v1/user_profiles?')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: 'staff-1',
+          role: staffRole,
+          tenant_id: 'shop-1',
+          entity_id: 'barber-1',
+          disabled_at: null
+        }])
+      };
+    }
+    if (String(url).includes('/rest/v1/booking_entities?select=active')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([entityRecord])
+      };
+    }
     if (String(url).includes('/rpc/consume_booking_rate_limit')) {
       return { ok: true, status: 200, text: async () => JSON.stringify(rateAllowed) };
     }
@@ -61,9 +91,9 @@ const makeResponse = () => ({
   }
 });
 
-const makeRequest = (body) => ({
+const makeRequest = (body, authorization = '') => ({
   method: 'POST',
-  headers: { 'x-forwarded-for': '203.0.113.1' },
+  headers: { 'x-forwarded-for': '203.0.113.1', authorization },
   socket: { remoteAddress: '203.0.113.1' },
   body
 });
@@ -86,7 +116,26 @@ test('stores the appointment without requiring WhatsApp or email services', asyn
   assert.equal(response.body.appointmentId, appointmentInput.appointmentId);
   assert.equal(response.body.message, 'La cita se guardó correctamente.');
   assert.equal(requests.length, 4);
+  const appointment = requests.find(request => request.url.includes('/rest/v1/appointments?on_conflict=id'));
+  assert.equal(JSON.parse(appointment.options.body).status, 'confirmed');
   assert.ok(requests.every(request => request.url.startsWith(process.env.SUPABASE_URL)));
+});
+
+test('only the assigned signed-in barber can create an appointment as completed', async () => {
+  const unauthorized = makeResponse();
+  await handler(makeRequest({ ...appointmentInput, status: 'completed' }), unauthorized);
+
+  assert.equal(unauthorized.statusCode, 403);
+  assert.equal(requests.some(request => request.url.includes('/rest/v1/appointments?on_conflict=id')), false);
+
+  requests = [];
+  staffAuthorized = true;
+  const response = makeResponse();
+  await handler(makeRequest({ ...appointmentInput, status: 'completed' }, 'Bearer staff-token'), response);
+
+  assert.equal(response.statusCode, 201);
+  const appointment = requests.find(request => request.url.includes('/rest/v1/appointments?on_conflict=id'));
+  assert.equal(JSON.parse(appointment.options.body).status, 'completed');
 });
 
 test('rejects bookings when the rate limit is exceeded', async () => {
