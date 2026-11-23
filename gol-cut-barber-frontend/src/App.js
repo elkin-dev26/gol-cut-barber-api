@@ -4,6 +4,7 @@ import {
   Gift, Award, AlertTriangle, Server, Key, PlusSquare, MessageCircle, Edit3, DollarSign, Clock
 } from 'lucide-react';
 import { supabase, supabaseConfigured } from './supabaseClient';
+import DeveloperGlobalAccounts from './components/DeveloperGlobalAccounts';
 
 const localAuthAllowed = !supabaseConfigured && process.env.NODE_ENV !== 'production';
 
@@ -1070,6 +1071,8 @@ export default function App() {
         {activeRole === 'superadmin' && (
           <VistaSuperAdmin 
             currentTime={currentTime}
+            citas={citas}
+            setCitas={setCitas}
             devConfig={devConfig} 
             setDevConfig={setDevConfig}
             guardarConfiguracionPlataforma={guardarConfiguracionPlataforma}
@@ -1321,7 +1324,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
       agendaPausada: false,
       globalTimer: { ...TURNOS_DISPONIBLES },
       bookingBlackouts: result.bookingBlackouts || [],
-      logo: result.logo || '',
+      logo: result.logo_url || result.logo || '',
       serviciosPropios: result.independentServices || [],
       servicios: result.services || []
     });
@@ -3158,11 +3161,20 @@ function VistaAdmin({ usuario, tenantActualParaAdmin, citas, onActualizarCita, o
   );
 }
 
-function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfiguracionPlataforma, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, setTenantVistaDesarrolladorId, setPerfilVistaDesarrolladorId, setPlatformSettingsError, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
+function VistaSuperAdmin({ currentTime, citas, setCitas, devConfig, setDevConfig, guardarConfiguracionPlataforma, barberos, setBarberos, tenants, setTenants, perfilesIndependientes, setPerfilesIndependientes, setActiveRole, setTenantVistaDesarrolladorId, setPerfilVistaDesarrolladorId, setPlatformSettingsError, incentivos, setIncentivos, credencialesAdmin, setCredencialesAdmin, superAdminCreds, setSuperAdminCreds }) {
   const [nombrePlataforma, setNombrePlataforma] = useState(devConfig?.nombrePlataforma || 'GOL CUT BARBER');
   const [whatsapp, setWhatsapp] = useState(devConfig?.whatsappSoporte || '573001234567');
   const [nuevaClaveDesarrollador, setNuevaClaveDesarrollador] = useState('');
   const [confirmarClaveDesarrollador, setConfirmarClaveDesarrollador] = useState('');
+  const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [systemSettings, setSystemSettings] = useState({
+    auto_cleanup_enabled: false,
+    retention_months: 3,
+    last_cleanup_at: null
+  });
+  const [systemSettingsLoading, setSystemSettingsLoading] = useState(supabaseConfigured);
+  const [systemSettingsSaving, setSystemSettingsSaving] = useState(false);
+  const [systemSettingsError, setSystemSettingsError] = useState('');
   const platformSettingsRequest = useRef(0);
   
   const [nuevoSuperUser, setNuevoSuperUser] = useState(superAdminCreds.username);
@@ -3226,6 +3238,39 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfigur
     };
   }, [guardarConfiguracionPlataforma, setPlatformSettingsError]);
 
+  useEffect(() => {
+    if (!supabaseConfigured) {
+      setSystemSettingsLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+    setSystemSettingsLoading(true);
+    supabase
+      .from('system_settings')
+      .select('auto_cleanup_enabled,retention_months,last_cleanup_at')
+      .eq('id', 1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!data) throw new Error('No se encontró la fila de configuración del sistema.');
+        if (active) {
+          setSystemSettings(data);
+          setSystemSettingsError('');
+        }
+      })
+      .catch(error => {
+        if (active) setSystemSettingsError(error.message || 'No se pudo cargar la limpieza automática.');
+      })
+      .finally(() => {
+        if (active) setSystemSettingsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const generarCodigoUnico = (prefijo) => {
     const codigosExistentes = new Set(
       [...tenants, ...perfilesIndependientes].map(cuenta => String(cuenta.codigoPublico || cuenta.id).toLowerCase())
@@ -3265,6 +3310,150 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfigur
     setNombrePlataforma(nombreGuardado);
     setDevConfig({ ...devConfig, nombrePlataforma: nombreGuardado, whatsappSoporte: whatsapp.trim() });
     alert('¡Nombre de plataforma y WhatsApp de soporte actualizados!');
+  };
+
+  const handleManualCleanup = async () => {
+    if (!window.confirm('¿Ejecutar ahora la limpieza de citas antiguas según la retención configurada?')) return;
+
+    setCleanupRunning(true);
+    try {
+      await requestStaffApi('/api/dev/run-cleanup', { method: 'POST' });
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('auto_cleanup_enabled,retention_months,last_cleanup_at')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) {
+        setSystemSettingsError(error.message || 'No se pudo actualizar la fecha de última ejecución.');
+      } else if (data) {
+        setSystemSettings(data);
+        setSystemSettingsError('');
+      }
+      alert('La limpieza manual se ejecutó correctamente.');
+    } catch (error) {
+      alert(error.message || 'No se pudo ejecutar la limpieza manual.');
+    } finally {
+      setCleanupRunning(false);
+    }
+  };
+
+  const handleToggleAutomaticCleanup = async () => {
+    const enabled = !systemSettings.auto_cleanup_enabled;
+    if (enabled && !window.confirm(
+      `Al activarla, la limpieza correrá el día 1 de enero, abril, julio y octubre a las 02:00. Eliminará registros con más de ${systemSettings.retention_months} meses y conservará los totales financieros consolidados. ¿Deseas continuar?`
+    )) return;
+
+    setSystemSettingsSaving(true);
+    setSystemSettingsError('');
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .update({ auto_cleanup_enabled: enabled })
+        .eq('id', 1)
+        .select('auto_cleanup_enabled,retention_months,last_cleanup_at')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('No se encontró la fila de configuración del sistema.');
+      setSystemSettings(data);
+    } catch (error) {
+      setSystemSettingsError(error.message || 'No se pudo guardar la configuración de limpieza.');
+    } finally {
+      setSystemSettingsSaving(false);
+    }
+  };
+
+  const handleGlobalAccountStatus = async (account) => {
+    const activate = !account.active;
+    const updateAccountAccess = async (action) => {
+      if (!account.userId) return;
+      if (supabaseConfigured) {
+        await requestStaffApi('/api/staff/credentials', {
+          method: 'PATCH',
+          body: JSON.stringify({ userId: account.userId, action })
+        });
+      }
+      const accessDisabled = action === 'revoke';
+      setTenants(current => current.map(item => item.authUserId === account.userId ? { ...item, accessDisabled } : item));
+      setBarberos(current => current.map(item => item.authUserId === account.userId ? { ...item, accessDisabled } : item));
+      setPerfilesIndependientes(current => current.map(item => item.authUserId === account.userId ? { ...item, accessDisabled } : item));
+    };
+    const updateTenant = async (updates) => {
+      await actualizarTenantServidor(account.tenantId, updates);
+      const next = {};
+      if (updates.licenseStatus !== undefined) {
+        next.estadoLicencia = updates.licenseStatus === 'active' ? 'Activa' : 'Pausada (Vencida)';
+        next.diasRestantes = updates.licenseStatus === 'active' ? 30 : 0;
+      }
+      if (updates.developerBlocked !== undefined) next.bloqueadoDesarrollador = updates.developerBlocked;
+      setTenants(current => current.map(item => item.id === account.tenantId ? { ...item, ...next } : item));
+      setPerfilesIndependientes(current => current.map(item => item.id === account.tenantId ? { ...item, ...next } : item));
+    };
+    const updateEntity = async (accessBlocked) => {
+      const result = supabaseConfigured
+        ? await requestStaffApi('/api/staff/update', {
+          method: 'PATCH',
+          body: JSON.stringify({ entityId: account.id, accessBlocked })
+        })
+        : null;
+      const entity = result?.entity || {
+        active: !accessBlocked,
+        access_blocked: accessBlocked,
+        billing_cycle_started_at: accessBlocked
+          ? account.source.billingCycleStartedAt
+          : new Date().toISOString(),
+        billing_cycle_days: account.source.billingCycleDays || 30
+      };
+      const next = {
+        active: entity.active,
+        pausado: !entity.active,
+        accessBlocked: entity.access_blocked,
+        billingCycleStartedAt: entity.billing_cycle_started_at,
+        billingCycleDays: Number(entity.billing_cycle_days) || 30,
+        isLocked: Boolean(entity.access_blocked) || cicloDePagoVencido({
+          billingCycleStartedAt: entity.billing_cycle_started_at,
+          billingCycleDays: entity.billing_cycle_days
+        }, currentTime)
+      };
+      setBarberos(current => current.map(item => item.id === account.id ? { ...item, ...next } : item));
+      setPerfilesIndependientes(current => current.map(item => item.id === account.id ? { ...item, ...next } : item));
+    };
+
+    if (activate) {
+      if (account.kind === 'tenant' || account.kind === 'independent') {
+        await updateTenant({ licenseStatus: 'active', developerBlocked: false });
+      }
+      if (account.kind === 'barber' || account.kind === 'independent') {
+        await updateEntity(false);
+      }
+      if (account.accessDisabled) await updateAccountAccess('activate');
+      return;
+    }
+
+    if (account.userId) await updateAccountAccess('revoke');
+    if (account.kind === 'barber' || account.kind === 'independent') {
+      await updateEntity(true);
+    }
+    if (account.kind === 'tenant' || account.kind === 'independent') {
+      await updateTenant({ licenseStatus: 'paused' });
+    }
+  };
+
+  const handleHardDeleteAccount = async (account) => {
+    await requestStaffApi(`/api/dev/hard-delete-user/${encodeURIComponent(account.userId)}`, {
+      method: 'DELETE'
+    });
+
+    if (account.kind === 'barber') {
+      setBarberos(current => current.filter(item => item.id !== account.id));
+      setCitas(current => current.filter(appointment => appointment.bookingEntityId !== account.id));
+    } else {
+      setTenants(current => current.filter(item => item.id !== account.tenantId));
+      setBarberos(current => current.filter(item => item.sedeId !== account.tenantId));
+      setPerfilesIndependientes(current => current.filter(item => (
+        item.id !== account.tenantId && item.sedeId !== account.tenantId
+      )));
+      setCitas(current => current.filter(appointment => appointment.establecimientoId !== account.tenantId));
+    }
   };
 
   const handleRestablecerClaveCuenta = async (e, userId) => {
@@ -3754,6 +3943,58 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfigur
           <button type="submit" style={{ backgroundColor: '#059669', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Guardar cambios</button>
         </form>
       </div>
+
+      <div style={{ backgroundColor: '#0f172a', border: '1px solid #b45309', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px' }}>Limpieza Trimestral Automática</h3>
+        <p style={{ fontSize: '11px', color: '#cbd5e1', margin: '0 0 10px 0' }}>
+          Calendario fijo: 1 de enero, abril, julio y octubre a las 02:00 (hora de Supabase). Procesa registros con más de {systemSettings.retention_months} meses y conserva el historial financiero consolidado.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            role="switch"
+            aria-label="Limpieza Trimestral Automática"
+            aria-checked={Boolean(systemSettings.auto_cleanup_enabled)}
+            disabled={!supabaseConfigured || systemSettingsLoading || systemSettingsSaving}
+            onClick={handleToggleAutomaticCleanup}
+            style={{ width: '48px', height: '26px', padding: '3px', border: 0, borderRadius: '999px', backgroundColor: systemSettings.auto_cleanup_enabled ? '#059669' : '#475569', cursor: !supabaseConfigured || systemSettingsLoading || systemSettingsSaving ? 'not-allowed' : 'pointer', opacity: !supabaseConfigured || systemSettingsLoading || systemSettingsSaving ? 0.6 : 1, transition: 'background-color 150ms ease' }}
+          >
+            <span aria-hidden="true" style={{ display: 'block', width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#fff', transform: systemSettings.auto_cleanup_enabled ? 'translateX(22px)' : 'translateX(0)', transition: 'transform 150ms ease' }} />
+          </button>
+          <strong style={{ color: systemSettings.auto_cleanup_enabled ? '#34d399' : '#cbd5e1', fontSize: '12px' }}>
+            {systemSettingsLoading ? 'Cargando estado…' : systemSettings.auto_cleanup_enabled ? 'Activada' : 'Desactivada'}
+          </strong>
+          <span style={{ color: '#94a3b8', fontSize: '11px' }}>
+            Última ejecución: {systemSettings.last_cleanup_at
+              ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(systemSettings.last_cleanup_at))
+              : 'Sin ejecuciones registradas'}
+          </span>
+        </div>
+        {!supabaseConfigured && <p style={{ color: '#fbbf24', fontSize: '11px', margin: '8px 0 0' }}>Configura Supabase para administrar esta opción.</p>}
+        {systemSettingsError && <p role="alert" style={{ color: '#fca5a5', fontSize: '11px', margin: '8px 0 0' }}>{systemSettingsError}</p>}
+        {systemSettingsSaving && <p style={{ color: '#94a3b8', fontSize: '11px', margin: '8px 0 0' }}>Guardando configuración…</p>}
+      </div>
+
+      {supabaseConfigured && <div style={{ backgroundColor: '#0f172a', border: '1px solid #b45309', padding: '16px', borderRadius: '12px' }}>
+        <h3 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px' }}>Limpieza manual de citas antiguas</h3>
+        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 10px 0' }}>Consolida las citas completadas y elimina registros vencidos según los meses de retención configurados.</p>
+        <button type="button" onClick={handleManualCleanup} disabled={cleanupRunning} style={{ backgroundColor: '#b45309', color: '#fff', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: cleanupRunning ? 'wait' : 'pointer', fontSize: '12px', opacity: cleanupRunning ? 0.7 : 1 }}>
+          {cleanupRunning ? 'Ejecutando...' : 'Ejecutar limpieza ahora'}
+        </button>
+      </div>}
+
+      <DeveloperGlobalAccounts
+        tenants={tenants}
+        barbers={barberos}
+        independentProfiles={perfilesIndependientes}
+        appointments={citas}
+        currentTime={currentTime}
+        canDelete={supabaseConfigured}
+        onToggleStatus={handleGlobalAccountStatus}
+        onHardDelete={handleHardDeleteAccount}
+        onViewTenant={accederTenantTiempoReal}
+        onViewIndependent={accederIndependienteTiempoReal}
+      />
 
       {!supabaseConfigured && <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', padding: '16px', borderRadius: '12px' }}>
         <h3 style={{ margin: '0 0 8px 0', color: '#60a5fa', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>

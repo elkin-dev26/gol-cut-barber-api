@@ -50,6 +50,9 @@ module.exports = async (req, res) => {
         `user_profiles?select=display_name&id=eq.${encodeURIComponent(availableEntities[0].user_id)}&limit=1`
       )
       : [];
+    const logo = tenant.entity_type === 'independent' && availableEntities[0]
+      ? appSettings.independentLogos?.[availableEntities[0].id] || ''
+      : appSettings.logo || '';
     return res.status(200).json({
       tenant,
       bookingBlackouts: tenant.booking_blackouts || [],
@@ -57,9 +60,8 @@ module.exports = async (req, res) => {
       independentServices: tenant.entity_type === 'independent' && availableEntities[0]
         ? appSettings.independentServices?.[availableEntities[0].id] || []
         : [],
-      logo: tenant.entity_type === 'independent' && availableEntities[0]
-        ? appSettings.independentLogos?.[availableEntities[0].id] || ''
-        : appSettings.logo || '',
+      logo,
+      logo_url: logo,
       entities: availableEntities.map(entity => ({
         id: entity.id,
         entity_type: entity.entity_type,
