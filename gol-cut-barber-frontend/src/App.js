@@ -93,6 +93,10 @@ const diasCicloRestantes = (barbero, now = Date.now()) => {
 const fechaLocalIso = (date = new Date()) => (
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 );
+const citaCuentaComoConfirmada = (cita) => (
+  ['confirmada', 'confirmed', 'completada', 'completed'].includes(cita.estado || cita.status)
+);
+const valorServicioCita = (cita) => Number(cita.precio ?? cita.price) || 0;
 const leerLogo = (file) => new Promise((resolve, reject) => {
   if (!file || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     reject(new Error('Selecciona una imagen PNG, JPG o WebP.'));
@@ -628,6 +632,7 @@ export default function App() {
       mensajePausaGeneral: MENSAJE_PAUSA_SEDE,
       globalTimer: { ...TURNOS_DISPONIBLES },
       bookingBlackouts: tenant.booking_blackouts || [],
+      logo: tenant.app_settings?.logo || '',
       authUserId: (staffProfiles || []).find(item => item.role === 'admin' && item.tenant_id === tenant.id)?.id,
       accessDisabled: Boolean((staffProfiles || []).find(item => item.role === 'admin' && item.tenant_id === tenant.id)?.disabled_at)
     });
@@ -656,6 +661,9 @@ export default function App() {
         billingCycleStartedAt: entity.billing_cycle_started_at,
         claveAcceso: '',
         sedeId: entity.tenant_id,
+        logo: entity.entity_type === 'independent'
+          ? tenantRows.find(tenant => tenant.id === entity.tenant_id)?.app_settings?.independentLogos?.[entity.id] || ''
+          : '',
         esIndependiente: entity.entity_type === 'independent'
       };
     });
@@ -1193,11 +1201,19 @@ function LogoUploader({ nombre, logo, onChange }) {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      onChange(await leerLogo(file));
+      await onChange(await leerLogo(file));
     } catch (error) {
       alert(error.message || 'No se pudo cargar el logo.');
     } finally {
       event.target.value = '';
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      await onChange('');
+    } catch (error) {
+      alert(error.message || 'No se pudo quitar el logo.');
     }
   };
 
@@ -1214,7 +1230,7 @@ function LogoUploader({ nombre, logo, onChange }) {
           {logo ? 'Cambiar logo' : 'Cargar logo'}
           <input type="file" accept="image/png,image/jpeg,image/webp" aria-label={`Cargar logo de ${nombre}`} onChange={handleFileChange} style={{ display: 'block', marginTop: '4px', maxWidth: '190px', fontSize: '10px' }} />
         </label>
-        {logo && <button type="button" onClick={() => onChange('')} style={{ width: 'fit-content', padding: '4px 8px', backgroundColor: '#334155', color: '#fda4af', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>Quitar logo</button>}
+        {logo && <button type="button" onClick={handleRemove} style={{ width: 'fit-content', padding: '4px 8px', backgroundColor: '#334155', color: '#fda4af', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>Quitar logo</button>}
         <span style={{ color: '#64748b', fontSize: '9px' }}>PNG, JPG o WebP · máximo 120 KB</span>
       </div>
     </div>
@@ -1542,7 +1558,7 @@ function VistaCliente({ barberos, tenants, perfilesIndependientes, servicios, ci
             <h2 style={{ margin: '0 0 8px', color: '#f8fafc', fontSize: '24px' }}>Tu próximo corte empieza aquí.</h2>
             <p style={{ margin: 0, color: '#cbd5e1', fontSize: '12px', lineHeight: 1.6 }}>Encuentra tu barbería, elige tu servicio y reserva con tu barbero.</p>
           </div>
-          <img src="/home-barber.svg" alt="Ilustración de una silla de barbería y herramientas de corte" style={{ width: '100%', maxHeight: '190px', objectFit: 'contain' }} />
+          <img src={`${process.env.PUBLIC_URL}/control-saas-logo.svg`} alt="Logotipo oficial de la plataforma Control SaaS" style={{ display: 'block', width: '100%', maxWidth: '320px', height: 'auto', objectFit: 'contain', margin: '0 auto' }} />
         </section>
         <div style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', paddingBottom: '12px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', margin: 0 }}>Módulo de Reservas</h2>
@@ -1801,7 +1817,7 @@ function VistaBarbero({ barberoActual, citas, onCrearCita, onActualizarCita, onE
   const citasBarbero = citas.filter(c => {
     if (c.bookingEntityId && c.bookingEntityId === barberoActual?.id) return true;
     const barberoCitaLimpio = (c.barbero || '').trim().toLowerCase();
-    return Boolean(nombreBarberoActualLimpio)
+    return Boolean(nombreBarberoActualLimpio && barberoCitaLimpio)
       && (barberoCitaLimpio.includes(nombreBarberoActualLimpio) || nombreBarberoActualLimpio.includes(barberoCitaLimpio));
   });
 
@@ -1869,8 +1885,8 @@ function VistaBarbero({ barberoActual, citas, onCrearCita, onActualizarCita, onE
 
   const hoy = fechaLocalIso();
   const ingresosHoy = citasBarbero
-    .filter(c => c.estado === 'completada' && c.fecha === hoy)
-    .reduce((sum, c) => sum + (c.precio || 0), 0);
+    .filter(c => citaCuentaComoConfirmada(c) && (c.fecha || c.appointment_date) === hoy)
+    .reduce((sum, c) => sum + valorServicioCita(c), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
@@ -2018,11 +2034,18 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
   const nombreBarberiaIndepLimpio = (perfilIndependiente.nombreBarberia || '').trim().toLowerCase();
 
   const misCitasIndependiente = citas.filter(c => {
+    if (c.bookingEntityId && c.bookingEntityId === perfilIndependiente.id) return true;
     const barberoCitaLimpio = (c.barbero || '').trim().toLowerCase();
-    return barberoCitaLimpio.includes(nombrePropLimpio) || barberoCitaLimpio.includes(nombreBarberiaIndepLimpio);
+    return Boolean(barberoCitaLimpio)
+      && ((nombrePropLimpio && barberoCitaLimpio.includes(nombrePropLimpio))
+        || (nombreBarberiaIndepLimpio && barberoCitaLimpio.includes(nombreBarberiaIndepLimpio)));
   });
 
   const ingresosTotales = misCitasIndependiente.filter(c => c.estado === 'completada').reduce((sum, c) => sum + (c.precio || 0), 0);
+  const hoy = fechaLocalIso();
+  const ingresosHoy = misCitasIndependiente
+    .filter(c => citaCuentaComoConfirmada(c) && (c.fecha || c.appointment_date) === hoy)
+    .reduce((sum, c) => sum + valorServicioCita(c), 0);
 
   const actualizarPerfilActual = (nuevoPerfil) => {
     const actualizados = perfilesIndependientes.map(pi => pi.id === nuevoPerfil.id ? nuevoPerfil : pi);
@@ -2157,6 +2180,10 @@ function VistaBarberoIndependiente({ perfilIndependiente, setPerfilesIndependien
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
+          <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Consolidado Ganancias Hoy</span>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#34d399' }}>${ingresosHoy.toLocaleString()}</p>
+        </div>
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #059669', padding: '14px', borderRadius: '10px' }}>
           <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>💰 Mis Ingresos Mes Actual (Caja)</span>
           <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#34d399' }}>${ingresosTotales.toLocaleString()}</p>
@@ -3589,6 +3616,29 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfigur
     alert('¡Contraseña del barbero modificada con éxito!');
   };
 
+  const handleLogoTenantDev = async (tenant, logo) => {
+    if (supabaseConfigured) {
+      await requestStaffApi('/api/tenants/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: tenant.id, settings: { logo } })
+      });
+    }
+    setTenants(current => current.map(item => item.id === tenant.id ? { ...item, logo } : item));
+  };
+
+  const handleLogoIndependienteDev = async (profile, logo) => {
+    if (supabaseConfigured) {
+      await requestStaffApi('/api/tenants/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          id: profile.sedeId || profile.id,
+          settings: { independentLogos: { [profile.id]: logo } }
+        })
+      });
+    }
+    setPerfilesIndependientes(current => current.map(item => item.id === profile.id ? { ...item, logo } : item));
+  };
+
   const actualizarEstadoCuenta = (id, patch, setter, cuentas) => {
     const cuenta = cuentas.find(item => item.id === id);
     if (!cuenta) return;
@@ -3781,6 +3831,12 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfigur
                 </div>
               </div>
 
+              <LogoUploader
+                nombre={t.nombreBarberia}
+                logo={t.logo || ''}
+                onChange={(logo) => handleLogoTenantDev(t, logo)}
+              />
+
               {supabaseConfigured && cuentaRestableciendoId === t.authUserId && (
                 <form onSubmit={(e) => handleRestablecerClaveCuenta(e, t.authUserId)} style={{ display: 'flex', gap: '6px' }}>
                   <input type="password" autoComplete="new-password" placeholder="Nueva contraseña (mínimo 8 caracteres)" value={nuevaClaveCuenta} onChange={(e) => setNuevaClaveCuenta(e.target.value)} required minLength={8} style={{ flex: 1, backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '4px', fontSize: '10px' }} />
@@ -3847,6 +3903,12 @@ function VistaSuperAdmin({ currentTime, devConfig, setDevConfig, guardarConfigur
                   {!supabaseConfigured && <button type="button" onClick={() => eliminarPerfilIndependiente(pi.id, pi.nombreBarberia)} style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Eliminar</button>}
                 </div>
               </div>
+
+              <LogoUploader
+                nombre={pi.nombreBarberia}
+                logo={pi.logo || ''}
+                onChange={(logo) => handleLogoIndependienteDev(pi, logo)}
+              />
 
               {supabaseConfigured && cuentaRestableciendoId === pi.authUserId && (
                 <form onSubmit={(e) => handleRestablecerClaveCuenta(e, pi.authUserId)} style={{ display: 'flex', gap: '6px' }}>

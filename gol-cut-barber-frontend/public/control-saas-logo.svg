@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" fill="none">
+  <defs>
+    <linearGradient id="background" x1="360" y1="0" x2="360" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101A2A"/>
+      <stop offset="1" stop-color="#080D16"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="matrix(0 228 -250 0 360 228)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D6A94D" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#D6A94D" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="180" y1="62" x2="545" y2="411" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF1BF"/>
+      <stop offset=".35" stop-color="#E9C66C"/>
+      <stop offset=".72" stop-color="#B98635"/>
+      <stop offset="1" stop-color="#F6D991"/>
+    </linearGradient>
+    <linearGradient id="type" x1="220" y1="220" x2="500" y2="260" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF0BE"/>
+      <stop offset=".5" stop-color="#D9AD51"/>
+      <stop offset="1" stop-color="#F5D98C"/>
+    </linearGradient>
+    <filter id="soft-glow" x="125" y="12" width="470" height="456" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="720" height="480" rx="28" fill="url(#background)"/>
+  <rect width="720" height="480" rx="28" fill="url(#halo)"/>
+  <rect x="1" y="1" width="718" height="478" rx="27" stroke="#344154" stroke-opacity=".48" stroke-width="2"/>
+  <circle cx="360" cy="232" r="188" fill="#0A111C" fill-opacity=".72" filter="url(#soft-glow)" stroke="#D5AA52" stroke-opacity=".22" stroke-width="10"/>
+  <circle cx="360" cy="232" r="182" fill="#0B121D" stroke="url(#gold)" stroke-width="4"/>
+  <circle cx="360" cy="232" r="169" stroke="#F0D18A" stroke-opacity=".36" stroke-width="1.5"/>
+  <path d="M214 135a185 185 0 0 1 36-39M470 96a185 185 0 0 1 36 39M506 329a185 185 0 0 1-36 39M250 368a185 185 0 0 1-36-39" stroke="#F0D18A" stroke-opacity=".5" stroke-width="2"/>
+  <path d="M325 119 359 161 394 119M395 119 361 161 326 119" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <circle cx="316" cy="108" r="13" fill="#0B121D" stroke="url(#gold)" stroke-width="5"/>
+  <circle cx="404" cy="108" r="13" fill="#0B121D" stroke="url(#gold)" stroke-width="5"/>
+  <circle cx="360" cy="161" r="5" fill="#F6DF9F"/>
+  <rect x="102" y="187" width="516" height="91" rx="17" fill="#090F19" stroke="url(#gold)" stroke-width="3"/>
+  <rect x="109" y="194" width="502" height="77" rx="12" stroke="#F1D58E" stroke-opacity=".22" stroke-width="1"/>
+  <text x="360" y="245" fill="url(#type)" font-family="Arial, Helvetica, sans-serif" font-size="35" font-weight="700" letter-spacing="4" text-anchor="middle">CONTROL SAAS</text>
+  <text x="360" y="322" fill="#F5E7C3" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="3" text-anchor="middle">PLATAFORMA DE GESTIÓN</text>
+  <path d="M264 356h78M378 356h78" stroke="url(#gold)" stroke-opacity=".76" stroke-width="1.5"/>
+  <path d="m360 349 7 7-7 7-7-7 7-7Z" fill="url(#gold)"/>
+</svg>

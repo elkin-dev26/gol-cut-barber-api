@@ -1,38 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" fill="none" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <linearGradient id="wall" x1="120" y1="24" x2="680" y2="410" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#172554"/>
-      <stop offset="1" stop-color="#0F172A"/>
+    <radialGradient id="background" cx="0" cy="0" r="1" gradientTransform="matrix(0 480 -480 0 320 112)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17212D"/>
+      <stop offset="1" stop-color="#070B10"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="155" y1="88" x2="475" y2="506" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF1C7"/>
+      <stop offset=".28" stop-color="#D9B76D"/>
+      <stop offset=".68" stop-color="#9B7538"/>
+      <stop offset="1" stop-color="#F1D99C"/>
     </linearGradient>
-    <linearGradient id="seat" x1="360" y1="140" x2="500" y2="356" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FBBF24"/>
-      <stop offset="1" stop-color="#B45309"/>
+    <linearGradient id="silver" x1="235" y1="188" x2="405" y2="273" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".5" stop-color="#C9CFD7"/>
+      <stop offset="1" stop-color="#77828F"/>
     </linearGradient>
   </defs>
-  <rect x="14" y="14" width="732" height="392" rx="28" fill="url(#wall)" stroke="#334155" stroke-width="2"/>
-  <path d="M66 80h628M66 352h628" stroke="#334155" stroke-width="2" stroke-dasharray="7 12"/>
-  <path d="M96 115h92v164H96z" fill="#020617" stroke="#475569" stroke-width="3"/>
-  <path d="M142 115v164M96 197h92" stroke="#475569" stroke-width="2"/>
-  <path d="M118 146h48v24h-48zM118 209h48v39h-48z" fill="#1E3A5F"/>
-  <path d="M250 130h86v18h-86zM260 148h66v58h-66z" fill="#020617" stroke="#64748B" stroke-width="3"/>
-  <path d="M270 166h46v4h-46zM270 179h30v4h-30z" fill="#FBBF24"/>
-  <path d="M397 93h68v26h-68z" fill="#F59E0B"/>
-  <path d="M405 99h52v5h-52zM405 109h52v5h-52z" fill="#7C2D12"/>
-  <path d="M388 127h86v18h-86z" fill="#334155"/>
-  <path d="M393 145v39M469 145v39" stroke="#94A3B8" stroke-width="5"/>
-  <path d="M378 183c0-15 12-27 27-27h48c15 0 27 12 27 27v18h-102z" fill="url(#seat)"/>
-  <path d="M388 199h82v53h-82z" fill="#7C2D12"/>
-  <path d="M374 247h110v29H374z" fill="#B45309"/>
-  <path d="M386 276v70M472 276v70" stroke="#94A3B8" stroke-width="8" stroke-linecap="round"/>
-  <path d="M365 347h128M410 347l-19 27M450 347l20 27" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/>
-  <path d="M552 157l60 60M612 157l-60 60" stroke="#E2E8F0" stroke-width="12" stroke-linecap="round"/>
-  <circle cx="552" cy="157" r="13" fill="#FBBF24"/>
-  <circle cx="612" cy="157" r="13" fill="#FBBF24"/>
-  <path d="M565 170l34 34" stroke="#F59E0B" stroke-width="7" stroke-linecap="round"/>
-  <path d="M554 271h64l-7 58h-50z" fill="#0B1220" stroke="#64748B" stroke-width="3"/>
-  <path d="M562 283h48M560 298h51" stroke="#FBBF24" stroke-width="3"/>
-  <path d="M576 265v-28h20v28" stroke="#CBD5E1" stroke-width="5"/>
-  <circle cx="222" cy="312" r="7" fill="#FBBF24"/>
-  <circle cx="244" cy="312" r="7" fill="#FBBF24"/>
-  <circle cx="266" cy="312" r="7" fill="#FBBF24"/>
+  <rect width="640" height="640" fill="url(#background)"/>
+  <circle cx="320" cy="300" r="244" fill="#090E14" stroke="url(#silver)" stroke-width="2"/>
+  <circle cx="320" cy="300" r="235" fill="#0B1118" stroke="url(#gold)" stroke-width="7"/>
+  <circle cx="320" cy="300" r="219" stroke="#D7BC7D" stroke-opacity=".34" stroke-width="1.5"/>
+  <path d="M202 134h236" stroke="url(#gold)" stroke-width="2"/>
+  <path d="M220 130l10-8 10 8-10 8-10-8zM400 130l10-8 10 8-10 8-10-8z" fill="#D9B76D"/>
+  <text x="320" y="115" fill="url(#silver)" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-weight="700" letter-spacing="5" text-anchor="middle">GOL CUT BARBER</text>
+  <path d="M279 202c-22-25-37-48-48-76 25 12 50 30 72 53M361 202c22-25 37-48 48-76-25 12-50 30-72 53" stroke="url(#silver)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="270" cy="209" r="24" stroke="url(#gold)" stroke-width="7"/>
+  <circle cx="370" cy="209" r="24" stroke="url(#gold)" stroke-width="7"/>
+  <circle cx="320" cy="191" r="8" fill="#E8D19B" stroke="#FFF1C7" stroke-width="2"/>
+  <path d="M286 220l34-29 34 29" stroke="#D8B66C" stroke-width="3" stroke-linecap="round"/>
+  <text x="320" y="320" fill="url(#silver)" font-family="Georgia, 'Times New Roman', serif" font-size="43" font-weight="700" letter-spacing="4" text-anchor="middle">CONTROL</text>
+  <text x="320" y="379" fill="url(#gold)" font-family="Georgia, 'Times New Roman', serif" font-size="61" font-weight="700" letter-spacing="9" text-anchor="middle">SAAS</text>
+  <path d="M216 409h208" stroke="url(#gold)" stroke-width="2"/>
+  <circle cx="205" cy="409" r="4" fill="#E7CC8D"/>
+  <circle cx="435" cy="409" r="4" fill="#E7CC8D"/>
+  <text x="320" y="451" fill="#B5BEC9" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" letter-spacing="3.5" text-anchor="middle">GESTIÓN  ·  AGENDA  ·  CAJA</text>
+  <path d="M260 482h120" stroke="#D9B76D" stroke-opacity=".7" stroke-width="1.5"/>
+  <path d="M320 474l8 8-8 8-8-8 8-8z" fill="url(#gold)"/>
 </svg>
