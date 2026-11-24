@@ -11,7 +11,7 @@ Para desplegar desde la raíz del repositorio en Vercel, configura **Root Direct
 
 ## Configuración de Supabase
 
-1. Crea un proyecto de Supabase y ejecuta `supabase/schema.sql` en el SQL Editor.
+1. Crea un proyecto de Supabase y ejecuta, en este orden, `supabase/schema.sql`, `supabase/quarterly_cleanup.sql` y `supabase/audit_and_security.sql` en el SQL Editor. La última migración configura auditoría, políticas RLS, Realtime y el Escudo de Producción (desactivado por defecto).
 2. Crea el usuario del desarrollador en **Authentication → Users** y confirma su correo. Copia su UUID y registra su perfil desde el SQL Editor:
 
    ```sql
@@ -28,11 +28,13 @@ Para desplegar desde la raíz del repositorio en Vercel, configura **Root Direct
    | `SUPABASE_URL` | La misma URL, para las funciones del servidor |
    | `SUPABASE_ANON_KEY` | La misma clave pública, para validar sesiones |
    | `SUPABASE_SERVICE_ROLE_KEY` | Clave privada de servidor; nunca usar el prefijo `REACT_APP_` |
-   | `APP_ORIGIN` | Dominio exacto de la aplicación en Vercel (opcional, protege el endpoint de reservas) |
+   | `APP_ORIGIN` | Dominio exacto de la aplicación en Vercel; necesario para crear sedes con el Escudo de Producción activado |
 
 4. Despliega de nuevo después de agregar las variables. Usa un único proyecto de Supabase para el perfil del administrador y el del barbero; no alternes entre dos despliegues Vercel conectados a proyectos Supabase distintos. El build de Vercel se detiene con un error explícito si faltan variables o las URLs cliente/servidor no coinciden. No publiques la clave `SUPABASE_SERVICE_ROLE_KEY` en el frontend. Las cuentas antiguas que solo existían en `localStorage` deben crearse de nuevo desde el panel del desarrollador o del administrador; no se migran contraseñas locales.
 
 El nombre global de la plataforma, el inicio de sesión, perfiles, códigos públicos y reservas nuevas usan Supabase. Las reservas se guardan en la base de datos, pero no se envían avisos de citas por WhatsApp ni correo. El correo que se solicita al crear una cuenta es únicamente para iniciar sesión. Otros módulos de demostración todavía guardan parte de su estado en `localStorage` y no se sincronizan entre dispositivos.
+
+Los paneles de barberos e independientes pueden suscribirse a citas nuevas en vivo y solicitar permiso del navegador para mostrar notificaciones y sonido. El Desarrollador puede habilitar el Escudo de Producción en el control global; este reduce los intentos de reserva pública y oculta campos internos en las consultas de códigos públicos. La bitácora de auditoría se conserva según el periodo de retención de la limpieza trimestral.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

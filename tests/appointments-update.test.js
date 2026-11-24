@@ -30,14 +30,29 @@ beforeEach(() => {
         }])
       };
     }
+    if (String(url).includes('/rest/v1/tenants?')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: 'shop-1',
+          license_status: 'active',
+          developer_blocked: false,
+          is_indefinite: true
+        }])
+      };
+    }
     if (String(url).includes('/rest/v1/booking_entities?')) {
       return {
         ok: true,
         status: 200,
         text: async () => JSON.stringify([{
           id: 'barber-1',
+          tenant_id: 'shop-1',
+          entity_type: 'barber',
           active: true,
           access_blocked: false,
+          is_indefinite: true,
           billing_cycle_days: 30,
           billing_cycle_started_at: new Date().toISOString()
         }])

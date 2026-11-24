@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DeveloperGlobalAccounts from './DeveloperGlobalAccounts';
 
 const now = new Date(2026, 10, 23, 12).getTime();
@@ -114,4 +114,58 @@ test('an annulled barber without an Auth user can still be definitively deleted'
   expect(promptSpy).toHaveBeenCalledWith('Para confirmar, escribe ELIMINAR:');
   confirmSpy.mockRestore();
   promptSpy.mockRestore();
+});
+
+test('developer renewal sends the selected finite duration for the exact account', async () => {
+  const onRenewSubscription = jest.fn().mockResolvedValue(undefined);
+  renderTable({ onRenewSubscription });
+
+  const barberRow = screen.getByRole('row', { name: /Barbero Uno/ });
+  fireEvent.change(screen.getByLabelText('Plan para Barbero Uno'), {
+    target: { value: '60' }
+  });
+  fireEvent.click(within(barberRow).getByRole('button', { name: 'Aplicar / renovar' }));
+
+  await waitFor(() => expect(onRenewSubscription).toHaveBeenCalledWith(
+    expect.objectContaining({ kind: 'barber', id: 'barber-1' }),
+    { subscriptionDays: 60, isIndefinite: false }
+  ));
+  await waitFor(() => expect(within(barberRow).getByRole('button', { name: 'Aplicar / renovar' })).not.toBeDisabled());
+});
+
+test('developer accounts show exact expiration dates and inactivity notices', () => {
+  renderTable({
+    tenants: [{
+      ...tenants[0],
+      expiresAt: '2026-12-01T12:00:00.000Z',
+      isIndefinite: false,
+      createdAt: new Date(now - 31 * 24 * 60 * 60 * 1000).toISOString(),
+      lastActiveAt: new Date(now - 31 * 24 * 60 * 60 * 1000).toISOString()
+    }]
+  });
+
+  expect(screen.getByRole('row', { name: /Administrador de barbería/ })).toHaveTextContent('01/12/2026');
+  expect(screen.getByRole('status')).toHaveTextContent('Sede Central');
+});
+
+test('Ver opens the selected account inspection instead of entering its panel', async () => {
+  const onViewTenant = jest.fn();
+  renderTable({ onViewTenant });
+
+  const barberRow = screen.getByRole('row', { name: /Barbero Uno/ });
+  fireEvent.click(within(barberRow).getByRole('button', { name: 'Ver' }));
+
+  expect(await screen.findByRole('dialog', { name: /Inspección: Barbero Uno/ })).toBeInTheDocument();
+  expect(onViewTenant).not.toHaveBeenCalled();
+  expect(screen.getByRole('alert')).toHaveTextContent(/requiere una conexión configurada con Supabase/i);
+});
+
+test('developer can toggle the production shield from global accounts', () => {
+  const onToggleProductionShield = jest.fn();
+  renderTable({ onToggleProductionShield, productionShieldEnabled: false });
+
+  const shield = screen.getByRole('switch', { name: 'Escudo de Producción Real' });
+  expect(shield).not.toBeChecked();
+  fireEvent.click(shield);
+  expect(onToggleProductionShield).toHaveBeenCalledTimes(1);
 });

@@ -1,5 +1,7 @@
 const { beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const { join } = require('node:path');
 
 process.env.SUPABASE_URL = 'https://supabase.example.test';
 process.env.SUPABASE_ANON_KEY = 'test-anon-key';
@@ -12,14 +14,27 @@ let entityRecord;
 let tenantRecord;
 let staffAuthorized;
 let staffRole;
+let slotConflict;
 
 beforeEach(() => {
   requests = [];
   rateAllowed = true;
   staffAuthorized = false;
   staffRole = 'barber';
-  entityRecord = { id: 'barber-1', tenant_id: 'shop-1', active: true };
-  tenantRecord = { id: 'shop-1', license_status: 'active', developer_blocked: false };
+  slotConflict = false;
+  entityRecord = {
+    id: 'barber-1',
+    tenant_id: 'shop-1',
+    entity_type: 'barber',
+    active: true,
+    is_indefinite: true
+  };
+  tenantRecord = {
+    id: 'shop-1',
+    license_status: 'active',
+    developer_blocked: false,
+    is_indefinite: true
+  };
   global.fetch = async (url, options = {}) => {
     requests.push({ url: String(url), options });
     if (String(url).endsWith('/auth/v1/user')) {
@@ -66,6 +81,16 @@ beforeEach(() => {
       };
     }
     if (String(url).includes('/rest/v1/appointments?on_conflict=id')) {
+      if (slotConflict) {
+        return {
+          ok: false,
+          status: 409,
+          text: async () => JSON.stringify({
+            code: '23505',
+            message: 'duplicate key value violates unique constraint'
+          })
+        };
+      }
       return {
         ok: true,
         status: 201,
@@ -120,6 +145,23 @@ test('stores the appointment without requiring WhatsApp or email services', asyn
   const appointment = requests.find(request => request.url.includes('/rest/v1/appointments?on_conflict=id'));
   assert.equal(JSON.parse(appointment.options.body).status, 'confirmed');
   assert.ok(requests.every(request => request.url.startsWith(process.env.SUPABASE_URL)));
+});
+
+test('returns a clear conflict when another client has just booked the same slot', async () => {
+  slotConflict = true;
+  const response = makeResponse();
+  await handler(makeRequest(appointmentInput), response);
+
+  assert.equal(response.statusCode, 409);
+  assert.match(response.body.error, /horario acaba de ser ocupado/i);
+});
+
+test('defines an atomic partial unique index for active appointment slots', () => {
+  const sql = readFileSync(join(__dirname, '..', 'supabase', 'audit_and_security.sql'), 'utf8');
+
+  assert.match(sql, /create unique index if not exists appointments_active_slot_unique_idx/i);
+  assert.match(sql, /on public\.appointments\s*\(booking_entity_id,\s*appointment_date,\s*appointment_time\)/i);
+  assert.match(sql, /where status <> 'cancelled'\s+and deleted_at is null/i);
 });
 
 test('only the assigned signed-in barber can create an appointment as completed', async () => {

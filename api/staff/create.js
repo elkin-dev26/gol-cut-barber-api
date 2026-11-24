@@ -1,10 +1,12 @@
 const {
   authenticateStaff,
+  auditActorHeaders,
   getServiceRoleKey,
   getSupabaseUrl,
   isConfigured,
   serviceRequest
 } = require('../../lib/supabase-server');
+const { DAY_MS, isValidSubscriptionDays } = require('../../lib/subscriptions');
 
 const isEmail = (value) => typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const isId = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
@@ -30,13 +32,25 @@ module.exports = async (req, res) => {
       username,
       displayName,
       tenantId,
-      entityId
+      entityId,
+      subscriptionDays,
+      isIndefinite = false
     } = req.body || {};
     const canCreateRole = caller.role === 'developer'
       ? ['admin', 'barber', 'independent'].includes(role)
       : caller.role === 'admin' && role === 'barber' && caller.tenant_id === tenantId;
 
     if (!canCreateRole) return res.status(403).json({ error: 'No tienes permiso para crear esta cuenta.' });
+    if ((subscriptionDays !== undefined || req.body?.isIndefinite !== undefined)
+      && (caller.role !== 'developer' || role === 'admin')
+    ) {
+      return res.status(403).json({ error: 'Solo el desarrollador puede asignar planes de suscripción.' });
+    }
+    if (typeof isIndefinite !== 'boolean'
+      || (!isIndefinite && !isValidSubscriptionDays(subscriptionDays === undefined ? 30 : subscriptionDays))
+    ) {
+      return res.status(400).json({ error: 'El plan de suscripción no es válido.' });
+    }
     if (!isEmail(email) || typeof password !== 'string' || password.length < 8) {
       return res.status(400).json({ error: 'Ingresa un correo válido y una contraseña de al menos 8 caracteres.' });
     }
@@ -61,6 +75,10 @@ module.exports = async (req, res) => {
       return res.status(403).json({ error: 'La sede está bloqueada y no puede crear cuentas de equipo.' });
     }
 
+    const now = new Date();
+    const subscriptionExpiresAt = isIndefinite
+      ? null
+      : new Date(now.getTime() + (subscriptionDays === undefined ? 30 : subscriptionDays) * DAY_MS).toISOString();
     const authResponse = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users`, {
       method: 'POST',
       headers: {
@@ -86,27 +104,33 @@ module.exports = async (req, res) => {
       display_name: displayName.trim(),
       username: username?.trim().toLowerCase() || null,
       tenant_id: tenantId,
-      entity_id: entityId
+      entity_id: entityId,
+      password_changed_at: now.toISOString(),
+      last_active_at: null
     };
     const entityType = role === 'independent' ? 'independent' : 'barber';
 
     try {
       await serviceRequest('user_profiles', {
         method: 'POST',
-        headers: { Prefer: 'return=minimal' },
+        headers: { Prefer: 'return=minimal', ...auditActorHeaders(caller) },
         body: JSON.stringify(profile)
       });
 
       if (role !== 'admin') {
         await serviceRequest('booking_entities', {
           method: 'POST',
-          headers: { Prefer: 'return=minimal' },
+          headers: { Prefer: 'return=minimal', ...auditActorHeaders(caller) },
           body: JSON.stringify({
             id: entityId,
             tenant_id: tenantId,
             entity_type: entityType,
             name: displayName.trim(),
-            user_id: authData.id
+            user_id: authData.id,
+            expires_at: subscriptionExpiresAt,
+            is_indefinite: isIndefinite,
+            password_changed_at: now.toISOString(),
+            last_active_at: null
           })
         });
       }

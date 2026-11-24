@@ -1,8 +1,10 @@
 const {
   authenticateStaff,
+  auditActorHeaders,
   isConfigured,
   serviceRequest
 } = require('../../lib/supabase-server');
+const { isValidSubscriptionDays } = require('../../lib/subscriptions');
 
 const isId = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
 
@@ -21,20 +23,35 @@ module.exports = async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para modificar esta cuenta.' });
     }
 
-    const { entityId, accessBlocked, billingCycleDays } = req.body || {};
+    const {
+      entityId,
+      accessBlocked,
+      billingCycleDays,
+      subscriptionDays,
+      isIndefinite
+    } = req.body || {};
+    const hasSubscriptionUpdate = subscriptionDays !== undefined || isIndefinite !== undefined || billingCycleDays !== undefined;
     if (!isId(entityId)) return res.status(400).json({ error: 'Se requiere un ID de barbero válido.' });
     if (accessBlocked !== undefined && typeof accessBlocked !== 'boolean') {
       return res.status(400).json({ error: 'El estado del bloqueo no es válido.' });
     }
-    if (billingCycleDays !== undefined && ![8, 15, 30].includes(billingCycleDays)) {
-      return res.status(400).json({ error: 'El ciclo debe ser de 8, 15 o 30 días.' });
+    if (hasSubscriptionUpdate && caller.role !== 'developer') {
+      return res.status(403).json({ error: 'Solo el desarrollador puede cambiar planes de suscripción.' });
     }
-    if (accessBlocked === undefined && billingCycleDays === undefined) {
+    if (billingCycleDays !== undefined
+      || (hasSubscriptionUpdate && (
+        typeof isIndefinite !== 'boolean'
+        || (!isIndefinite && !isValidSubscriptionDays(subscriptionDays))
+      ))
+    ) {
+      return res.status(400).json({ error: 'El plan de suscripción no es válido.' });
+    }
+    if (accessBlocked === undefined && !hasSubscriptionUpdate) {
       return res.status(400).json({ error: 'No se enviaron cambios válidos.' });
     }
 
     const entities = await serviceRequest(
-      `booking_entities?select=id,tenant_id,entity_type,active,access_blocked,billing_cycle_days,billing_cycle_started_at&id=eq.${encodeURIComponent(entityId)}&limit=1`
+      `booking_entities?select=id,tenant_id,entity_type,active,access_blocked,billing_cycle_days,billing_cycle_started_at,expires_at,is_indefinite&id=eq.${encodeURIComponent(entityId)}&limit=1`
     );
     const entity = entities?.[0];
     if (!entity || !['barber', 'independent'].includes(entity.entity_type)) {
@@ -47,32 +64,38 @@ module.exports = async (req, res) => {
       return res.status(403).json({ error: 'Solo puedes modificar barberos de tu propia sede.' });
     }
 
-    const now = new Date();
-    const cycleExpiresAt = new Date(entity.billing_cycle_started_at).getTime()
-      + Number(entity.billing_cycle_days) * 24 * 60 * 60 * 1000;
-    const updates = { updated_at: now.toISOString() };
-
-    if (billingCycleDays !== undefined) {
-      updates.billing_cycle_days = billingCycleDays;
-      updates.billing_cycle_started_at = now.toISOString();
-      if (entity.access_blocked || cycleExpiresAt <= now.getTime()) {
-        updates.access_blocked = true;
-      }
-    }
+    const updates = { updated_at: new Date().toISOString() };
     if (accessBlocked === true) updates.access_blocked = true;
     if (accessBlocked === false) {
       updates.active = true;
       updates.access_blocked = false;
-      updates.billing_cycle_started_at = now.toISOString();
     }
 
-    const updated = await serviceRequest(`booking_entities?id=eq.${encodeURIComponent(entityId)}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify(updates)
-    });
-    if (!updated?.length) return res.status(404).json({ error: 'No se encontró el barbero.' });
-    return res.status(200).json({ entity: updated[0] });
+    let updatedEntity = entity;
+    if (hasSubscriptionUpdate) {
+      updatedEntity = await serviceRequest('rpc/renew_subscription', {
+        method: 'POST',
+        headers: auditActorHeaders(caller),
+        body: JSON.stringify({
+          target_kind: 'booking_entity',
+          target_id: entityId,
+          subscription_days: isIndefinite ? null : subscriptionDays,
+          make_indefinite: isIndefinite
+        })
+      });
+    }
+    if (accessBlocked !== undefined) {
+      const updated = await serviceRequest(`booking_entities?id=eq.${encodeURIComponent(entityId)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation', ...auditActorHeaders(caller) },
+        body: JSON.stringify(updates)
+      });
+      if (!updated?.length) return res.status(404).json({ error: 'No se encontró el barbero.' });
+      updatedEntity = { ...updatedEntity, ...updated[0] };
+    } else if (!hasSubscriptionUpdate) {
+      return res.status(400).json({ error: 'No se enviaron cambios válidos.' });
+    }
+    return res.status(200).json({ entity: updatedEntity });
   } catch (error) {
     console.error('Staff account update failed:', error.message);
     return res.status(500).json({ error: 'No se pudo actualizar la cuenta del barbero.' });

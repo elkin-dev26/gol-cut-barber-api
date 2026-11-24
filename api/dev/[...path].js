@@ -13,6 +13,8 @@ module.exports = async (req, res) => {
     || (routePath.length === 4
       && routePath[0] === 'hard-delete-user'
       && routePath[1] === 'by-resource')
+    || (routePath.length === 2 && routePath[0] === 'hard-delete')
+    || (routePath.length === 1 && routePath[0].startsWith('hard-delete-'))
   ) {
     return hardDeleteUser(req, res);
   }

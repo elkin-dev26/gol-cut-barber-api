@@ -31,6 +31,18 @@ beforeEach(() => {
         }])
       };
     }
+    if (String(url).includes('/rest/v1/tenants?select=id,license_status,developer_blocked,expires_at,is_indefinite')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: callerTenantId,
+          license_status: 'active',
+          developer_blocked: false,
+          is_indefinite: true
+        }])
+      };
+    }
     if (String(url).includes('/rest/v1/booking_entities?select=id,tenant_id,entity_type,user_id')) {
       return {
         ok: true,

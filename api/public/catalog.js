@@ -1,4 +1,5 @@
 const { isConfigured, serviceRequest } = require('../../lib/supabase-server');
+const { isSubscriptionExpired } = require('../../lib/subscriptions');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
@@ -16,11 +17,15 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const systemSettingsRows = await serviceRequest(
+      'system_settings?select=production_shield_enabled&id=eq.1&limit=1'
+    );
+    const productionShieldEnabled = Boolean(systemSettingsRows?.[0]?.production_shield_enabled);
     const tenants = await serviceRequest(
-      `tenants?select=id,public_code,name,entity_type,license_status,developer_blocked,booking_blackouts&id=eq.${encodeURIComponent(code)}&limit=1`
+      `tenants?select=id,public_code,name,entity_type,license_status,developer_blocked,booking_blackouts,expires_at,is_indefinite&id=eq.${encodeURIComponent(code)}&limit=1`
     );
     const tenant = tenants?.[0];
-    if (!tenant || tenant.license_status !== 'active' || tenant.developer_blocked) {
+    if (!tenant || tenant.license_status !== 'active' || tenant.developer_blocked || isSubscriptionExpired(tenant)) {
       return res.status(404).json({ error: 'No encontramos un perfil activo con ese código.' });
     }
     const tenantSettingsRows = await serviceRequest(
@@ -29,9 +34,8 @@ module.exports = async (req, res) => {
     const appSettings = tenantSettingsRows?.[0]?.app_settings || {};
 
     const entities = await serviceRequest(
-      `booking_entities?select=id,entity_type,name,active,access_blocked,billing_cycle_days,billing_cycle_started_at,user_id&tenant_id=eq.${encodeURIComponent(tenant.id)}&active=eq.true&order=name.asc`
+      `booking_entities?select=id,entity_type,name,active,access_blocked,billing_cycle_days,billing_cycle_started_at,expires_at,is_indefinite,user_id&tenant_id=eq.${encodeURIComponent(tenant.id)}&active=eq.true&order=name.asc`
     );
-    const now = Date.now();
     const userIds = (entities || []).map(entity => entity.user_id).filter(Boolean);
     const disabledProfiles = userIds.length
       ? await serviceRequest(`user_profiles?select=id,disabled_at&id=in.(${userIds.map(encodeURIComponent).join(',')})`)
@@ -40,12 +44,14 @@ module.exports = async (req, res) => {
     const availableEntities = (entities || []).filter(entity => (
       !entity.access_blocked
       && !disabledUserIds.has(entity.user_id)
-      && new Date(entity.billing_cycle_started_at).getTime() + Number(entity.billing_cycle_days) * 24 * 60 * 60 * 1000 > now
+      && !isSubscriptionExpired(entity)
     ));
     if (tenant.entity_type === 'independent' && !availableEntities.length) {
       return res.status(404).json({ error: 'No encontramos un perfil independiente activo con ese código.' });
     }
-    const ownerProfiles = tenant.entity_type === 'independent' && availableEntities[0]?.user_id
+    const ownerProfiles = !productionShieldEnabled
+      && tenant.entity_type === 'independent'
+      && availableEntities[0]?.user_id
       ? await serviceRequest(
         `user_profiles?select=display_name&id=eq.${encodeURIComponent(availableEntities[0].user_id)}&limit=1`
       )
@@ -54,7 +60,15 @@ module.exports = async (req, res) => {
       ? appSettings.independentLogos?.[availableEntities[0].id] || ''
       : appSettings.logo || '';
     return res.status(200).json({
-      tenant,
+      tenant: productionShieldEnabled
+        ? {
+          id: tenant.id,
+          public_code: tenant.public_code,
+          name: tenant.name,
+          entity_type: tenant.entity_type,
+          booking_blackouts: tenant.booking_blackouts || []
+        }
+        : tenant,
       bookingBlackouts: tenant.booking_blackouts || [],
       services: Array.isArray(appSettings.services) ? appSettings.services : [],
       independentServices: tenant.entity_type === 'independent' && availableEntities[0]
@@ -67,7 +81,7 @@ module.exports = async (req, res) => {
         entity_type: entity.entity_type,
         name: entity.name,
         active: entity.active,
-        owner_name: ownerProfiles?.[0]?.display_name || null
+        owner_name: productionShieldEnabled ? null : ownerProfiles?.[0]?.display_name || null
       }))
     });
   } catch (error) {

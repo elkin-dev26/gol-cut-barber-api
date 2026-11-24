@@ -1,5 +1,6 @@
 const {
   authenticateStaff,
+  auditActorHeaders,
   isConfigured,
   serviceRequest
 } = require('../../lib/supabase-server');
@@ -37,13 +38,13 @@ module.exports = async (req, res) => {
     if (entity.user_id) {
       await serviceRequest(`user_profiles?id=eq.${encodeURIComponent(entity.user_id)}`, {
         method: 'PATCH',
-        headers: { Prefer: 'return=minimal' },
+        headers: { Prefer: 'return=minimal', ...auditActorHeaders(caller) },
         body: JSON.stringify({ disabled_at: new Date().toISOString() })
       });
     } else {
       await serviceRequest(`booking_entities?id=eq.${encodeURIComponent(entityId)}`, {
         method: 'PATCH',
-        headers: { Prefer: 'return=minimal' },
+        headers: { Prefer: 'return=minimal', ...auditActorHeaders(caller) },
         body: JSON.stringify({ active: false, access_blocked: true, updated_at: new Date().toISOString() })
       });
     }

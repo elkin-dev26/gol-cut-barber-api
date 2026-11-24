@@ -128,7 +128,7 @@ test('el desarrollador puede abrir la sede específica seleccionada para reparar
 
   render(<App />);
   iniciarSesion('elkin-dev26', 'elkin2026');
-  fireEvent.click(screen.getAllByRole('button', { name: 'Ver' })[1]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[1]);
   fireEvent.click(screen.getByRole('button', { name: 'Ajustes & Tiempos' }));
 
   expect(screen.getByRole('heading', { name: 'Credenciales de Administrador (Sede Dos)' })).toBeInTheDocument();
@@ -215,7 +215,7 @@ test('el estado explícito desbloqueado prevalece sobre un indicador de bloqueo 
   expect(screen.queryByText('La cuenta está bloqueada. Solo el administrador puede volver a activarla.')).not.toBeInTheDocument();
 });
 
-test('una sede activa permite iniciar sesión aunque el contador local esté en cero', () => {
+test('una sede con cero días restantes queda bloqueada y muestra aviso de vencimiento', () => {
   localStorage.setItem('gol_cut_tenants', JSON.stringify([
     {
       id: 't1',
@@ -229,11 +229,11 @@ test('una sede activa permite iniciar sesión aunque el contador local esté en 
   render(<App />);
   iniciarSesion('elkin', 'barbero123');
 
-  expect(screen.getByText('Panel Barbero - Elkin Ramírez')).toBeInTheDocument();
-  expect(screen.queryByText('Cuenta temporalmente bloqueada')).not.toBeInTheDocument();
+  expect(screen.getByText('Suscripción vencida')).toBeInTheDocument();
+  expect(screen.queryByText('Panel Barbero - Elkin Ramírez')).not.toBeInTheDocument();
 });
 
-test('el ciclo vencido del barbero no bloquea el panel de una sede activa', () => {
+test('el vencimiento de barbero bloquea su acceso aunque la sede siga activa', () => {
   localStorage.setItem('gol_cut_tenants', JSON.stringify([
     {
       id: 't1',
@@ -261,8 +261,8 @@ test('el ciclo vencido del barbero no bloquea el panel de una sede activa', () =
   render(<App />);
   iniciarSesion('elkin', 'barbero123');
 
-  expect(screen.getByText('Panel Barbero - Elkin Ramírez')).toBeInTheDocument();
-  expect(screen.queryByText('Cuenta temporalmente bloqueada')).not.toBeInTheDocument();
+  expect(screen.getByText(/La suscripción de esta cuenta venció/i)).toBeInTheDocument();
+  expect(screen.queryByText('Panel Barbero - Elkin Ramírez')).not.toBeInTheDocument();
 });
 
 test('el consolidado del barbero incluye citas confirmadas o completadas de hoy', () => {

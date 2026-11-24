@@ -9,6 +9,7 @@ const handler = require('../api/public/catalog');
 let tenant;
 let appSettings;
 let requests;
+let productionShieldEnabled;
 
 beforeEach(() => {
   tenant = {
@@ -21,10 +22,14 @@ beforeEach(() => {
     booking_blackouts: []
   };
   appSettings = { logo: 'https://cdn.example.test/shop.png' };
+  productionShieldEnabled = false;
   requests = [];
   global.fetch = async (url) => {
     const requestUrl = String(url);
     requests.push(requestUrl);
+    if (requestUrl.includes('/rest/v1/system_settings?')) {
+      return jsonResponse([{ production_shield_enabled: productionShieldEnabled }]);
+    }
     if (requestUrl.includes('/rest/v1/tenants?select=id,public_code')) {
       return jsonResponse([tenant]);
     }
@@ -91,4 +96,26 @@ test('public catalog returns the independent profile logo in logo_url', async ()
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.logo_url, appSettings.independentLogos['entity-1']);
+});
+
+test('production shield masks internal tenant and owner fields from public code lookups', async () => {
+  productionShieldEnabled = true;
+  tenant.entity_type = 'independent';
+  appSettings = { independentLogos: { 'entity-1': 'https://cdn.example.test/independent.png' } };
+  tenant.expires_at = '2027-01-01T00:00:00.000Z';
+  tenant.developer_blocked = false;
+  tenant.internal_owner_email = 'private@example.test';
+  const response = makeResponse();
+  await handler({ method: 'GET', query: { code: 'shop-1' } }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body.tenant, {
+    id: 'shop-1',
+    public_code: 'shop-1',
+    name: 'Barbería',
+    entity_type: 'independent',
+    booking_blackouts: []
+  });
+  assert.equal(response.body.entities[0].owner_name, null);
+  assert.equal(requests.some(url => url.includes('select=display_name')), false);
 });

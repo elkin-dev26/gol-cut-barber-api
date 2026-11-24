@@ -69,6 +69,12 @@ test('developer can reset a staff password without retrieving the old one', asyn
   const authUpdate = requests.find(request => request.url.includes('/auth/v1/admin/users/'));
   assert.equal(authUpdate.options.method, 'PUT');
   assert.deepEqual(JSON.parse(authUpdate.options.body), { password: 'a-new-secret-123' });
+  assert.ok(response.body.passwordChangedAt);
+  const passwordTimestampUpdate = requests.find(request => (
+    request.url.includes('/rest/v1/user_profiles?id=eq.20000000-0000-4000-8000-000000000001')
+    && request.options.method === 'PATCH'
+  ));
+  assert.ok(JSON.parse(passwordTimestampUpdate.options.body).password_changed_at);
 });
 
 test('non-developers cannot reset staff passwords', async () => {
@@ -82,4 +88,17 @@ test('non-developers cannot reset staff passwords', async () => {
 
   assert.equal(response.statusCode, 403);
   assert.equal(requests.some(request => request.url.includes('/auth/v1/admin/users/')), false);
+});
+
+test('login activity updates the caller profile timestamp', async () => {
+  const response = makeResponse();
+  await handler(makeRequest({ action: 'activity' }), response);
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body.lastActiveAt);
+  const activityUpdate = requests.find(request => (
+    request.url.includes('/rest/v1/user_profiles?id=eq.10000000-0000-4000-8000-000000000001')
+    && request.options.method === 'PATCH'
+  ));
+  assert.ok(JSON.parse(activityUpdate.options.body).last_active_at);
 });

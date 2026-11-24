@@ -29,6 +29,18 @@ beforeEach(() => {
         }])
       };
     }
+    if (String(url).includes('/rest/v1/tenants?')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: 'shop-1',
+          license_status: 'active',
+          developer_blocked: false,
+          is_indefinite: true
+        }])
+      };
+    }
     if (String(url).includes('/rest/v1/booking_entities?select=')) {
       return {
         ok: true,
@@ -40,7 +52,9 @@ beforeEach(() => {
           active: false,
           access_blocked: true,
           billing_cycle_days: 15,
-          billing_cycle_started_at: '2026-01-01T00:00:00.000Z'
+          billing_cycle_started_at: '2026-01-01T00:00:00.000Z',
+          expires_at: '2026-01-16T00:00:00.000Z',
+          is_indefinite: false
         }])
       };
     }
@@ -76,7 +90,7 @@ const makeRequest = (body) => ({
   body
 });
 
-test('reactivating a barber clears the lock and restarts the payment cycle', async () => {
+test('reactivating a barber clears the manual lock without resetting its subscription', async () => {
   const response = makeResponse();
   await handler(makeRequest({ entityId: 'barber-1', accessBlocked: false }), response);
 
@@ -85,9 +99,11 @@ test('reactivating a barber clears the lock and restarts the payment cycle', asy
   const body = JSON.parse(update.options.body);
   assert.equal(body.active, true);
   assert.equal(body.access_blocked, false);
-  assert.ok(Date.parse(body.billing_cycle_started_at) > Date.parse('2026-01-01T00:00:00.000Z'));
+  assert.equal(body.billing_cycle_started_at, undefined);
+  assert.equal(body.billing_cycle_days, undefined);
   assert.equal(response.body.entity.active, true);
   assert.equal(response.body.entity.access_blocked, false);
+  assert.equal(response.body.entity.expires_at, '2026-01-16T00:00:00.000Z');
 });
 
 test('an administrator cannot block a barber in another location', async () => {

@@ -69,12 +69,19 @@ beforeEach(() => {
         entity_id: 'barber-1'
       }] : []);
     }
-    if (request.url.includes('/rest/v1/booking_entities?select=id,tenant_id,user_id&id=eq.barber-1')) {
+    if (request.url.includes('/rest/v1/booking_entities?select=id,tenant_id,user_id,entity_type&id=eq.barber-1')) {
       return jsonResponse([{
         id: 'barber-1',
         tenant_id: 'shop-1',
-        user_id: entityUserId
+        user_id: entityUserId,
+        entity_type: 'barber'
       }]);
+    }
+    if (request.url.includes('/rest/v1/tenants?select=id,entity_type&id=eq.barber-1')) {
+      return jsonResponse([]);
+    }
+    if (request.url.includes('/rest/v1/booking_entities?select=id,entity_type&id=eq.barber-1')) {
+      return jsonResponse([{ id: 'barber-1', entity_type: 'barber' }]);
     }
     if (request.url.includes('/rest/v1/tenants?select=id,entity_type,app_settings&id=eq.shop-1')) {
       return jsonResponse([{
@@ -83,14 +90,14 @@ beforeEach(() => {
         app_settings: targetAppSettings
       }]);
     }
-    if (request.url.includes('/rest/v1/user_profiles?select=id,role&tenant_id=eq.shop-1')) {
+    if (request.url.includes('/rest/v1/user_profiles?select=id,role,entity_id&tenant_id=eq.shop-1')) {
       return jsonResponse([
-        { id: targetId, role: targetRole },
-        { id: staffId, role: 'barber' }
+        { id: targetId, role: targetRole, entity_id: targetRole === 'barber' ? 'barber-1' : 'shop-1' },
+        { id: staffId, role: 'barber', entity_id: 'barber-1' }
       ]);
     }
-    if (request.url.includes('/rest/v1/booking_entities?select=id,user_id&tenant_id=eq.shop-1')) {
-      return jsonResponse([{ id: 'barber-1', user_id: staffId }]);
+    if (request.url.includes('/rest/v1/booking_entities?select=id,user_id,entity_type&tenant_id=eq.shop-1')) {
+      return jsonResponse([{ id: 'barber-1', user_id: staffId, entity_type: 'barber' }]);
     }
     if (request.url.includes('/rest/v1/appointments?booking_entity_id=eq.barber-1')) {
       return jsonResponse(null, 204);
@@ -184,6 +191,24 @@ test('developer hard delete resolves its route from req.url when catch-all query
   assert.equal(response.body.deleted, true);
 });
 
+test('developer hard delete supports both exact resource URL aliases without an Auth user', async () => {
+  entityUserId = null;
+  entityProfileExists = false;
+  for (const url of ['/api/dev/hard-delete-barber-1', '/api/dev/hard-delete/barber-1']) {
+    requests = [];
+    const request = makeRequest('DELETE');
+    delete request.query.path;
+    request.url = url;
+    const response = makeResponse();
+    await devHandler(request, response);
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.deleted, true);
+    assert.ok(requests.some(item => item.url.includes('/rest/v1/appointments?booking_entity_id=eq.barber-1')));
+    assert.equal(requests.some(item => item.url.includes('/auth/v1/admin/users/')), false);
+  }
+});
+
 test('developer can delete a barber entity with no Auth user or user profile', async () => {
   entityUserId = null;
   entityProfileExists = false;
@@ -273,4 +298,15 @@ test('manual cleanup invokes the RPC with force_run enabled for developers', asy
   assert.deepEqual(response.body, { success: true });
   const rpcRequest = requests.find(request => request.url.includes('/rpc/run_quarterly_cleanup'));
   assert.deepEqual(JSON.parse(rpcRequest.options.body), { force_run: true });
+});
+
+test('manual cleanup resolves its route from req.url', async () => {
+  const request = makeRequest('POST');
+  delete request.query.path;
+  request.url = '/api/dev/run-cleanup';
+  const response = makeResponse();
+  await devHandler(request, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body, { success: true });
 });
