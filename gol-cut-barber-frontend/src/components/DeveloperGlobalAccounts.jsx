@@ -236,7 +236,7 @@ export default function DeveloperGlobalAccounts({
                     >
                       {account.active ? 'Anular' : 'Activar'}
                     </button>
-                    {canDelete && account.userId && (
+                    {canDelete && account.id && (
                       <button
                         type="button"
                         onClick={() => confirmDelete(account)}

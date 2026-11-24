@@ -90,3 +90,28 @@ test('definitive deletion is hidden unless enabled and requires both confirmatio
   renderTable({ canDelete: false });
   expect(screen.queryByRole('button', { name: 'Eliminar definitivamente' })).not.toBeInTheDocument();
 });
+
+test('an annulled barber without an Auth user can still be definitively deleted', async () => {
+  const onHardDelete = jest.fn().mockResolvedValue(undefined);
+  const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('ELIMINAR');
+  renderTable({
+    barbers: [{ ...barbers[0], authUserId: null, active: false }],
+    onHardDelete
+  });
+
+  const barberRow = screen.getByRole('row', { name: /Barbero Uno/ });
+  expect(barberRow).toHaveTextContent('Anulado');
+  const deleteButton = screen.getAllByRole('button', { name: 'Eliminar definitivamente' })[1];
+  fireEvent.click(deleteButton);
+  expect(deleteButton).toBeDisabled();
+
+  await waitFor(() => expect(onHardDelete).toHaveBeenCalledWith(
+    expect.objectContaining({ kind: 'barber', id: 'barber-1', userId: null })
+  ));
+  await waitFor(() => expect(deleteButton).not.toBeDisabled());
+  expect(confirmSpy).toHaveBeenCalledTimes(1);
+  expect(promptSpy).toHaveBeenCalledWith('Para confirmar, escribe ELIMINAR:');
+  confirmSpy.mockRestore();
+  promptSpy.mockRestore();
+});

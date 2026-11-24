@@ -3439,7 +3439,10 @@ function VistaSuperAdmin({ currentTime, citas, setCitas, devConfig, setDevConfig
   };
 
   const handleHardDeleteAccount = async (account) => {
-    await requestStaffApi(`/api/dev/hard-delete-user/${encodeURIComponent(account.userId)}`, {
+    const resourceType = account.kind === 'barber' ? 'barber' : 'tenant';
+    const resourceId = account.kind === 'barber' ? account.id : account.tenantId;
+    const target = `by-resource/${resourceType}/${encodeURIComponent(resourceId)}`;
+    await requestStaffApi(`/api/dev/hard-delete-user/${target}`, {
       method: 'DELETE'
     });
 
