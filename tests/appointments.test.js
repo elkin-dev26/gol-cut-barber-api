@@ -5,7 +5,7 @@ process.env.SUPABASE_URL = 'https://supabase.example.test';
 process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-const handler = require('../api/appointments/create');
+const handler = require('../api/appointments/[...path]');
 let requests;
 let rateAllowed;
 let entityRecord;
@@ -95,6 +95,7 @@ const makeRequest = (body, authorization = '') => ({
   method: 'POST',
   headers: { 'x-forwarded-for': '203.0.113.1', authorization },
   socket: { remoteAddress: '203.0.113.1' },
+  query: { path: ['create'] },
   body
 });
 

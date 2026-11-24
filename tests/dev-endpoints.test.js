@@ -5,8 +5,7 @@ process.env.SUPABASE_URL = 'https://supabase.example.test';
 process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-const hardDeleteHandler = require('../api/dev/hard-delete-user/[userId]');
-const cleanupHandler = require('../api/dev/run-cleanup');
+const devHandler = require('../api/dev/[...path]');
 
 const developerId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const targetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -122,16 +121,16 @@ const makeResponse = () => ({
   }
 });
 
-const makeRequest = (method, userId = targetId) => ({
+const makeRequest = (method, userId = targetId, route = 'hard-delete-user') => ({
   method,
   headers: { authorization: 'Bearer test-token' },
-  params: { userId },
+  query: { path: route === 'hard-delete-user' ? [route, userId] : [route] },
   body: {}
 });
 
 test('developer hard delete removes a barber appointment and entity before Auth', async () => {
   const response = makeResponse();
-  await hardDeleteHandler(makeRequest('DELETE'), response);
+  await devHandler(makeRequest('DELETE'), response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.deleted, true);
@@ -149,7 +148,7 @@ test('deleting a tenant owner removes tenant records, linked accounts, and store
     logo: 'https://supabase.example.test/storage/v1/object/public/logos/shop.png'
   };
   const response = makeResponse();
-  await hardDeleteHandler(makeRequest('DELETE'), response);
+  await devHandler(makeRequest('DELETE'), response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.deletedAccounts, 2);
@@ -168,14 +167,14 @@ test('deleting a tenant owner removes tenant records, linked accounts, and store
 test('non-developers cannot invoke hard deletion or cleanup', async () => {
   callerRole = 'admin';
   let response = makeResponse();
-  await hardDeleteHandler(makeRequest('DELETE'), response);
+  await devHandler(makeRequest('DELETE'), response);
 
   assert.equal(response.statusCode, 403);
   assert.equal(requests.some(request => request.options.method === 'DELETE'), false);
 
   requests = [];
   response = makeResponse();
-  await cleanupHandler(makeRequest('POST'), response);
+  await devHandler(makeRequest('POST', targetId, 'run-cleanup'), response);
 
   assert.equal(response.statusCode, 403);
   assert.equal(requests.some(request => request.url.includes('/rpc/run_quarterly_cleanup')), false);
@@ -184,20 +183,20 @@ test('non-developers cannot invoke hard deletion or cleanup', async () => {
 test('hard deletion rejects developers and users without a staff profile', async () => {
   targetRole = 'developer';
   let response = makeResponse();
-  await hardDeleteHandler(makeRequest('DELETE'), response);
+  await devHandler(makeRequest('DELETE'), response);
   assert.equal(response.statusCode, 403);
   assert.equal(requests.some(request => request.url.includes('/auth/v1/admin/users/')), false);
 
   targetProfileExists = false;
   response = makeResponse();
-  await hardDeleteHandler(makeRequest('DELETE'), response);
+  await devHandler(makeRequest('DELETE'), response);
   assert.equal(response.statusCode, 404);
   assert.equal(requests.some(request => request.url.includes('/auth/v1/admin/users/')), false);
 });
 
 test('manual cleanup invokes the RPC with force_run enabled for developers', async () => {
   const response = makeResponse();
-  await cleanupHandler(makeRequest('POST'), response);
+  await devHandler(makeRequest('POST', targetId, 'run-cleanup'), response);
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.body, { success: true });

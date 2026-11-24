@@ -5,7 +5,7 @@ process.env.SUPABASE_URL = 'https://supabase.example.test';
 process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-const handler = require('../api/appointments/update');
+const handler = require('../api/appointments/[...path]');
 let requests;
 let appointmentEntityId;
 
@@ -84,7 +84,7 @@ const makeRequest = (method, body = {}, query = {}) => ({
   method,
   headers: { authorization: 'Bearer test-token' },
   body,
-  query
+  query: { path: ['update'], ...query }
 });
 
 test('persists appointment status changes for the assigned barber', async () => {

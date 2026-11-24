@@ -5,7 +5,7 @@ process.env.SUPABASE_URL = 'https://supabase.example.test';
 process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-const handler = require('../api/tenants/settings');
+const handler = require('../api/tenants/[...path]');
 let requests;
 let callerRole;
 
@@ -86,7 +86,7 @@ const makeRequest = (method, body = {}, query = {}) => ({
   method,
   headers: { authorization: 'Bearer test-token' },
   body,
-  query
+  query: { path: ['settings'], ...query }
 });
 
 test('admin can reload saved business settings', async () => {
