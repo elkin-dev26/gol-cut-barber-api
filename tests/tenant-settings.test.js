@@ -98,6 +98,18 @@ test('admin can reload saved business settings', async () => {
   assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 
+test('dispatches tenant settings from the request URL when the catch-all parameter is absent', async () => {
+  const request = makeRequest('GET', {}, { id: 'shop-1' });
+  delete request.query.path;
+  request.url = '/api/tenants/settings?id=shop-1';
+
+  const response = makeResponse();
+  await handler(request, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body.settings.services, [{ id: 's1' }]);
+});
+
 test('independent profiles can read only their own services and logo', async () => {
   callerRole = 'independent';
   const response = makeResponse();
